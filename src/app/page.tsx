@@ -4,11 +4,11 @@ import { Footer } from "@/components/footer";
 import { HeroSection } from "@/components/hero-section";
 import Navbar from "@/components/navbar";
 import { ServicesSection } from "@/components/service-section";
-import { Questions } from "@/components/Question";
-import { Newsletter } from "@/components/Newleter";
-import { Caregiver } from "@/components/Caregiver";
-import { LastItemSection } from "@/components/LastItemSection";
-import { MedSection } from "@/components/MedSection";
+import { QuestionsSection } from "@/components/questions-section";
+import { NewsletterSection } from "@/components/newsletter-section";
+import { CareGiver } from "@/components/care-giver";
+import { LastItemSection } from "@/components/last-item-section";
+import { MedSection } from "@/components/doctors-section";
 export default function Home() {
   return (
     <div className="min-h-screen">
@@ -23,7 +23,7 @@ export default function Home() {
         <ServicesSection />
 
         {/*Question Section*/}
-        <Questions />
+        <QuestionsSection />
 
         {/*Question Section*/}
         <MedSection />
@@ -32,10 +32,10 @@ export default function Home() {
         <LastItemSection />
 
         {/*Question Section*/}
-        <Caregiver />
+        <CareGiver />
 
         {/*Newsletter*/}
-        <Newsletter />
+        <NewsletterSection />
         
         {/* Doctors Section */}
 
