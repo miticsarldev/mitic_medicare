@@ -1,4 +1,3 @@
-
 import React from "react";
 
 export function Questions() {
@@ -22,8 +21,20 @@ export function Questions() {
       </div>
 
       {/* Questions Médicales */}
-      <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-        <h2 className="text-xl font-bold mb-4">Questions médicales</h2>
+      <div className="bg-white p-8 rounded-lg shadow-md mt-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Questions médicales</h2>
+          <div className="flex gap-4">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              Posez ma question
+            </button>
+            <button className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+              Trouver une réponse
+            </button>
+          </div>
+        </div>
+
+        {/* Sélections médicales */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array(8)
             .fill("Médecine Dentaire")
@@ -36,19 +47,7 @@ export function Questions() {
               </select>
             ))}
         </div>
-
-        {/* Boutons */}
-        <div className="flex gap-4 mt-4">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            Posez ma question
-          </button>
-          <button className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
-            Trouver une réponse
-          </button>
-        </div>
       </div>
     </div>
   );
 };
-
-

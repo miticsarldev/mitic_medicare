@@ -14,7 +14,7 @@ export function Newsletter() {
       <h2 className="text-2xl font-bold">Abonnez-vous à Notre Newsletter</h2>
       <p className="text-gray-500 mb-6">Recevez les dernières nouvelles de notre plateforme</p>
 
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl">
         <h3 className="text-lg font-semibold mb-3">Pour la Newsletter</h3>
         <form onSubmit={handleSubmit} className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
           <input
