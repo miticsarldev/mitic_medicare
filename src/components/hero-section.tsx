@@ -30,6 +30,7 @@ export function HeroSection() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6">
+            <Link href="/appointments">
               <Button
                 size="lg"
                 className="gap-2 bg-[#107ACA] flex items-center justify-center hover:bg-[#0A5A8A] transition-all duration-300"
@@ -37,6 +38,7 @@ export function HeroSection() {
                 <Calendar className="h-5 w-5" />
                 Prendre rendez-vous
               </Button>
+              </Link>
               <Link className="gap-2 flex items-center justify-center" href="#">
                 <div className="flex items-center bg-transparent rounded-full p-1 border border-[#107ACA]">
                   <div className="p-2 rounded-full bg-[#107ACA]">
