@@ -60,10 +60,10 @@ export function HeroSection() {
           </div>
 
           <div className="absolute top-0 right-28 w-1/3 h-full rounded-full">
-            <div className="absolute inset-0 rounded-full bg-primary/10 dark:bg-primary/30 animate-pulse" />
-            <div className="absolute inset-4 rounded-full bg-primary/20 dark:bg-primary/40" />
+          <div className="hidden sm:block absolute inset-0 rounded-full bg-primary/10 dark:bg-primary/30 animate-pulse" />
+          <div className="hidden sm:block absolute inset-4 rounded-full bg-primary/20 dark:bg-primary/40" />
             <Image
-              className="relative top-0 rounded-full object-cover h-auto w-full"
+              className="relative top-0 rounded-full object-cover h-auto w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl hidden sm:block"
               src="/doctors.png"
               alt="Doctors"
               width={400}
@@ -71,7 +71,7 @@ export function HeroSection() {
             />
           </div>
 
-          <div className="absolute top-4 right-4 md:top-8 md:right-8">
+          <div className="absolute top-4 right-4 md:top-8 md:right-8 hidden sm:block">
             <div className="bg-background dark:bg-background/80 backdrop-blur-sm rounded-lg p-4 shadow-lg">
               <div className="flex items-center gap-3">
                 <Search className="h-5 w-5 text-primary" />
