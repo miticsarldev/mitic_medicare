@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Microscope, Ambulance, Calendar, Phone } from "lucide-react";
+import { Microscope, Ambulance, Calendar, Phone, Clock, User, Heart } from "lucide-react";
 
 const services = [
   {
@@ -105,15 +105,24 @@ export function ServicesSection() {
         {/* Additional Features */}
         <div className="mt-16 grid gap-8 md:grid-cols-3 text-center">
           <div className="space-y-2">
-            <div className="text-3xl font-bold text-primary">24/7</div>
+            <div className="flex justify-center items-center gap-2">
+              <Clock className="w-8 h-8 text-primary" />
+              <div className="text-3xl font-bold text-primary">24/7</div>
+            </div>
             <p className="text-muted-foreground">Service d&apos;urgence</p>
           </div>
           <div className="space-y-2">
-            <div className="text-3xl font-bold text-primary">100+</div>
+            <div className="flex justify-center items-center gap-2">
+              <User className="w-8 h-8 text-primary" />
+              <div className="text-3xl font-bold text-primary">100+</div>
+            </div>
             <p className="text-muted-foreground">Médecins spécialistes</p>
           </div>
           <div className="space-y-2">
-            <div className="text-3xl font-bold text-primary">50k+</div>
+            <div className="flex justify-center items-center gap-2">
+              <Heart className="w-8 h-8 text-primary" />
+              <div className="text-3xl font-bold text-primary">50k+</div>
+            </div>
             <p className="text-muted-foreground">Patients satisfaits</p>
           </div>
         </div>
