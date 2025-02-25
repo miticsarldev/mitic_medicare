@@ -1,4 +1,12 @@
-export const doctors = [
+export interface Doctor {
+  id: number;
+  name: string;
+  specialty: string;
+  location: string;
+  image: string;
+}
+
+export const doctors: Doctor[] = [
     {
       id: 1,
       name: "Dr Amed Kouakou",
