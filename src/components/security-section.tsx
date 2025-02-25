@@ -1,28 +1,28 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Microscope, Ambulance, Calendar, Phone, Clock, User, Heart } from "lucide-react";
+import { BadgeCheck, FileUp, ListChecks, Phone } from "lucide-react";
 
 const services = [
   {
-    icon: Microscope,
-    title: "Laboratoire bien équipé",
+    icon: BadgeCheck,
+    title: "Vérification d’identité",
     description:
-      "Accédez à nos installations de laboratoire modernes pour des diagnostics précis",
+      "Vérification systématique de l\'identité du médecin",
     color: "bg-white dark:bg-secondary/50",
   },
   {
-    icon: Ambulance,
-    title: "Ambulance d'urgence",
+    icon: FileUp,
+    title: "Publication du Profil",
     description:
-      "Service d'ambulance disponible 24/7 pour les urgences médicales",
+      "Création de votre fiche, incluant : Adresse, photo, numéro de téléphone, géolocalisation, spécialité",
     color: "bg-[#107ACA] text-primary-foreground",
   },
   {
-    icon: Calendar,
-    title: "Rendez-vous en ligne",
+    icon: ListChecks,
+    title: "Référencement au Listing",
     description:
-      "Prenez rendez-vous facilement avec nos professionnels de santé",
+      "Listing aléatoire de votre fiche suivant la géolocalisation, la spécialité ou la localité",
     color: "bg-white dark:bg-secondary/50",
   },
   {
@@ -60,10 +60,10 @@ export function ServicesSection() {
       <div className="container px-4 md:px-6">
         <div className="text-center space-y-4 mb-16">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Nos Services Médicaux
+          Comment ca se passe ?
           </h2>
           <p className="text-muted-foreground text-lg max-w-[600px] mx-auto">
-            Nous nous engageons à vous offrir les meilleurs services médicaux
+          Votre inscription en 3 étapes
           </p>
         </div>
 
@@ -105,24 +105,15 @@ export function ServicesSection() {
         {/* Additional Features */}
         <div className="mt-16 grid gap-8 md:grid-cols-3 text-center">
           <div className="space-y-2">
-            <div className="flex justify-center items-center gap-2">
-              <Clock className="w-8 h-8 text-primary" />
-              <div className="text-3xl font-bold text-primary">24/7</div>
-            </div>
+            <div className="text-3xl font-bold text-primary">24/7</div>
             <p className="text-muted-foreground">Service d&apos;urgence</p>
           </div>
           <div className="space-y-2">
-            <div className="flex justify-center items-center gap-2">
-              <User className="w-8 h-8 text-primary" />
-              <div className="text-3xl font-bold text-primary">100+</div>
-            </div>
+            <div className="text-3xl font-bold text-primary">100+</div>
             <p className="text-muted-foreground">Médecins spécialistes</p>
           </div>
           <div className="space-y-2">
-            <div className="flex justify-center items-center gap-2">
-              <Heart className="w-8 h-8 text-primary" />
-              <div className="text-3xl font-bold text-primary">50k+</div>
-            </div>
+            <div className="text-3xl font-bold text-primary">50k+</div>
             <p className="text-muted-foreground">Patients satisfaits</p>
           </div>
         </div>
