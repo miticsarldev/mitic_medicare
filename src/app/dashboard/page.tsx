@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
+import { Chart } from "@/components/chart"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,7 +14,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-
+import {stats} from "@/components/stats"
 export default function Page() {
   return (
     <SidebarProvider>
@@ -39,12 +40,30 @@ export default function Page() {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          {/* Sections avec icônes et chiffres */}
           <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
+            {stats.map((stat, index) => (
+              <div
+                key={index}
+                className="aspect-video rounded-xl bg-muted/50 p-6 flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">{stat.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {stat.description}
+                    </p>
+                  </div>
+                  {stat.icon}
+                </div>
+                <p className="text-3xl font-bold">{stat.value}</p>
+              </div>
+            ))}
           </div>
+
           <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
+
+        <Chart/>
         </div>
       </SidebarInset>
     </SidebarProvider>
