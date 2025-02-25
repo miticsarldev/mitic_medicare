@@ -4,7 +4,7 @@ import Navbar from "@/components/navbar";
 import Link from "next/link";
 import React from "react";
 import { Pagination } from "@/components/pagination";
-import { doctors } from "@/components/doctor-data"; 
+import { Doctor, doctors } from "@/components/doctor-data"; 
 
 export default function SearchDoctor() {
   return (
@@ -72,7 +72,7 @@ export default function SearchDoctor() {
               </div>
 
               {/* Carte Médecin */}
-              {doctors.map((doctor: { id: React.Key | null | undefined; name: string | number | bigint | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<React.AwaitedReactNode> | null | undefined; specialty: string | number | bigint | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<React.AwaitedReactNode> | null | undefined; location: string | number | bigint | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<React.AwaitedReactNode> | null | undefined; }) => (
+              {doctors.map((doctor: Doctor) => (
                 <div key={doctor.id} className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md mb-4 flex items-center gap-4">
                   <div className="w-16 h-16 bg-gray-300 rounded-full"></div>
                   <div className="flex-1">
