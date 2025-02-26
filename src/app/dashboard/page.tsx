@@ -15,7 +15,10 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import {stats} from "@/components/stats"
+import { usersData } from "@/components/user-data";
+
 export default function Page() {
+  const recentAppointments = usersData.slice(0, 6);
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -64,6 +67,44 @@ export default function Page() {
           <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
 
         <Chart/>
+         {/* Section "Rendez-vous Récents" */}
+         <div className="rounded-xl bg-muted/50 p-6">
+            <h2 className="text-xl font-semibold mb-4">Rendez-vous Récents</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-background rounded-lg">
+                <thead>
+                  <tr className="text-left border-b">
+                    <th className="p-5">Nom</th>
+                    <th className="p-4">Médecin</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentAppointments.map((appointment) => (
+                    <tr key={appointment.id} className="border-b">
+                      <td className="p-3">{appointment.name}</td>
+                      <td className="p-3">{appointment.doctor}</td>
+                      <td className="p-3">{appointment.appointmentDate}</td>
+                      <td className="p-3">
+                        <span
+                          className={`px-3 py-1 text-sm rounded-full ${
+                            appointment.status === "Confirmé"
+                              ? "bg-green-100 text-green-800"
+                              : appointment.status === "En attente"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {appointment.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

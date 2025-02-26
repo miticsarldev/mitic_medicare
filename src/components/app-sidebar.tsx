@@ -73,11 +73,11 @@ const data = {
       icon: Bot,
       items: [
         {
-          title: "Dossiers Médicaux",
+          title: "Rendez-vous",
           url: "#",
         },
         {
-          title: "Rendez-vous",
+          title: "Paramètres",
           url: "#",
         },
       ],
@@ -96,28 +96,29 @@ const data = {
           url: "#",
         },
         {
-          title: "Consultations",
+          title: "Rendez-vous",
           url: "#",
         },
       ],
     },
     {
-      title: "Administration",
+      title: "Administrateur",
       url: "#",
       icon: Settings2,
       items: [
         {
           title: "Gestion des Utilisateurs",
+          url: "admin/manage-users",
+        },
+        {
+          title: "Rendez-vous",
           url: "#",
         },
         {
           title: "Paramètres",
           url: "#",
         },
-        {
-          title: "Rapports",
-          url: "#",
-        },
+        
       ],
     },
   ],
