@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 import { Pagination } from "@/components/pagination";
 import { doctors } from "@/components/doctor-data"; 
+import { Calendar, NotepadText } from "lucide-react";
 
 export default function SearchDoctor() {
   return (
@@ -53,6 +54,10 @@ export default function SearchDoctor() {
                 <input type="checkbox" id="garde" className="dark:bg-gray-600" />
                 <label htmlFor="garde" className="dark:text-white">Services de garde 24/7</label>
               </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="garde" className="dark:bg-gray-600" />
+                <label htmlFor="garde" className="dark:text-white">Carte Amo</label>
+              </div>
               <button className="w-full bg-yellow-500 text-white py-2 rounded-lg">
                 RECHERCHER
               </button>
@@ -81,16 +86,15 @@ export default function SearchDoctor() {
                     <p className="text-gray-500 dark:text-gray-400">{doctor.location}</p>
                   </div>
                   <Link href={`/details/${doctor.id}`}>
-                    <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg">
-                      Voir Fiche
-                    </button>
+                  <button className="bg-yellow-500 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <Calendar className="w-3 h-3" />
+                    <span>Prendre rendez-vous</span>
+                  </button>
                   </Link>
                 </div>
               ))}
               <Pagination totalPages={0} />
-              <button className="w-full bg-blue-600 text-white py-2 rounded-lg mt-4">
-                Voir Plus
-              </button>
+              
             </div>
 
             {/* Questions Médicales */}
@@ -108,9 +112,10 @@ export default function SearchDoctor() {
                 Voir la réponse
               </button>
               <ul className="mt-4">
-                {Array(6).fill("Solutions pour le fétichisme de pieds").map((item, index) => (
-                  <li key={index} className="text-gray-500 dark:text-gray-400 border-b py-2">
-                    {item}
+                {Array(10).fill("Solutions pour le fétichisme de pieds").map((item, index) => (
+                  <li key={index} className="text-gray-500 dark:text-gray-400 border-b py-2 flex items-center gap-2">
+                    <NotepadText className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm">{item}</span>
                   </li>
                 ))}
               </ul>

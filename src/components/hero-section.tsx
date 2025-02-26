@@ -9,8 +9,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function HeroSection() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeTab, setActiveTab] = useState("medecin");
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   const renderFormFields = () => {
     switch (activeTab) {
       case "medecin":
@@ -35,8 +39,7 @@ export function HeroSection() {
       case "medicaments":
         return (
           <>
-            <Input placeholder="Nom du médicament" className="md:col-span-2" />
-            <Input placeholder="Dosage" className="md:col-span-1" />
+            <Input placeholder="Nom du médicament" className="md:col-span-4" />
           </>
         );
 
@@ -44,7 +47,7 @@ export function HeroSection() {
         return (
           <>
             <Input placeholder="Sujet de la question" className="md:col-span-2" />
-            <Input placeholder="Votre email" type="email" className="md:col-span-1" />
+            <Input placeholder="Votre email" type="email" className="md:col-span-2" />
           </>
         );
 
@@ -75,7 +78,7 @@ export function HeroSection() {
                   Prendre rendez-vous
                 </Button>
               </Link>
-              <Link className="gap-2 flex items-center justify-center" href="#">
+              <Link className="gap-2 flex items-center" href="#">
                 <div className="flex items-center bg-transparent rounded-full p-1 border border-[#107ACA]">
                   <div className="p-2 rounded-full bg-[#107ACA]">
                     <Play className="h-5 w-5" />
@@ -124,18 +127,34 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Zone avec les Tabs */}
+        {/*les Tabs */}
         <div className="py-10 px-10">
           <Card className="border-none shadow-lg bg-background/80 backdrop-blur-sm">
             <CardContent className="p-6">
-              <Tabs defaultValue="medecin" className="w-full" onValueChange={setActiveTab}>
-                <TabsList className="grid grid-cols-4 mb-6">
-                  <TabsTrigger value="medecin">Médecin</TabsTrigger>
-                  <TabsTrigger value="pharmacie">Pharmacie</TabsTrigger>
-                  <TabsTrigger value="medicaments">Médicaments</TabsTrigger>
-                  <TabsTrigger value="questions">Questions</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {/* Sur Mobile */}
+              <div className="sm:hidden mb-6">
+                <select
+                  onChange={(e) => handleTabChange(e.target.value)}
+                  className="w-400 p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-background dark:bg-background/80"
+                >
+                  <option value="medecin">Médecin</option>
+                  <option value="pharmacie">Pharmacie</option>
+                  <option value="medicaments">Médicaments</option>
+                  <option value="questions">Questions</option>
+                </select>
+              </div>
+
+              {/* Sur Pc */}
+              <div className="hidden sm:block">
+                <Tabs defaultValue="medecin" className="w-full" onValueChange={setActiveTab}>
+                  <TabsList className="grid grid-cols-4 mb-6">
+                    <TabsTrigger value="medecin">Médecin</TabsTrigger>
+                    <TabsTrigger value="pharmacie">Pharmacie</TabsTrigger>
+                    <TabsTrigger value="medicaments">Médicaments</TabsTrigger>
+                    <TabsTrigger value="questions">Questions</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
 
               {/* Champs dynamiques selon l'onglet sélectionné */}
               <div className="grid gap-4 md:grid-cols-5">
