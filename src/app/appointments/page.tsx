@@ -4,7 +4,8 @@ import Navbar from "@/components/navbar";
 import Link from "next/link";
 import React from "react";
 import { Pagination } from "@/components/pagination";
-import { Doctor, doctors } from "@/components/doctor-data"; 
+import {  doctors } from "@/components/doctor-data"; 
+import {  Doctor } from "@/types"; 
 
 export default function SearchDoctor() {
   return (
