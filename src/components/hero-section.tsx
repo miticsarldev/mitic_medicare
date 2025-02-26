@@ -50,7 +50,7 @@ export function HeroSection() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Devenir membre de notre communauté hospitalière?</span>
               <Link
-                href="/auth"
+                href="/patient/quiz"
                 className="text-primary hover:underline font-medium"
               >
                 Connexion
