@@ -103,3 +103,114 @@ export const countries = [
       answer : "Je vous conseille vivement d’aller consulter un médecin, surtout si vous avez des troubles visuels associés"
     },
   ];
+
+  export const posts = [
+    {
+      id: 1,
+      title: "La rééducation périnéale est une pratique paramédicale qui vise à renforcer les muscles du périnée, cette zone musculaire située entre le vagin et l'anus. Elle est souvent recommandée aux femmes après une grossesse ou un accouchement, mais peut également être bénéfique pour les hommes et les femmes à tout âge.",
+      content: "Quels sont les bienfaits de la rééducation périnéale ? Amélioration du contrôle de la vessie et réduction des fuites urinaires : la rééducation périnéale renforce les muscles du sphincter vésical, ce qui permet de mieux contrôler la miction et de réduire les fuites urinaires, même d'effort.Prévention et réduction de la descente d'organes : le périnée joue un rôle important dans le soutien des organes pelviens, tels que la vessie, l'utérus et le rectum. En renforçant les muscles périnéaux, on peut prévenir ou réduire la descente d'organes, qui peut se manifester par une sensation de pesanteur ou une protrusion des organes.Amélioration de la vie sexuelle : la rééducation périnéale peut également améliorer la sensibilité et la tonicité du vagin, ce qui peut se traduire par une augmentation du plaisir sexuel pour les femmes et les hommes.Soulagement de la constipation : les muscles du périnée sont également impliqués dans l'évacuation des selles. En les renforçant, on peut faciliter le transit intestinal et soulager la constipation.Amélioration de la posture et de la proprioception : la rééducation périnéale peut également avoir un impact positif sur la posture et la proprioception, la perception de son propre corps.",
+      authorName: "Marie L.",
+      authorImage: "/doctors.png",
+      date: "26 Février 2025",
+      category: "generaliste"
+    },
+    {
+      id: 2,
+      title: "Quels aliments privilégier pour une meilleure digestion ?",
+      content: "J’ai des problèmes digestifs récurrents. Des suggestions ?",
+      authorName: "Paul D.",
+      authorImage: "/doc.webp",
+      date: "25 Février 2025",
+      category: "cardiologue"
+    },
+  ];
+
+  export const recentArticles = [
+    {
+      title: "Les bienfaits du sommeil sur la santé mentale",
+      image: "/doc.webp",
+      category: "Santé mentale",
+    },
+    {
+      title: "Comment booster son système immunitaire naturellement",
+      image: "/montre.png",
+      category: "Bien-être",
+    },
+    {
+      title: "L'importance de l'hydratation pour le corps",
+      image: "/orange.png",
+      category: "Nutrition",
+    },
+    {
+      title: "Les nouvelles avancées en médecine régénérative",
+      image: "/montre.png",
+      category: "Innovation",
+    },
+  ];
+  export const medicalArticles = [
+    {
+      title: "Comprendre les maladies cardiovasculaires",
+      image: "/ballon.png",
+      author: "Dr. Ali Koné",
+      authorImage: "/medecin.png",
+      specialty: "Cardiologue",
+    },
+    {
+      title: "Les nouvelles thérapies contre le cancer",
+      image: "/montre.png",
+      author: "Dr. Alou Cissé",
+      authorImage: "/doc.webp",
+      specialty: "Oncologue",
+    },
+    {
+      title: "Les effets du stress sur le système nerveux",
+      image: "/orange.png",
+      author: "Dr. Sophie Martin",
+      authorImage: "/doctors.png",
+      specialty: "Neurologue",
+    },
+  ];
+    
+  export const pastAppointments = [
+    {
+      id: 1,
+      date: "12 Février 2024",
+      doctor: "Dr. Oumar Koîta",
+      specialty: "Cardiologue", 
+    },
+    {
+      id: 2,
+      date: "5 Janvier 2024",
+      doctor: "Dr. Marie Ballo",
+      specialty: "Oncologue", 
+
+    },
+  ];
+
+  export const upcomingAppointments = [
+    {
+      id: 1,
+      date: "15 Mars 2025 - 10:00 AM",
+      doctor: "Dr. Madou Ag",
+      specialty: "Cardiologie",
+      reason: "Consultation",
+
+    },
+    {
+      id: 2,
+      date: "20 Mars 2025 - 14:30 PM",
+      doctor: "Dr. Marie Ballo",
+      specialty: "Dermatologie",
+      reason: "Consultation",
+
+    },
+    {
+      id: 3,
+      date: "25 Mars 2025 - 09:00 AM",
+      doctor: "Dr. Ali Kone",
+      specialty: "Neurologie",
+      reason: "Consultation",
+
+    },
+  ];
+  
