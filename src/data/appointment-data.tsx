@@ -98,4 +98,32 @@ export const appointmentsData = [
     },
   ]
     
+
+  export const rdvData = [
+    {
+        id: 1,
+        patientName: "Jean Dupont",
+        doctorName: "Dr. Martin",
+        date: "2024-03-01",
+        time: "14:30",
+        status: true,  // Rendez-vous confirmé
+    },
+    {
+        id: 2,
+        patientName: "Marie Curie",
+        doctorName: "Dr. Rousseau",
+        date: "2024-03-02",
+        time: "10:00",
+        status: false, // En attente de confirmation
+    },
+    {
+        id: 3,
+        patientName: "Albert Einstein",
+        doctorName: "Dr. Lavoisier",
+        date: "2024-03-03",
+        time: "16:00",
+        status: true,
+    },
+];
+
   
