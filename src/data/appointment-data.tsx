@@ -60,3 +60,42 @@ export const appointmentsData = [
       status: "En attente",
     },
   ];
+
+
+  export const doctorData = [
+    {
+      id: 1,
+      firstName: "Alou",
+      lastName: "Dr.",
+      speciality: "Cardiologie",
+      email: "dr.alou@example.com",
+      phone: "667898467",
+      address: "Kalaban Koura",
+      dateCreated: "2023-10-01",
+      status: true,
+    },
+    {
+      id: 2,
+      firstName: "Alou",
+      lastName: "Dr.",
+      speciality: "Cardiologie",
+      email: "dr.alou@example.com",
+      phone: "667898467",
+      address: "Kalaban Koura",
+      dateCreated: "2023-10-01",
+      status: true,
+    },
+    {
+      id: 3,
+      firstName: "Alou",
+      lastName: "Dr.",
+      speciality: "Cardiologie",
+      email: "dr.alou@example.com",
+      phone: "667898467",
+      address: "Kalaban Koura",
+      dateCreated: "2023-10-01",
+      status: false,
+    },
+  ]
+    
+  

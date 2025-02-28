@@ -62,7 +62,7 @@ const data = {
       items: [
         {
           title: "Liste des Médecins",
-          url: "#",
+          url: "/medecin",
         },
         {
           title: "Disponibilités",
