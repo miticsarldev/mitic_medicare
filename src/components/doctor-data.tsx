@@ -1,4 +1,5 @@
-export const doctors = [
+import {Doctor} from "@/types"
+export const doctors: Doctor[] = [
     {
       id: 1,
       name: "Dr Amed Kouakou",
