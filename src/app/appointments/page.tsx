@@ -42,6 +42,9 @@ export default function SearchDoctor() {
                 <option>Ville</option>
               </select>
               <select className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-600 dark:text-white">
+                <option>Ville</option>
+              </select>
+              <select className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-600 dark:text-white">
                 <option>Genre</option>
               </select>
               <select className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-600 dark:text-white">

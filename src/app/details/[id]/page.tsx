@@ -100,13 +100,19 @@ const AppointmentPage = () => {
         )}
 
         <div className="mt-4">
-          <label className="block text-gray-700 dark:text-gray-300">Motif de consultation</label>
-          <input
-            type="text"
+          <label className="block text-gray-700 dark:text-gray-300">
+            Motif de consultation
+          </label>
+          <select
             className="w-full p-2 border rounded mt-1 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-          />
+          >
+            <option value="">Sélectionnez un motif</option>
+            <option value="controle">Contrôle général</option>
+            <option value="douleur">Douleur persistante</option>
+            <option value="suivi">Suivi post-opératoire</option>
+            <option value="vaccin">Vaccination</option>
+          </select>
         </div>
-
         <div className="flex justify-between mt-4">
           <button className="text-red-500 dark:text-red-300">Annuler</button>
           <button
