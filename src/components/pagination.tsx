@@ -1,30 +1,13 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 
 type PaginationProps = {
   totalPages: number;
 };
 
-import { ChevronRight, ChevronLeft } from "lucide-react";
 
-export const Pagination: React.FC<PaginationProps> = ({ totalPages }) => {
-  const [currentPage, setCurrentPage] = useState(1);
+export const Pagination: React.FC<PaginationProps> = () => {
 
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
-    }
-  };
-
-  const handlePageClick = (page: number) => {
-    setCurrentPage(page);
-  };
 
   return (
     

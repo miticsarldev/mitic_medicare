@@ -5,6 +5,7 @@ import { ProgressBar } from "@/components/progress-bar";
 import { useSearchParams } from "next/navigation";
 import { doctors } from "@/components/doctor-data";
 import Navbar from "@/components/custum-navbar";
+import Image from "next/image";
 
 const Step3 = () => {
   const [code, setCode] = useState("");
@@ -38,11 +39,13 @@ const Step3 = () => {
         <ProgressBar step={2} />
 
         <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 mt-4 rounded-lg flex items-center space-x-4">
-          <img
-            src={doctor.image}
-            alt="Doctor profile"
-            className="w-12 h-12 rounded-full"
-          />
+        <Image
+          src={doctor.image}
+          alt="Doctor profile"
+          width={48}
+          height={48}
+          className="rounded-full"
+        />
           <div>
             <h2 className="text-lg font-semibold">{doctor.name}</h2>
             <p className="text-sm">{doctor.specialty}</p>

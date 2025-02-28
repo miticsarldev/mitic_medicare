@@ -4,12 +4,12 @@ import { useRouter, useParams } from "next/navigation";
 import { ProgressBar } from "@/components/progress-bar";
 import Navbar from "@/components/custum-navbar";
 import { doctors } from "@/components/doctor-data";
+import Image from "next/image";
 
 const AppointmentPage = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [showMoreHours, setShowMoreHours] = useState(false);
-  const [step, setStep] = useState(0);
   const router = useRouter();
   const params = useParams();
   const doctorId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -32,7 +32,6 @@ const AppointmentPage = () => {
 
   const handleConfirm = () => {
     if (selectedDate && selectedTime) {
-      setStep(1);
       router.push(`/step2?doctorId=${doctorId}`);
     } else {
       alert("Veuillez sélectionner une date et une heure.");
@@ -43,14 +42,16 @@ const AppointmentPage = () => {
     <>
       <Navbar />
       <div className="p-6 max-w-lg mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg">
-        <ProgressBar step={1} />
+        <ProgressBar step={0} />
 
         <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 mt-4 rounded-lg flex items-center space-x-4">
-          <img
-            src={doctor.image}
-            alt="Doctor profile"
-            className="w-12 h-12 rounded-full"
-          />
+        <Image
+          src={doctor.image}
+          alt="Doctor profile"
+          width={48}
+          height={48}
+          className="rounded-full"
+        />
           <div>
             <h2 className="text-lg font-semibold">{doctor.name}</h2>
             <p className="text-sm">{doctor.specialty}</p>
@@ -75,7 +76,7 @@ const AppointmentPage = () => {
           ))}
         </div>
 
-        <h2 className="text-lg font-semibold mt-4 dark:text-white">Veuillez choisir l'heure du rendez-vous</h2>
+        <h2 className="text-lg font-semibold mt-4 dark:text-white"> Veuillez choisir l&apos;heure du rendez-vous</h2>
         <div className="grid grid-cols-3 gap-2 mt-2">
           {(showMoreHours ? hours : hours.slice(0, 6)).map((hour, index) => (
             <button
@@ -94,7 +95,7 @@ const AppointmentPage = () => {
 
         {!showMoreHours && (
           <button className="text-blue-500 dark:text-blue-300 mt-2" onClick={() => setShowMoreHours(true)}>
-            Voir plus d'horaires
+            Voir plus d&apos;horaires
           </button>
         )}
 
