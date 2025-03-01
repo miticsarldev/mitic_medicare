@@ -21,4 +21,11 @@ export const doctors: Doctor[] = [
       location: "Badalabougou, Bamako Mali",
       image: "/doctor3.jpg",
     },
+    {
+      id: 4,
+      name: "Aliou Kouma",
+      specialty: "Pneumologue",
+      location: "Sabalibougou, Bamako Mali",
+      image: "/doctor4.jpg",
+    },
   ];
