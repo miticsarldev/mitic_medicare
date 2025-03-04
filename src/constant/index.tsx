@@ -174,15 +174,26 @@ export const countries = [
   export const pastAppointments = [
     {
       id: 1,
+      time: "12h40",
       date: "12 Février 2024",
-      doctor: "Dr. Oumar Koîta",
-      specialty: "Cardiologue", 
+      doctor: "Dr Oumar Koîta",
+      specialty: "Cardiologue",  
+      phone: 8976543,
+      location: "Kati",
+      patient: "Oumar Ballo",
+      doctorImage: "/doctors.png",
+      paymentMethod: "Espéce"
     },
     {
       id: 2,
+      time: "02h40",
       date: "5 Janvier 2024",
-      doctor: "Dr. Marie Ballo",
+      doctor: "Dr Marie Ballo",
       specialty: "Oncologue", 
+      phone: 8976543,
+      location: "Koulikoro",
+      patient: "Aliou Sall",
+      doctorImage: "/doctors.png"
 
     },
   ];
@@ -212,5 +223,28 @@ export const countries = [
       reason: "Consultation",
 
     },
+  ];
+  
+  export const doctorInfo = {
+    name: "Dr. Jean Dupont",
+    specialty: "Cardiologue",
+    phone: "+33 1 23 45 67 89",
+    email: "jean.dupont@hospital.com",
+    address: "12 Rue de la Santé, 75005 Paris, France"
+  };
+  
+  export const patientInfo = {
+    name: "Marie Curie",
+    age: 45,
+    gender: "Femme",
+    phone: "+33 6 12 34 56 78",
+    email: "marie.curie@example.com",
+    insurance: "Mutuelle Santé Plus"
+  };
+  
+  export const documents = [
+    "Compte rendu de consultation.pdf",
+    "Résultats d'analyse sanguine.pdf",
+    "Ordonnance médicamenteuse.pdf"
   ];
   
