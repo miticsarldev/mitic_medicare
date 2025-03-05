@@ -102,28 +102,39 @@ export const appointmentsData = [
   export const rdvData = [
     {
         id: 1,
-        patientName: "Jean Dupont",
-        doctorName: "Dr. Martin",
+        patientName: "Oumar Mariko",
+        doctorName: "Dr. Alou",
         date: "2024-03-01",
         time: "14:30",
-        status: true,  // Rendez-vous confirmé
+        status: true,
     },
     {
         id: 2,
-        patientName: "Marie Curie",
-        doctorName: "Dr. Rousseau",
+        patientName: "Marie Koné",
+        doctorName: "Dr. Aly",
         date: "2024-03-02",
         time: "10:00",
-        status: false, // En attente de confirmation
+        status: false,
     },
     {
         id: 3,
         patientName: "Albert Einstein",
-        doctorName: "Dr. Lavoisier",
+        doctorName: "Dr. Pythagore",
         date: "2024-03-03",
         time: "16:00",
         status: true,
     },
 ];
 
+export const doctorAvailability: { id: number; doctorName: string; slots: { day: string; time: string }[] }[] = [
+  { id: 1, doctorName: "Dr. Alou", slots: [{ day: "Lundi", time: "9h00" }, { day: "Lundi", time: "10h00" }] },
+  { id: 2, doctorName: "Dr. Oumar", slots: [{ day: "Mardi", time: "11h00" }, { day: "Mardi", time: "12h00" }] },
+];
+
   
+export const specialtiesData = [
+  { id: 1, description: "none", specialty: "Cardiologie" },
+  { id: 2, description: "none", specialty: "Dermatologie" },
+  { id: 3, description: "none", specialty: "Pédiatrie" },
+  { id: 4, description: "none", specialty: "Neurologie" },
+];

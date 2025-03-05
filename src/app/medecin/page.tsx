@@ -31,7 +31,7 @@ export default function Page() {
             <div className="mx-auto max-w-screen-xl px-4 lg:px-4">
               <div className="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
                 {/* Barre de recherche et boutons */}
-                <SearchBar />
+                <SearchBar path="/ajouter-specialite"/>
 
                 {/* Tableau des Rendez-vous */}
                 <div className="overflow-x-auto">

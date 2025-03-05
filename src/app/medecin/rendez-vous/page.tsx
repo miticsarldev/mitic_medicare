@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Edit, Trash } from "lucide-react";
-import { rdvData } from "@/data/appointments-data"; 
+import { rdvData } from "@/data/appointment-data"; 
 import Header from "@/components/dashboard-header";
 import SearchBar from "@/components/search-filtre-section";
 import Pagination from "@/components/pagination-dashboard";  
@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 
 // Déclaration de l'état initial des rendez-vous
 export default function Page() { 
-    const [rdvData, setAppointments] = useState(rdvData);
+    const [listRdv, setAppointments] = useState(rdvData);
 
     // Fonction pour modifier l'état d'un rendez-vous (activé/désactivé)
     const handleChange = (id: number) => {
@@ -34,7 +34,7 @@ export default function Page() {
                         <div className="mx-auto max-w-screen-xl px-4 lg:px-4">
                             <div className="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
                                 {/* Barre de recherche et boutons */}
-                                <SearchBar />
+                                <SearchBar path="/ajouter-specialite"/>
 
                                 {/* Tableau des Rendez-vous */}
                                 <div className="overflow-x-auto">
@@ -50,7 +50,7 @@ export default function Page() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {rdvData.map((rdv) => (
+                                            {listRdv.map((rdv) => (
                                                 <tr key={rdv.id} className="border-b dark:border-gray-700">
                                                     <td className="px-4 py-3">{rdv.patientName}</td>
                                                     <td className="px-4 py-3">{rdv.doctorName}</td>

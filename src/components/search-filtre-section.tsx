@@ -1,6 +1,15 @@
-import { Search, ChevronDown, Filter } from "lucide-react";
+"use client";
 
-const SearchBar = () => {
+import { Search, ChevronDown, Plus, Filter } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+interface SearchBarProps {
+  path: string;
+}
+
+const SearchBar: React.FC<SearchBarProps> = ({ path }) => {
+  const router = useRouter();
+
   return (
     <div className="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
       <div className="w-full md:w-1/2">
@@ -16,7 +25,7 @@ const SearchBar = () => {
               type="text"
               id="simple-search"
               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-              placeholder="Rechercher un rendez-vous..."
+              placeholder="Rechercher..."
               required
             />
           </div>
@@ -38,9 +47,21 @@ const SearchBar = () => {
             data-dropdown-toggle="filterDropdown"
             className="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
             type="button"
+            onClick={() => router.push(path)}
           >
             <Filter className="h-4 w-4 mr-2 text-gray-400" />
             Filtres
+          </button>
+          {/* Bouton Ajouter */}
+          <button
+            id="filterDropdownButton"
+            data-dropdown-toggle="filterDropdown"
+            className="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            type="button"
+            onClick={() => router.push(path)}
+          > 
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter
           </button>
         </div>
       </div>
