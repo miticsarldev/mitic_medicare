@@ -75,12 +75,44 @@ const data = {
       ],
     },
     {
-      title: "Administrateur",
+      title: "Hopitaux",
       url: "#",
       icon: Settings2,
       items: [
         {
           title: "Gestion des Utilisateurs",
+          url: "admin/manage-users",
+        },
+        {
+          title: "Gestion des médecin",
+          url: "admin/manage-doctors",
+        },
+        {
+          title: "Rendez-vous",
+          url: "/admin/appointment",
+        },
+        {
+          title: "Paramètres",
+          url: "/admin/settings",
+        },
+        
+      ],
+    },
+    {
+      title: "Super Administrateur",
+      url: "#",
+      icon: Settings2,
+      items: [
+        {
+          title: "Gestion des Utilisateurs",
+          url: "admin/manage-users",
+        },
+        {
+          title: "Gestion des Hopitaux",
+          url: "super-admin/hospital-manage",
+        },
+        {
+          title: "Gestion des Médecin",
           url: "admin/manage-users",
         },
         {
