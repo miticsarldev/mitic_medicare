@@ -62,15 +62,19 @@ const data = {
       items: [
         {
           title: "Liste des Médecins",
-          url: "#",
+          url: "/medecin",
+        },
+        {
+          title: "Liste des Spécialités",
+          url: "/medecin/specialiter",
         },
         {
           title: "Disponibilités",
-          url: "#",
+          url: "/medecin/disponibiliter",
         },
         {
           title: "Rendez-vous",
-          url: "#",
+          url: "/medecin/rendez-vous",
         },
       ],
     },
