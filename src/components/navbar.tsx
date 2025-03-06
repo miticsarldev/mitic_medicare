@@ -9,26 +9,7 @@ const Navbar = () => {
   return (
     <nav className="flex items-center justify-between p-4">
       <div className="flex items-center gap-4">
-        {/* Dropdown Menu
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="p-2">
-              <Menu className="w-6 h-6 text-[#107ACA]" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-48">
-            <DropdownMenuItem asChild>
-              <Link href="/services">Nos Services</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/about">À Propos</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/contact">Contact</Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu> */}
-        <Link href="/" className="text-2xl font-bold whitespace-nowrap">
+        <Link href="/" className="text-2xl w-full font-bold whitespace-nowrap">
           <span className="text-[#107ACA]">Medi</span>Care
         </Link>
       </div>
