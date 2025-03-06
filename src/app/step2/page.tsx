@@ -1,15 +1,20 @@
 "use client";
+
 import { useSearchParams } from "next/navigation";
 import { ProgressBar } from "@/components/progress-bar";
 import Link from "next/link";
 import { doctors } from "@/components/doctor-data";
 import Navbar from "@/components/custum-navbar";
 import Image from "next/image";
+import { Suspense } from "react";
+import { Loader } from "@/components/ui/loader";
 
 const Step2 = () => {
   const searchParams = useSearchParams();
   const doctorId = searchParams.get("doctorId");
-  const doctor = doctors.find((doc: { id: number }) => doc.id === parseInt(doctorId || ""));
+  const doctor = doctors.find(
+    (doc: { id: number }) => doc.id === parseInt(doctorId || "")
+  );
 
   if (!doctor) {
     return (
@@ -26,13 +31,13 @@ const Step2 = () => {
         <ProgressBar step={1} />
 
         <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 mt-4 rounded-lg flex items-center space-x-4">
-        <Image
-          src={doctor.image}
-          alt="Doctor profile"
-          width={48}
-          height={48}
-          className="rounded-full"
-        />
+          <Image
+            src={doctor.image}
+            alt="Doctor profile"
+            width={48}
+            height={48}
+            className="rounded-full"
+          />
           <div>
             <h2 className="text-lg font-semibold">{doctor.name}</h2>
             <p className="text-sm">{doctor.specialty}</p>
@@ -49,7 +54,9 @@ const Step2 = () => {
         </div>
 
         <div className="p-4">
-          <h3 className="text-center font-semibold dark:text-white">Saisissez vos informations</h3>
+          <h3 className="text-center font-semibold dark:text-white">
+            Saisissez vos informations
+          </h3>
           <input
             type="text"
             placeholder="Votre nom complet"
@@ -87,7 +94,8 @@ const Step2 = () => {
               Suivant
             </Link>
             <div className="flex items-center justify-center mt-2 text-xs text-gray-500 dark:text-gray-400">
-              <input type="checkbox" className="mr-2 dark:accent-blue-500" /> Votre connexion est sécurisée
+              <input type="checkbox" className="mr-2 dark:accent-blue-500" />{" "}
+              Votre connexion est sécurisée
             </div>
           </div>
         </div>
@@ -96,4 +104,10 @@ const Step2 = () => {
   );
 };
 
-export default Step2;
+export default function Page() {
+  return (
+    <Suspense fallback={<Loader size="lg" />}>
+      <Step2 />
+    </Suspense>
+  );
+}

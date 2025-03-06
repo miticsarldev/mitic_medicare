@@ -5,6 +5,8 @@ import { doctors } from "@/components/doctor-data";
 import Navbar from "@/components/navbar";
 import { ProgressBar } from "@/components/progress-bar";
 import Image from "next/image";
+import { Suspense } from "react";
+import { Loader } from "@/components/ui/loader";
 
 const Step4 = () => {
   const searchParams = useSearchParams();
@@ -26,13 +28,13 @@ const Step4 = () => {
         <ProgressBar step={3} />
 
         <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 mt-4 rounded-lg flex items-center space-x-4">
-        <Image
-          src={doctor.image}
-          alt="Doctor profile"
-          width={48}
-          height={48}
-          className="rounded-full"
-        />
+          <Image
+            src={doctor.image}
+            alt="Doctor profile"
+            width={48}
+            height={48}
+            className="rounded-full"
+          />
           <div>
             <h2 className="text-lg font-semibold">{doctor.name}</h2>
             <p className="text-sm">{doctor.specialty}</p>
@@ -61,4 +63,10 @@ const Step4 = () => {
   );
 };
 
-export default Step4;
+export default function Page() {
+  return (
+    <Suspense fallback={<Loader size="lg" />}>
+      <Step4 />
+    </Suspense>
+  );
+}

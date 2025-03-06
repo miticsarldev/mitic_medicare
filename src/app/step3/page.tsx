@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProgressBar } from "@/components/progress-bar";
 import { useSearchParams } from "next/navigation";
 import { doctors } from "@/components/doctor-data";
 import Navbar from "@/components/custum-navbar";
 import Image from "next/image";
+import { Loader } from "@/components/ui/loader";
 
 const Step3 = () => {
   const [code, setCode] = useState("");
@@ -39,13 +40,13 @@ const Step3 = () => {
         <ProgressBar step={2} />
 
         <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 mt-4 rounded-lg flex items-center space-x-4">
-        <Image
-          src={doctor.image}
-          alt="Doctor profile"
-          width={48}
-          height={48}
-          className="rounded-full"
-        />
+          <Image
+            src={doctor.image}
+            alt="Doctor profile"
+            width={48}
+            height={48}
+            className="rounded-full"
+          />
           <div>
             <h2 className="text-lg font-semibold">{doctor.name}</h2>
             <p className="text-sm">{doctor.specialty}</p>
@@ -54,11 +55,17 @@ const Step3 = () => {
         </div>
 
         <p className="mt-4 text-gray-700 dark:text-gray-300">
-          Veuillez saisir le code à 4 chiffres que nous venons de vous envoyer par email
+          Veuillez saisir le code à 4 chiffres que nous venons de vous envoyer
+          par email
         </p>
-        <p className="text-gray-600 dark:text-gray-400 font-semibold">(admin@gmail.com)</p>
+        <p className="text-gray-600 dark:text-gray-400 font-semibold">
+          (admin@gmail.com)
+        </p>
 
-        <form onSubmit={handleSubmit} className="mt-4 flex justify-center items-center">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-4 flex justify-center items-center"
+        >
           <input
             type="text"
             className="border p-2 w-24 text-center text-lg tracking-widest rounded-l dark:bg-gray-700 dark:text-white dark:border-gray-600"
@@ -75,10 +82,18 @@ const Step3 = () => {
           </button>
         </form>
 
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">Votre connexion est sécurisée</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
+          Votre connexion est sécurisée
+        </p>
       </div>
     </>
   );
 };
 
-export default Step3;
+export default function Page() {
+  return (
+    <Suspense fallback={<Loader size="lg" />}>
+      <Step3 />
+    </Suspense>
+  );
+}
