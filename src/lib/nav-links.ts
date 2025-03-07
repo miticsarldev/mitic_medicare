@@ -1,3 +1,4 @@
+import { UserRole } from "@prisma/client";
 import {
   BarChart,
   Database,
@@ -152,7 +153,7 @@ export const superAdminNavItems = [
   },
 ];
 
-// Doctor Navigation
+// Independant Doctor Navigation
 export const doctorNavItems = [
   {
     title: "Tableau de bord",
@@ -233,7 +234,7 @@ export const patientNavItems = [
     title: "Tableau de bord",
     icon: BarChart,
     description: "Vue d'ensemble du patient",
-    url: "/patient/dashboard",
+    url: "/dashboard/patient",
     items: [
       {
         title: "Aperçu",
@@ -512,7 +513,7 @@ export const hospitalDoctorNavItems = [
   },
 ];
 
-export function getNavItems(role: string) {
+export function getNavItems(role: UserRole) {
   switch (role) {
     case "super_admin":
       return superAdminNavItems;

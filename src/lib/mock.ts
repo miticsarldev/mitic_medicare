@@ -1,5 +1,7 @@
+import { UserRole } from "@prisma/client";
+
 export const user = {
-  role: "super_admin",
+  role: "super_admin" as UserRole,
   name: "John Doe",
   email: "john.doe@example.com",
   institution_type_name: undefined,
