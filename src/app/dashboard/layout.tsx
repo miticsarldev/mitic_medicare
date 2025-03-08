@@ -1,7 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ModeToggle } from "@/components/mode-toggle";
-import { NavUser } from "@/components/nav-user";
+import { NotificationBell } from "@/components/notification-bell";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -24,12 +24,9 @@ export default async function Page({ children }: LayoutProps) {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumbs />
           </div>
-          <div className="ml-auto flex items-center justify-center">
+          <div className="ml-auto flex items-center justify-center gap-2 sm:gap-4 mr-4">
+            <NotificationBell />
             <ModeToggle />
-            <NavUser
-              isNavbar
-              btnClassName="hover:bg-transparent focus-visible:ring-0"
-            />
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">

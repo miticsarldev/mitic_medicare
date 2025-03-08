@@ -159,21 +159,21 @@ export const doctorNavItems = [
     title: "Tableau de bord",
     icon: BarChart,
     description: "Vue d'ensemble du médecin",
-    url: "/doctor/dashboard",
+    url: "/dashboard/hopital_doctor",
     items: [
       {
         title: "Aperçu",
-        url: "/doctor/dashboard/overview",
+        url: "/dashboard/hopital_doctor/overview",
         icon: ClipboardList,
       },
       {
         title: "Statistiques & Analyse",
-        url: "/doctor/dashboard/statistics",
+        url: "/dashboard/hopital_doctor/statistics",
         icon: FileText,
       },
       {
         title: "Avis & Retours",
-        url: "/doctor/dashboard/reviews",
+        url: "/dashboard/hopital_doctor/reviews",
         icon: MessageSquare,
       },
     ],
@@ -181,49 +181,76 @@ export const doctorNavItems = [
   {
     title: "Mes Patients",
     icon: Users,
-    url: "/doctor/patients",
+    url: "/dashboard/hopital_doctor/patients",
     items: [
-      { title: "Liste des Patients", url: "/doctor/patients/list" },
+      {
+        title: "Liste des Patients",
+        url: "/dashboard/hopital_doctor/patients/list",
+      },
       {
         title: "Dossiers Médicaux",
-        url: "/doctor/patients/medical-records",
+        url: "/dashboard/hopital_doctor/patients/medical-records",
         icon: FolderHeart,
       },
-      { title: "Demandes Spéciales", url: "/doctor/patients/requests" },
+      {
+        title: "Demandes Spéciales",
+        url: "/dashboard/hopital_doctor/patients/requests",
+      },
     ],
   },
   {
     title: "Rendez-vous",
     icon: Calendar,
-    url: "/doctor/appointments",
+    url: "/dashboard/hopital_doctor/appointments",
     items: [
-      { title: "Tous les Rendez-vous", url: "/doctor/appointments/all" },
-      { title: "Prochains Rendez-vous", url: "/doctor/appointments/upcoming" },
+      {
+        title: "Tous les Rendez-vous",
+        url: "/dashboard/hopital_doctor/appointments/all",
+      },
+      {
+        title: "Prochains Rendez-vous",
+        url: "/dashboard/hopital_doctor/appointments/upcoming",
+      },
       {
         title: "Historique des Rendez-vous",
-        url: "/doctor/appointments/history",
+        url: "/dashboard/hopital_doctor/appointments/history",
       },
     ],
   },
   {
     title: "Mon Profil & Paramètres",
     icon: Settings,
-    url: "/doctor/profile",
+    url: "/dashboard/hopital_doctor/profile",
     items: [
-      { title: "Mon Profil", url: "/doctor/profile/details" },
-      { title: "Disponibilités", url: "/doctor/profile/availability" },
-      { title: "Tarification", url: "/doctor/profile/pricing" },
-      { title: "Paramètres", url: "/doctor/profile/settings" },
+      { title: "Mon Profil", url: "/dashboard/hopital_doctor/profile/details" },
+      {
+        title: "Disponibilités",
+        url: "/dashboard/hopital_doctor/profile/availability",
+      },
+      {
+        title: "Tarification",
+        url: "/dashboard/hopital_doctor/profile/pricing",
+      },
+      {
+        title: "Paramètres",
+        url: "/dashboard/hopital_doctor/profile/settings",
+      },
     ],
   },
   {
     title: "Documentation & Assistance",
     icon: FileText,
-    url: "/doctor/support",
+    url: "/dashboard/hopital_doctor/support",
     items: [
-      { title: "Centre d'Aide", url: "/doctor/support/help-center" },
-      { title: "FAQs", url: "/doctor/support/faq" },
-      { title: "Support Technique", url: "/doctor/support/contact" },
+      {
+        title: "Centre d'Aide",
+        url: "/dashboard/hopital_doctor/support/help-center",
+      },
+      { title: "FAQs", url: "/dashboard/hopital_doctor/support/faq" },
+      {
+        title: "Support Technique",
+        url: "/dashboard/hopital_doctor/support/contact",
+      },
     ],
   },
 ];
@@ -313,15 +340,15 @@ export const patientNavItems = [
   {
     title: "Abonnement & Services",
     icon: Heart,
-    url: "/dashboard/patient/subscription",
+    url: "/dashboard/patient/subscriptions",
     items: [
       {
         title: "Mon Abonnement",
-        url: "/dashboard/patient/subscription/details",
+        url: "/dashboard/patient/subscriptions/details",
       },
       {
         title: "Mettre à Niveau",
-        url: "/dashboard/patient/subscription/upgrade",
+        url: "/dashboard/patient/subscriptions/upgrade",
       },
     ],
   },
@@ -355,21 +382,21 @@ export const hospitalAdminNavItems = [
     title: "Tableau de bord",
     icon: BarChart,
     description: "Vue d'ensemble de l'hôpital",
-    url: "/hospital-admin/dashboard",
+    url: "/dashboard/hopital_admin",
     items: [
       {
         title: "Aperçu",
-        url: "/hospital-admin/dashboard/overview",
+        url: "/dashboard/hopital_admin/overview",
         icon: ClipboardList,
       },
       {
         title: "Statistiques & Analyse",
-        url: "/hospital-admin/dashboard/statistics",
+        url: "/dashboard/hopital_admin/statistics",
         icon: FileText,
       },
       {
         title: "Rapports & Activité",
-        url: "/hospital-admin/dashboard/reports",
+        url: "/dashboard/hopital_admin/reports",
         icon: FileText,
       },
     ],
@@ -377,93 +404,111 @@ export const hospitalAdminNavItems = [
   {
     title: "Gestion des Docteurs",
     icon: Stethoscope,
-    url: "/hospital-admin/doctors",
+    url: "/dashboard/hopital_admin/doctors",
     items: [
-      { title: "Liste des Docteurs", url: "/hospital-admin/doctors/list" },
+      {
+        title: "Liste des Docteurs",
+        url: "/dashboard/hopital_admin/doctors/list",
+      },
       {
         title: "Ajouter un Docteur",
-        url: "/hospital-admin/doctors/add",
+        url: "/dashboard/hopital_admin/doctors/add",
         icon: UserPlus,
       },
       {
         title: "Planning des Docteurs",
-        url: "/hospital-admin/doctors/schedule",
+        url: "/dashboard/hopital_admin/doctors/schedule",
       },
     ],
   },
   {
     title: "Gestion des Patients",
     icon: Users,
-    url: "/hospital-admin/patients",
+    url: "/dashboard/hopital_admin/patients",
     items: [
-      { title: "Liste des Patients", url: "/hospital-admin/patients/list" },
+      {
+        title: "Liste des Patients",
+        url: "/dashboard/hopital_admin/patients/list",
+      },
       {
         title: "Dossiers Médicaux",
-        url: "/hospital-admin/patients/medical-records",
+        url: "/dashboard/hopital_admin/patients/medical-records",
         icon: FolderHeart,
       },
-      { title: "Demandes Spéciales", url: "/hospital-admin/patients/requests" },
+      {
+        title: "Demandes Spéciales",
+        url: "/dashboard/hopital_admin/patients/requests",
+      },
     ],
   },
   {
     title: "Rendez-vous & Planning",
     icon: Calendar,
-    url: "/hospital-admin/appointments",
+    url: "/dashboard/hopital_admin/appointments",
     items: [
       {
         title: "Tous les Rendez-vous",
-        url: "/hospital-admin/appointments/all",
+        url: "/dashboard/hopital_admin/appointments/all",
       },
       {
         title: "Rendez-vous en Attente",
-        url: "/hospital-admin/appointments/pending",
+        url: "/dashboard/hopital_admin/appointments/pending",
       },
       {
         title: "Historique des Rendez-vous",
-        url: "/hospital-admin/appointments/history",
+        url: "/dashboard/hopital_admin/appointments/history",
       },
     ],
   },
   {
     title: "Gestion de l’Hôpital",
     icon: ShieldCheck,
-    url: "/hospital-admin/management",
+    url: "/dashboard/hopital_admin/management",
     items: [
       {
         title: "Informations de l’Hôpital",
-        url: "/hospital-admin/management/details",
+        url: "/dashboard/hopital_admin/management/details",
       },
       {
         title: "Services & Spécialités",
-        url: "/hospital-admin/management/services",
+        url: "/dashboard/hopital_admin/management/services",
       },
       {
         title: "Infrastructure & Équipements",
-        url: "/hospital-admin/management/infrastructure",
+        url: "/dashboard/hopital_admin/management/infrastructure",
       },
     ],
   },
   {
     title: "Paramètres & Sécurité",
     icon: Settings,
-    url: "/hospital-admin/settings",
+    url: "/dashboard/hopital_admin/settings",
     items: [
-      { title: "Mon Profil", url: "/hospital-admin/settings/profile" },
+      { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
       {
         title: "Sécurité & Confidentialité",
-        url: "/hospital-admin/settings/security",
+        url: "/dashboard/hopital_admin/settings/security",
       },
-      { title: "Utilisateurs & Accès", url: "/hospital-admin/settings/access" },
+      {
+        title: "Utilisateurs & Accès",
+        url: "/dashboard/hopital_admin/settings/access",
+      },
     ],
   },
   {
     title: "Assistance & Aide",
     icon: LifeBuoy,
-    url: "/hospital-admin/support",
+    url: "/dashboard/hopital_admin/support",
     items: [
-      { title: "Centre d'Aide", url: "/hospital-admin/support/help-center" },
-      { title: "FAQs", url: "/hospital-admin/support/faq" },
-      { title: "Support Technique", url: "/hospital-admin/support/contact" },
+      {
+        title: "Centre d'Aide",
+        url: "/dashboard/hopital_admin/support/help-center",
+      },
+      { title: "FAQs", url: "/dashboard/hopital_admin/support/faq" },
+      {
+        title: "Support Technique",
+        url: "/dashboard/hopital_admin/support/contact",
+      },
     ],
   },
 ];
@@ -474,16 +519,16 @@ export const hospitalDoctorNavItems = [
     title: "Tableau de bord",
     icon: BarChart,
     description: "Vue d'ensemble du médecin",
-    url: "/hospital-doctor/dashboard",
+    url: "/dashboard/hopital_doctor",
     items: [
       {
         title: "Aperçu",
-        url: "/hospital-doctor/dashboard/overview",
+        url: "/dashboard/hopital_doctor/overview",
         icon: ClipboardList,
       },
       {
         title: "Statistiques & Analyse",
-        url: "/hospital-doctor/dashboard/statistics",
+        url: "/dashboard/hopital_doctor/statistics",
         icon: FileText,
       },
     ],
@@ -491,12 +536,15 @@ export const hospitalDoctorNavItems = [
   {
     title: "Mes Patients",
     icon: Users,
-    url: "/hospital-doctor/patients",
+    url: "/dashboard/hopital_doctor/patients",
     items: [
-      { title: "Liste des Patients", url: "/hospital-doctor/patients/list" },
+      {
+        title: "Liste des Patients",
+        url: "/dashboard/hopital_doctor/patients/list",
+      },
       {
         title: "Dossiers Médicaux",
-        url: "/hospital-doctor/patients/medical-records",
+        url: "/dashboard/hopital_doctor/patients/medical-records",
         icon: FolderHeart,
       },
     ],
@@ -504,38 +552,44 @@ export const hospitalDoctorNavItems = [
   {
     title: "Rendez-vous",
     icon: Calendar,
-    url: "/hospital-doctor/appointments",
+    url: "/dashboard/hopital_doctor/appointments",
     items: [
       {
         title: "Mes Rendez-vous",
-        url: "/hospital-doctor/appointments/upcoming",
+        url: "/dashboard/hopital_doctor/appointments/upcoming",
       },
       {
         title: "Historique des Rendez-vous",
-        url: "/hospital-doctor/appointments/history",
+        url: "/dashboard/hopital_doctor/appointments/history",
       },
     ],
   },
   {
     title: "Hôpital",
     icon: Stethoscope,
-    url: "/hospital-doctor/hospital",
+    url: "/dashboard/hopital_doctor/hospital",
     items: [
       {
         title: "Informations de l’Hôpital",
-        url: "/hospital-doctor/hospital/details",
+        url: "/dashboard/hopital_doctor/hospital/details",
       },
-      { title: "Planning", url: "/hospital-doctor/hospital/schedule" },
+      { title: "Planning", url: "/dashboard/hopital_doctor/hospital/schedule" },
     ],
   },
   {
     title: "Assistance & Aide",
     icon: LifeBuoy,
-    url: "/hospital-doctor/support",
+    url: "/dashboard/hopital_doctor/support",
     items: [
-      { title: "Centre d'Aide", url: "/hospital-doctor/support/help-center" },
-      { title: "FAQs", url: "/hospital-doctor/support/faq" },
-      { title: "Support Technique", url: "/hospital-doctor/support/contact" },
+      {
+        title: "Centre d'Aide",
+        url: "/dashboard/hopital_doctor/support/help-center",
+      },
+      { title: "FAQs", url: "/dashboard/hopital_doctor/support/faq" },
+      {
+        title: "Support Technique",
+        url: "/dashboard/hopital_doctor/support/contact",
+      },
     ],
   },
 ];
