@@ -238,12 +238,12 @@ export const patientNavItems = [
     items: [
       {
         title: "Aperçu",
-        url: "/patient/dashboard/overview",
+        url: "/dashboard/patient/overview",
         icon: UserCheck,
       },
       {
         title: "Statistiques & Suivi",
-        url: "/patient/dashboard/statistics",
+        url: "/dashboard/patient/statistics",
         icon: FileText,
       },
     ],
@@ -251,73 +251,100 @@ export const patientNavItems = [
   {
     title: "Mes Rendez-vous",
     icon: Calendar,
-    url: "/patient/appointments",
+    url: "/dashboard/patient/appointments",
     items: [
-      { title: "Prochains Rendez-vous", url: "/patient/appointments/upcoming" },
+      {
+        title: "Prochains Rendez-vous",
+        url: "/dashboard/patient/appointments/upcoming",
+      },
       {
         title: "Historique des Rendez-vous",
-        url: "/patient/appointments/history",
+        url: "/dashboard/patient/appointments/history",
       },
-      { title: "Prendre un Rendez-vous", url: "/patient/appointments/book" },
+      {
+        title: "Prendre un Rendez-vous",
+        url: "/dashboard/patient/appointments/book",
+      },
     ],
   },
   {
     title: "Mon Dossier Médical",
     icon: FolderHeart,
-    url: "/patient/medical-records",
+    url: "/dashboard/patient/medical-records",
     items: [
-      { title: "Voir Mon Dossier", url: "/patient/medical-records/view" },
-      { title: "Mises à jour", url: "/patient/medical-records/updates" },
+      {
+        title: "Voir Mon Dossier",
+        url: "/dashboard/patient/medical-records/view",
+      },
+      {
+        title: "Mises à jour",
+        url: "/dashboard/patient/medical-records/updates",
+      },
     ],
   },
   {
-    title: "Médecins & Centres de Santé",
+    title: "Médecins & Centres",
     icon: Users,
-    url: "/patient/doctors",
+    url: "/dashboard/patient/doctors",
     items: [
-      { title: "Rechercher un Médecin", url: "/patient/doctors/search" },
-      { title: "Centres Médicaux", url: "/patient/doctors/hospitals" },
-      { title: "Mes Médecins", url: "/patient/doctors/my-doctors" },
+      {
+        title: "Rechercher un Médecin",
+        url: "/dashboard/patient/doctors/search",
+      },
+      {
+        title: "Centres Médicaux",
+        url: "/dashboard/patient/doctors/hospitals",
+      },
+      { title: "Mes Médecins", url: "/dashboard/patient/doctors/my-doctors" },
     ],
   },
   {
     title: "Avis & Feedback",
     icon: MessageSquare,
-    url: "/patient/reviews",
+    url: "/dashboard/patient/reviews",
     items: [
-      { title: "Donner un Avis", url: "/patient/reviews/give-feedback" },
-      { title: "Mes Avis", url: "/patient/reviews/my-feedback" },
+      {
+        title: "Donner un Avis",
+        url: "/dashboard/patient/reviews/give-feedback",
+      },
+      { title: "Mes Avis", url: "/dashboard/patient/reviews/my-feedback" },
     ],
   },
   {
     title: "Abonnement & Services",
     icon: Heart,
-    url: "/patient/subscription",
+    url: "/dashboard/patient/subscription",
     items: [
-      { title: "Mon Abonnement", url: "/patient/subscription/details" },
-      { title: "Mettre à Niveau", url: "/patient/subscription/upgrade" },
+      {
+        title: "Mon Abonnement",
+        url: "/dashboard/patient/subscription/details",
+      },
+      {
+        title: "Mettre à Niveau",
+        url: "/dashboard/patient/subscription/upgrade",
+      },
     ],
   },
   {
     title: "Paramètres & Sécurité",
     icon: Settings,
-    url: "/patient/settings",
+    url: "/dashboard/patient/settings",
     items: [
-      { title: "Mon Profil", url: "/patient/settings/profile" },
+      { title: "Mon Profil", url: "/dashboard/patient/settings/profile" },
       {
         title: "Sécurité & Confidentialité",
-        url: "/patient/settings/security",
+        url: "/dashboard/patient/settings/security",
       },
     ],
   },
   {
     title: "Assistance & Aide",
     icon: LifeBuoy,
-    url: "/patient/support",
+    url: "/dashboard/patient/support",
     items: [
-      { title: "Centre d'Aide", url: "/patient/support/help-center" },
-      { title: "FAQs", url: "/patient/support/faq" },
-      { title: "Support Client", url: "/patient/support/contact" },
+      { title: "Centre d'Aide", url: "/dashboard/patient/support/help-center" },
+      { title: "FAQs", url: "/dashboard/patient/support/faq" },
+      { title: "Support Client", url: "/dashboard/patient/support/contact" },
     ],
   },
 ];

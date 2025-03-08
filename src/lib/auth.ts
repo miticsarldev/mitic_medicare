@@ -25,8 +25,9 @@ export const authOptions: AuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
           where: { email: credentials.email },
+          include: { userProfile: true },
         });
 
         if (!user) {
@@ -41,7 +42,7 @@ export const authOptions: AuthOptions = {
           throw new Error("Incorrect password");
         }
 
-        return user;
+        return { ...user, userProfile: user.userProfile ?? undefined };
       },
     }),
   ],
@@ -50,8 +51,11 @@ export const authOptions: AuthOptions = {
       if (user) {
         return {
           ...token,
+          id: user.id,
           email: user.email,
           name: user.name,
+          image: user.userProfile?.avatarUrl,
+          userProfile: user.userProfile,
           role: user.role,
         };
       }
@@ -66,6 +70,8 @@ export const authOptions: AuthOptions = {
             id: token.id,
             email: token.email,
             name: token.name,
+            image: token.image as string | null | undefined,
+            userProfile: token.userProfile,
             role: token.role,
           },
         };

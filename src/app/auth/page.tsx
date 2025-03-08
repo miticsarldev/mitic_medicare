@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/navbar";
 import Image from "next/image";
 import LoginForm from "@/components/login-form";
 import RegisterForm from "@/components/register-form";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login");
   const router = useRouter();
+  const session = useSession();
+
+  useEffect(() => {
+    if (session.status === "authenticated") {
+      router.push("/dashboard");
+    }
+  }, [session, router]);
 
   // Function to reset everything (clear form & switch tab)
   const resetPage = () => {

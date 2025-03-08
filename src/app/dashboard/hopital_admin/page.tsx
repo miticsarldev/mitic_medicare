@@ -8,7 +8,7 @@ const MainPage = () => {
 
   return (
     <div>
-      <div>Ici un superadmin</div>
+      <div>Ici un Administrateur d&apos;hopital</div>
       {/* Sections avec icônes et chiffres */}
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
         {stats.map((stat, index) => (

@@ -20,10 +20,14 @@ import {
 import Link from "next/link";
 import { getNavItems } from "@/lib/nav-links";
 import { usePathname } from "next/navigation";
-import { user } from "@/lib/mock";
+import { useSession } from "next-auth/react";
+import { UserRole } from "@prisma/client";
 
 export function NavMain() {
-  const navItems = getNavItems(user.role).map((item) => ({
+  const session = useSession();
+  const user = session.data?.user;
+
+  const navItems = getNavItems(user?.role ?? UserRole.patient).map((item) => ({
     ...item,
     url: item.url ?? "#",
   }));
@@ -35,22 +39,27 @@ export function NavMain() {
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {navItems?.map((item) => {
-          const isDefaultOpen =
-            pathname.startsWith(item.url) ||
-            item.items.some((subItem) => pathname.startsWith(subItem.url));
+          const isActive =
+            pathname === item.url ||
+            item.items.some((subItem) => pathname === subItem.url);
 
-          console.log({ isDefaultOpen, url: item.url, pathname });
+          const isDefaultOpen = item.items.some((subItem) =>
+            pathname.startsWith(subItem.url)
+          );
 
           return (
             <Collapsible
               key={item.title}
               asChild
               className="group/collapsible"
-              defaultOpen={isDefaultOpen}
+              defaultOpen={isActive}
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <SidebarMenuButton tooltip={item.title}>
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    isActive={isDefaultOpen}
+                  >
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                     <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -58,15 +67,18 @@ export function NavMain() {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {item.items?.map((subItem) => (
-                      <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton asChild>
-                          <Link href={subItem.url}>
-                            <span>{subItem.title}</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
+                    {item.items?.map((subItem) => {
+                      const isSubActive = pathname === subItem.url;
+                      return (
+                        <SidebarMenuSubItem key={subItem.title}>
+                          <SidebarMenuSubButton asChild isActive={isSubActive}>
+                            <Link href={subItem.url}>
+                              <span>{subItem.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </SidebarMenuItem>
