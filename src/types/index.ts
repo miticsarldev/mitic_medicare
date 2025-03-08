@@ -1,7 +1,19 @@
 export interface Doctor {
+  id: number;
+  name: string;
+  departement: string
+  specialty: string;
+  email: string;
+  phone: string;
+  status: "Actif" | "Inactif";
+  location: string;
+  image: string;
+  }
+  export interface Hospital {
     id: number;
     name: string;
-    specialty: string;
-    location: string;
-    image: string;
+    address: string;
+    phone: string;
+    email: string;
   }
+  

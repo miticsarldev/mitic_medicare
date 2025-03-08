@@ -5,7 +5,11 @@ export const doctors: Doctor[] = [
       name: "Dr Amed Kouakou",
       specialty: "Généraliste",
       location: "Bamako-coura, Bamako Mali",
-      image: "/doctor1.jpg", 
+      image: "/doctor1.jpg",
+      departement: "",
+      email: "",
+      phone: "",
+      status: "Actif"
     },
     {
       id: 2,
@@ -13,6 +17,10 @@ export const doctors: Doctor[] = [
       specialty: "Dentiste",
       location: "Hamdallaye, Bamako Mali",
       image: "/doctor2.jpg",
+      departement: "",
+      email: "",
+      phone: "",
+      status: "Actif"
     },
     {
       id: 3,
@@ -20,6 +28,10 @@ export const doctors: Doctor[] = [
       specialty: "Cardiologue",
       location: "Badalabougou, Bamako Mali",
       image: "/doctor3.jpg",
+      departement: "",
+      email: "",
+      phone: "",
+      status: "Actif"
     },
     {
       id: 4,
@@ -27,5 +39,9 @@ export const doctors: Doctor[] = [
       specialty: "Pneumologue",
       location: "Sabalibougou, Bamako Mali",
       image: "/doctor4.jpg",
+      departement: "",
+      email: "",
+      phone: "",
+      status: "Actif"
     },
   ];
