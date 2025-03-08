@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { signOut, useSession } from "next-auth/react";
-import { roleLabels } from "@/constant";
 
 type NavItemProps = {
   btnClassName?: string;
@@ -66,9 +65,6 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-bold">{user?.name}</span>
                 <span className="truncate text-xs">{user?.email}</span>
-                <span className="truncate font-bold text-[10px] leading-3 text-accent-foreground text-center">
-                  {user?.role && (roleLabels[user.role] ?? "")}
-                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -88,7 +84,12 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
                         src={user?.userProfile?.avatarUrl ?? undefined}
                         alt={`${user?.name} Image Profile`}
                       />
-                      <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                      <AvatarFallback className="rounded-lg">
+                        {user?.name
+                          ?.split(" ")
+                          .map((n) => n.charAt(0))
+                          .join("")}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">

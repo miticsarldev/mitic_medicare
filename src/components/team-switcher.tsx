@@ -1,98 +1,175 @@
 "use client";
 
 import * as React from "react";
-import { ChevronsUpDown, Plus } from "lucide-react";
-
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  HeartPulse,
+  Shield,
+  Star,
+  Stethoscope,
+  User,
+  UserCheck,
+} from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
+import { UserRole } from "@prisma/client";
+import { useSession } from "next-auth/react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
-const teams = [
-  {
-    name: "Acme Inc.",
-    logo: Plus,
-    plan: "Free",
+type RoleStyle = {
+  name: string;
+  icon: React.ElementType;
+  gradient: string;
+  textColor: string;
+  bgColor: string;
+  borderColor: string;
+  description: string;
+};
+
+const roleStyles: Record<UserRole, RoleStyle> = {
+  patient: {
+    name: "Patient",
+    icon: HeartPulse,
+    gradient: "from-blue-500 to-cyan-400",
+    textColor: "text-blue-700",
+    bgColor: "bg-blue-100", // Slightly stronger background
+    borderColor: "border-blue-300",
+    description: "Accès patient",
   },
-  {
-    name: "Acme Corp.",
-    logo: Plus,
-    plan: "Pro",
+  hospital_doctor: {
+    name: "Médecin",
+    icon: Stethoscope,
+    gradient: "from-emerald-500 to-green-400",
+    textColor: "text-emerald-700",
+    bgColor: "bg-emerald-100",
+    borderColor: "border-emerald-300",
+    description: "Accès médecin",
   },
-  {
-    name: "Acme Ltd.",
-    logo: Plus,
-    plan: "Enterprise",
+  hospital_admin: {
+    name: "Administrateur",
+    icon: Shield,
+    gradient: "from-purple-500 to-indigo-400",
+    textColor: "text-purple-700",
+    bgColor: "bg-purple-100",
+    borderColor: "border-purple-300",
+    description: "Accès complet",
   },
-];
+  independent_doctor: {
+    name: "Médecin Indépendant",
+    icon: UserCheck,
+    gradient: "from-amber-500 to-orange-400",
+    textColor: "text-amber-700",
+    bgColor: "bg-amber-100",
+    borderColor: "border-amber-300",
+    description: "Accès médecin indépendant",
+  },
+  super_admin: {
+    name: "Super Administrateur",
+    icon: Star,
+    gradient: "from-red-500 to-pink-400",
+    textColor: "text-red-700",
+    bgColor: "bg-red-100",
+    borderColor: "border-red-300",
+    description: "Accès établissement & gestion avancée",
+  },
+};
 
 export function TeamSwitcher() {
-  const { isMobile } = useSidebar();
-  const [activeTeam, setActiveTeam] = React.useState(teams[2]);
+  const session = useSession();
+  const user = session?.data?.user;
+
+  const roleStyle = user?.role
+    ? roleStyles[user.role.toLowerCase()]
+    : {
+        name: user?.role,
+        icon: User,
+        gradient: "from-gray-500 to-gray-400",
+        textColor: "text-gray-700",
+        bgColor: "bg-gray-50",
+        borderColor: "border-gray-200",
+        description: "Utilisateur",
+      };
+
+  const RoleIcon = roleStyle.icon;
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+        <SidebarMenuButton
+          size="lg"
+          className="group overflow-hidden transition-all duration-300 hover:shadow-md"
+        >
+          {/* Fond avec dégradé qui apparaît au survol */}
+          <div
+            className={cn(
+              "absolute inset-0 opacity-0 bg-gradient-to-r transition-opacity duration-300 group-hover:opacity-10",
+              roleStyle.gradient
+            )}
+          />
+
+          {/* Avatar avec bordure colorée */}
+          <div className="relative">
+            <Avatar
+              className={cn(
+                "size-8 ring-2 ring-offset-2 transition-all duration-300",
+                `ring-${roleStyle.borderColor}`,
+                "group-hover:ring-offset-4"
+              )}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <activeTeam.logo className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {activeTeam.name}
-                </span>
-                <span className="truncate text-xs">{activeTeam.plan}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            align="start"
-            side={isMobile ? "bottom" : "right"}
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Teams
-            </DropdownMenuLabel>
-            {teams.map((team, index) => (
-              <DropdownMenuItem
-                key={team.name}
-                onClick={() => setActiveTeam(team)}
-                className="gap-2 p-2"
+              <AvatarImage
+                src={user?.userProfile?.avatarUrl ?? undefined}
+                alt={`${user?.name}'s Image`}
+              />
+              <AvatarFallback
+                className={cn(
+                  "bg-gradient-to-br text-white font-medium",
+                  roleStyle.gradient
+                )}
               >
-                <div className="flex size-6 items-center justify-center rounded-sm border">
-                  <team.logo className="size-4 shrink-0" />
-                </div>
-                {team.name}
-                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2">
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                <Plus className="size-4" />
-              </div>
-              <div className="font-medium text-muted-foreground">Add team</div>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                {user?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("") ?? "MC"}
+              </AvatarFallback>
+            </Avatar>
+
+            {/* Icône de rôle en bas à droite de l'avatar */}
+            <div
+              className={cn(
+                "absolute -bottom-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center",
+                "border-2 border-background",
+                "bg-gradient-to-br text-white",
+                roleStyle.gradient
+              )}
+            >
+              <RoleIcon className="h-3 w-3" />
+            </div>
+          </div>
+
+          {/* Informations utilisateur */}
+          <div className="grid flex-1 text-left text-sm leading-tight ml-3">
+            <span className="truncate font-semibold">{user?.name}</span>
+            <div className="flex items-center gap-1.5">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "px-2 py-0.5 text-xs font-normal transition-colors duration-300",
+                  roleStyle.bgColor,
+                  roleStyle.textColor,
+                  roleStyle.borderColor,
+                  "group-hover:bg-white"
+                )}
+              >
+                <RoleIcon className="h-3 w-3 mr-1" />
+                {roleStyle.name}
+              </Badge>
+            </div>
+          </div>
+        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   );
