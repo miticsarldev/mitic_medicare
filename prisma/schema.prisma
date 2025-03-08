@@ -21,23 +21,18 @@ enum UserRole {
     patient
 }
 
-enum InstitutionType {
-    independent_doctor
-    hospital
-}
-
 enum PatientSubscriptionPlan {
     free
     basic
     premium
 }
 
-enum DoctorSubscriptionPlan {
-    basic
-    premium
+enum InstitutionType {
+    clinic
+    hospital
 }
 
-enum HospitalSubscriptionPlan {
+enum InstitutionSubscriptionPlan {
     standard
     enterprise
 }
@@ -49,44 +44,52 @@ enum SubscriptionStatus {
     expired
 }
 
+enum UserGenre {
+    male
+    female
+}
+
+enum AppointmentStatus {
+    PENDING
+    CONFIRMED
+    CANCELED
+}
+
 model User {
     id            String    @id @default(cuid())
     name          String
-    email         String    @unique
-    password      String
+    email         String    @unique @db.VarChar(255)
+    password      String    @db.Text
     role          UserRole
     emailVerified DateTime?
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
 
     // Relations
-    userProfile            UserProfile?
-    accounts               Account[]
-    sessions               Session[]
-    patientSubscription    PatientSubscription?
-    doctorSubscription     DoctorSubscription?   @relation(fields: [doctorSubscriptionId], references: [id])
-    hospitalSubscription   HospitalSubscription? @relation(fields: [hospitalSubscriptionId], references: [id])
-    doctorSubscriptionId   String?
-    hospitalSubscriptionId String?
-    Hospital               Hospital?
-    Doctor                 Doctor?
-    Patient                Patient?
+    userProfile          UserProfile?
+    accounts             Account[]
+    sessions             Session[]
+    patientSubscriptions PatientSubscription[]
+    institution          Institution? // If user is an institution admin
+    doctor               Doctor?
+    patient              Patient?
+    MedicalHistory       MedicalHistory[]
 }
 
 model UserProfile {
     id              String           @id @default(cuid())
     userId          String           @unique
     user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-    institutionId   String? // ID of Hospital if assigned
     institutionType InstitutionType?
-    phone           String?
-    address         String?
+    phone           String?          @unique @db.VarChar(20)
+    address         String?          @db.VarChar(255)
     city            String?
     state           String?
     zipCode         String?
     country         String?
     bio             String?
     avatarUrl       String?
+    genre           UserGenre?
     createdAt       DateTime         @default(now())
     updatedAt       DateTime         @updatedAt
 }
@@ -126,9 +129,12 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
-model Hospital {
-    id          String   @id @default(cuid())
+model Institution {
+    id          String          @id @default(cuid())
     name        String
+    type        InstitutionType
+    adminId     String          @unique
+    admin       User            @relation(fields: [adminId], references: [id], onDelete: Cascade)
     address     String
     city        String
     state       String
@@ -139,34 +145,28 @@ model Hospital {
     website     String?
     description String?
     logoUrl     String?
-    adminId     String   @unique
-    admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+    createdAt   DateTime        @default(now())
+    updatedAt   DateTime        @updatedAt
 
     // Relations
-    doctors      Doctor[]
-    patients     Patient[]
-    subscription HospitalSubscription?
+    doctors       Doctor[]
+    subscriptions InstitutionSubscription[]
 }
 
 model Doctor {
-    id              String           @id @default(cuid())
-    userId          String           @unique
-    user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-    specialization  String
-    licenseNumber   String
-    isVerified      Boolean          @default(false)
-    institutionId   String? // Nullable if independent
-    institutionType InstitutionType?
-    createdAt       DateTime         @default(now())
-    updatedAt       DateTime         @updatedAt
+    id             String       @id @default(cuid())
+    userId         String       @unique
+    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    institutionId  String?
+    institution    Institution? @relation(fields: [institutionId], references: [id])
+    specialization String
+    licenseNumber  String       @unique
+    isVerified     Boolean      @default(false)
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
 
     // Relations
     appointments Appointment[]
-    subscription DoctorSubscription?
-    Hospital     Hospital?           @relation(fields: [hospitalId], references: [id])
-    hospitalId   String?
 }
 
 model Patient {
@@ -181,73 +181,62 @@ model Patient {
     updatedAt    DateTime @updatedAt
 
     // Relations
-    appointments          Appointment[]
-    subscription          PatientSubscription? @relation(fields: [patientSubscriptionId], references: [id])
-    medicalHistories      MedicalHistory[]
-    Hospital              Hospital?            @relation(fields: [hospitalId], references: [id])
-    hospitalId            String?
-    patientSubscriptionId String?
+    appointments     Appointment[]
+    subscriptions    PatientSubscription[]
+    medicalHistories MedicalHistory[]
 }
 
 model Appointment {
-    id        String   @id @default(cuid())
+    id        String            @id @default(cuid())
     patientId String
-    patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    patient   Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
     doctorId  String
-    doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+    doctor    Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
     date      DateTime
-    status    String   @default("PENDING") // PENDING, CONFIRMED, CANCELED
-    createdAt DateTime @default(now())
+    status    AppointmentStatus @default(PENDING)
+    createdAt DateTime          @default(now())
 }
 
 model PatientSubscription {
     id        String                  @id @default(cuid())
-    userId    String                  @unique
-    user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    patientId String
+    patient   Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
     plan      PatientSubscriptionPlan
     status    SubscriptionStatus
     startDate DateTime
     endDate   DateTime
     createdAt DateTime                @default(now())
     updatedAt DateTime                @updatedAt
-    Patient   Patient[]
+    User      User?                   @relation(fields: [userId], references: [id])
+    userId    String?
+
+    @@unique([patientId, plan]) // Prevent duplicate plans for the same patient
 }
 
-model DoctorSubscription {
-    id        String                 @id @default(cuid())
-    doctorId  String                 @unique
-    doctor    Doctor                 @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-    plan      DoctorSubscriptionPlan
-    status    SubscriptionStatus
-    startDate DateTime
-    endDate   DateTime
-    createdAt DateTime               @default(now())
-    updatedAt DateTime               @updatedAt
-    User      User[]
-}
+model InstitutionSubscription {
+    id            String                      @id @default(cuid())
+    institutionId String
+    institution   Institution                 @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+    plan          InstitutionSubscriptionPlan
+    status        SubscriptionStatus
+    startDate     DateTime
+    endDate       DateTime
+    createdAt     DateTime                    @default(now())
+    updatedAt     DateTime                    @updatedAt
 
-model HospitalSubscription {
-    id         String                   @id @default(cuid())
-    hospitalId String                   @unique
-    hospital   Hospital                 @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-    plan       HospitalSubscriptionPlan
-    status     SubscriptionStatus
-    startDate  DateTime
-    endDate    DateTime
-    createdAt  DateTime                 @default(now())
-    updatedAt  DateTime                 @updatedAt
-    User       User[]
+    @@unique([institutionId, plan]) // Prevent duplicate plans for the same institution
 }
 
 model MedicalHistory {
-    id        String   @id @default(cuid())
-    patientId String
-    patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-    title     String // Short description of the medical history entry
-    details   String? // JSON or text format for medical records
-    createdBy String // Doctor or hospital ID that created the record
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    id            String   @id @default(cuid())
+    patientId     String
+    patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    title         String
+    details       String?
+    createdBy     String
+    createdByUser User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
 
     @@index([patientId]) // Index for quick lookups
 }

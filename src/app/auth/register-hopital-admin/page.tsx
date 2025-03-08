@@ -17,8 +17,9 @@ export default function HospitalAdminRegister() {
               alt="Doctors"
               width={400}
               height={200}
-              objectFit="cover"
-              className="rounded-l-lg absolute top-[-60px]"
+              priority
+              style={{ width: "100%", height: "auto" }}
+              className="rounded-l-lg absolute top-[-60px] object-cover"
             />
           </div>
 

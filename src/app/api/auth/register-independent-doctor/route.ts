@@ -1,15 +1,28 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "@/utils/hash";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, specialization, licenseNumber } =
-      await req.json();
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      speciality,
+      licenseNumber,
+    } = await req.json();
 
-    if (!email || !password || !name || !specialization || !licenseNumber) {
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !password ||
+      !speciality ||
+      !licenseNumber
+    ) {
       return NextResponse.json(
         { error: "Tous les champs sont requis." },
         { status: 400 }
@@ -24,22 +37,56 @@ export async function POST(req: Request) {
       );
     }
 
+    const existingPhone = await prisma.userProfile.findFirst({
+      where: { phone },
+    });
+    if (existingPhone) {
+      return NextResponse.json(
+        { error: "Numéro de téléphone déjà utilisé." },
+        { status: 400 }
+      );
+    }
+
+    const existingLicenseNumber = await prisma.doctor.findFirst({
+      where: { licenseNumber },
+    });
+    if (existingLicenseNumber) {
+      return NextResponse.json(
+        { error: "Numéro de licence déjà utilisé." },
+        { status: 400 }
+      );
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const name = `${firstName} ${lastName}`.trim();
     const hashedPassword = await hashPassword(password);
 
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: "independent_doctor",
-        Doctor: {
-          create: {
-            specialization,
-            licenseNumber,
-            institutionType: "independent_doctor",
-          },
+    const newUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name,
+          email: normalizedEmail,
+          password: hashedPassword,
+          role: "independent_doctor",
         },
-      },
+      });
+
+      await tx.userProfile.create({
+        data: {
+          userId: user.id,
+          phone,
+        },
+      });
+
+      await tx.doctor.create({
+        data: {
+          userId: user.id,
+          specialization: speciality,
+          licenseNumber,
+        },
+      });
+
+      return user;
     });
 
     return NextResponse.json(

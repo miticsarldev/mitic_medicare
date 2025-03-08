@@ -1,24 +1,48 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "@/utils/hash";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, role } = await req.json();
+    const { firstName, lastName, email, password, phoneNumber, genre } =
+      await req.json();
 
-    if (!name || !email || !password || !role) {
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !password ||
+      !phoneNumber ||
+      genre
+    ) {
       return NextResponse.json(
         { error: "Tous les champs sont requis." },
         { status: 400 }
       );
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase();
+
+    const name = `${firstName} ${lastName}`.trim();
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
     if (existingUser) {
       return NextResponse.json(
         { error: "Email déjà utilisé." },
+        { status: 400 }
+      );
+    }
+
+    const existingPhone = await prisma.userProfile.findFirst({
+      where: { phone: phoneNumber },
+    });
+
+    if (existingPhone) {
+      return NextResponse.json(
+        { error: "Numéro de téléphone déjà utilisé." },
         { status: 400 }
       );
     }
@@ -28,9 +52,24 @@ export async function POST(req: Request) {
     const newUser = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
-        role,
+        role: "patient",
+        userProfile: {
+          create: {
+            phone: phoneNumber,
+            genre,
+          },
+        },
+        patient: {
+          create: {
+            dateOfBirth: new Date(),
+          },
+        },
+      },
+      include: {
+        userProfile: true,
+        patient: true,
       },
     });
 

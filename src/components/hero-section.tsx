@@ -20,7 +20,10 @@ export function HeroSection() {
       case "medecin":
         return (
           <>
-            <Input placeholder="Nom du professionnel de santé" className="md:col-span-1" />
+            <Input
+              placeholder="Nom du professionnel de santé"
+              className="md:col-span-1"
+            />
             <Input placeholder="Spécialité" className="md:col-span-1" />
             <Input type="email" placeholder="Mail" className="md:col-span-1" />
             <Input placeholder="Ville" className="md:col-span-1" />
@@ -30,7 +33,10 @@ export function HeroSection() {
       case "pharmacie":
         return (
           <>
-            <Input placeholder="Nom de la pharmacie" className="md:col-span-2" />
+            <Input
+              placeholder="Nom de la pharmacie"
+              className="md:col-span-2"
+            />
             <Input placeholder="Ville" className="md:col-span-1" />
             <Input placeholder="Quartier" className="md:col-span-1" />
           </>
@@ -46,8 +52,15 @@ export function HeroSection() {
       case "questions":
         return (
           <>
-            <Input placeholder="Sujet de la question" className="md:col-span-2" />
-            <Input placeholder="Votre email" type="email" className="md:col-span-2" />
+            <Input
+              placeholder="Sujet de la question"
+              className="md:col-span-2"
+            />
+            <Input
+              placeholder="Votre email"
+              type="email"
+              className="md:col-span-2"
+            />
           </>
         );
 
@@ -67,13 +80,17 @@ export function HeroSection() {
                 <br />à propos de votre santé
               </h1>
               <p className="text-base text-muted-foreground max-w-[600px]">
-                Une bonne santé est un état de bien-être mental, physique et social et ne signifie pas seulement l&apos;absence de maladies.
+                Une bonne santé est un état de bien-être mental, physique et
+                social et ne signifie pas seulement l&apos;absence de maladies.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6">
               <Link href="/appointments">
-                <Button size="lg" className="gap-2 bg-[#107ACA] flex items-center justify-center hover:bg-[#0A5A8A] transition-all duration-300">
+                <Button
+                  size="lg"
+                  className="gap-2 bg-[#107ACA] flex items-center justify-center hover:bg-[#0A5A8A] transition-all duration-300"
+                >
                   <Calendar className="h-5 w-5" />
                   Prendre rendez-vous
                 </Button>
@@ -109,6 +126,8 @@ export function HeroSection() {
               alt="Doctors"
               width={400}
               height={400}
+              priority
+              style={{ width: "100%", height: "auto" }}
             />
           </div>
 
@@ -146,7 +165,11 @@ export function HeroSection() {
 
               {/* Sur Pc */}
               <div className="hidden sm:block">
-                <Tabs defaultValue="medecin" className="w-full" onValueChange={setActiveTab}>
+                <Tabs
+                  defaultValue="medecin"
+                  className="w-full"
+                  onValueChange={setActiveTab}
+                >
                   <TabsList className="grid grid-cols-4 mb-6">
                     <TabsTrigger value="medecin">Médecin</TabsTrigger>
                     <TabsTrigger value="pharmacie">Pharmacie</TabsTrigger>

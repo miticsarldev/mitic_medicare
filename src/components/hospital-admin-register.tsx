@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
@@ -10,30 +10,82 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { Eye, EyeOff, Mail, Phone, Building, MapPin } from "lucide-react";
+import { countries, institutionTypes, specialities } from "@/constant";
 
 const hospitalAdminSchema = z.object({
-  firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
-  lastName: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z.string().email("L'adresse email doit avoir un format valide"),
+  lastName: z
+    .string()
+    .min(2, "Le nom doit contenir au moins 2 caractères")
+    .max(50, "Le nom ne peut pas dépasser 50 caractères")
+    .regex(
+      /^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/,
+      "Le nom ne doit contenir que des lettres"
+    ),
+  firstName: z
+    .string()
+    .min(2, "Le prénom doit contenir au moins 2 caractères")
+    .max(50, "Le prénom ne peut pas dépasser 50 caractères")
+    .regex(
+      /^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/,
+      "Le prénom ne doit contenir que des lettres"
+    ),
+  phone: z
+    .string()
+    .regex(
+      /^\+?[0-9]{9,15}$/,
+      "Numéro de téléphone invalide. Ex: +223123456789"
+    ),
+  email: z
+    .string()
+    .email("L'adresse email doit être valide")
+    .transform((val) => val.toLowerCase()),
   password: z
     .string()
-    .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
-  phoneNumber: z
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+    .max(100, "Le mot de passe est trop long")
+    .regex(
+      /[A-Z]/,
+      "Le mot de passe doit contenir au moins une lettre majuscule"
+    )
+    .regex(
+      /[a-z]/,
+      "Le mot de passe doit contenir au moins une lettre minuscule"
+    )
+    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
+    .regex(
+      /[\W_]/,
+      "Le mot de passe doit contenir au moins un caractère spécial"
+    ),
+  speciality: z.string().min(1, "Veuillez sélectionner une spécialité"),
+  licenseNumber: z.string().min(5, "Le numéro de licence est requis"),
+  institutionName: z.string().min(2, "Le nom de l'hôpital est requis"),
+  institutionType: z.enum(["clinic", "hospital"], {
+    errorMap: () => ({ message: "Le type d'établissement est requis." }),
+  }),
+  institutionPhone: z
     .string()
-    .min(10, "Le numéro de téléphone doit avoir au moins 10 chiffres"),
-  hospitalName: z.string().min(2, "Le nom de l'hôpital est requis"),
-  hospitalPhone: z
-    .string()
-    .min(
-      8,
+    .regex(
+      /^\+?[0-9]{9,15}$/,
       "Le numéro de téléphone de l'hôpital doit avoir au moins 8 chiffres"
     ),
-  hospitalAddress: z.string().min(5, "L'adresse de l'hôpital est requise"),
-  hospitalCity: z.string().min(2, "La ville est requise"),
-  hospitalPostalCode: z.string().min(5, "Le code postal est requis"),
-  hospitalCountry: z.string().min(2, "Le pays est requis"),
-  termsAccepted: z.boolean().refine((val) => val === true, {
+  institutionEmail: z
+    .string()
+    .email("L'adresse email doit être valide")
+    .transform((val) => val.toLowerCase()),
+  institutionAddress: z.string().min(5, "L'adresse de l'hôpital est requise"),
+  institutionCity: z.string().min(2, "La ville est requise"),
+  institutionState: z.string().min(2, "L'état ou la région est requis."),
+  institutionZipCode: z.string().min(2, "Le code postal est requis"),
+  institutionCountry: z.string().min(2, "Le pays est requis"),
+  terms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les conditions d'utilisation",
   }),
 });
@@ -48,33 +100,42 @@ const HospitalAdminRegisterForm = () => {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<HospitalAdminFormValues>({
     resolver: zodResolver(hospitalAdminSchema),
     defaultValues: {
-      termsAccepted: false,
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      password: "",
+      speciality: "",
+      licenseNumber: "",
+      institutionName: "",
+      institutionType: undefined,
+      institutionPhone: "",
+      institutionEmail: "",
+      institutionAddress: "",
+      institutionCity: "",
+      institutionState: "",
+      institutionZipCode: "",
+      institutionCountry: "",
+      terms: false,
     },
   });
 
   const onSubmit = async (data: HospitalAdminFormValues) => {
+    console.log(data);
+
     try {
       const response = await fetch("/api/auth/register-hospital-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          password: data.password,
-          phoneNumber: data.phoneNumber,
-          hospitalName: data.hospitalName,
-          hospitalPhone: data.hospitalPhone,
-          hospitalAddress: data.hospitalAddress,
-          hospitalCity: data.hospitalCity,
-          hospitalPostalCode: data.hospitalPostalCode,
-          hospitalCountry: data.hospitalCountry,
-        }),
+        body: JSON.stringify(data),
       });
+
+      console.log(response);
 
       const result = await response.json();
       if (!response.ok)
@@ -86,7 +147,6 @@ const HospitalAdminRegisterForm = () => {
           "Votre compte administrateur d'hôpital a été créé avec succès.",
       });
 
-      // After successful registration, you might want to redirect to a dashboard or login page
       router.push("/auth");
     } catch (err) {
       console.error(err);
@@ -94,7 +154,9 @@ const HospitalAdminRegisterForm = () => {
         variant: "destructive",
         title: "Échec de l'inscription",
         description:
-          "Une erreur s'est produite lors de l'inscription. Veuillez réessayer.",
+          err instanceof Error
+            ? err.message
+            : "Une erreur s'est produite lors de l'inscription. Veuillez réessayer.",
       });
     }
   };
@@ -102,190 +164,348 @@ const HospitalAdminRegisterForm = () => {
   return (
     <div className="space-y-4">
       <h1 className="text-lg sm:text-xl font-bold text-center text-[#107ACA]">
-        Inscription d&apos;un Administrateur au compte d&apos;Hôpital
+        Inscription d&apos;une institution (hôpital et/ou clinique) et son
+        Administrateur
       </h1>
-      <p className="text-muted-foreground text-center text-sm">
+      <p className="text-muted-foreground text-center text-xs">
         Remplissez le formulaire ci-dessous pour vous inscrire en tant
-        qu&apos;administrateur pour votre hôpital.
+        qu&apos;administrateur pour votre hôpital et fournir des informations
+        sur votre hôpital ou clinique.
       </p>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
-        <div className="text-sm font-medium border-b text-center">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="text-sm font-bold border-b text-center mb-2">
           Les informations personnelles de l&apos;administrateur
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="firstName">Prénom</Label>
-            <Input id="firstName" {...register("firstName")} />
-            {errors.firstName && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.firstName.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="lastName">Nom</Label>
-            <Input id="lastName" {...register("lastName")} />
-            {errors.lastName && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.lastName.message}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Input id="email" type="email" {...register("email")} />
-              <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            </div>
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="phoneNumber">Votre numéro de téléphone</Label>
-            <div className="relative">
-              <Input id="phoneNumber" {...register("phoneNumber")} />
-              <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            </div>
-            {errors.phoneNumber && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.phoneNumber.message}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="password">Mot de passe</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              {...register("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="firstName">Prénom</Label>
+              <Input id="firstName" {...register("firstName")} />
+              {errors.firstName && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.firstName.message}
+                </p>
               )}
-            </button>
+            </div>
+            <div>
+              <Label htmlFor="lastName">Nom</Label>
+              <Input id="lastName" {...register("lastName")} />
+              {errors.lastName && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.lastName.message}
+                </p>
+              )}
+            </div>
           </div>
-          {errors.password && (
-            <p className="text-red-500 text-xs mt-1">
-              {errors.password.message}
-            </p>
-          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Input id="email" type="email" {...register("email")} />
+                <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="phone">Votre numéro de téléphone</Label>
+              <div className="relative">
+                <Input id="phone" {...register("phone")} />
+                <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.phone.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="password">Mot de passe</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-red-500 text-xs mt-0.5">
+                {errors.password.message}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="speciality">Spécialité *</Label>
+              <Controller
+                name="speciality"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <SelectTrigger id="speciality">
+                      <SelectValue placeholder="Sélectionnez votre spécialité" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {specialities.map((speciality) => (
+                        <SelectItem
+                          key={speciality.value}
+                          value={speciality.value}
+                        >
+                          {speciality.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.speciality && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.speciality.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="licenseNumber">Licence *</Label>
+              <Input
+                {...register("licenseNumber")}
+                type="text"
+                id="licenseNumber"
+                placeholder="Votre licence"
+              />
+              {errors.licenseNumber && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.licenseNumber.message}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="text-sm font-medium border-b text-center">
+        <div className="text-sm font-bold border-b text-center my-4">
           Les informations sur le centre de santé.
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="hospitalName">Nom de l&apos;hôpital</Label>
-            <div className="relative">
-              <Input id="hospitalName" {...register("hospitalName")} />
-              <Building className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="institutionName">Nom de l&apos;hôpital</Label>
+              <div className="relative">
+                <Input id="institutionName" {...register("institutionName")} />
+                <Building className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              {errors.institutionName && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionName.message}
+                </p>
+              )}
             </div>
-            {errors.hospitalName && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.hospitalName.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="hospitalPhone">
-              Numéro de téléphone de l&apos;hopital
-            </Label>
-            <div className="relative">
-              <Input id="hospitalPhone" {...register("hospitalPhone")} />
-              <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <div>
+              <Label htmlFor="institutionType">Le type d&apos;hopital</Label>
+              <Controller
+                control={control}
+                name="institutionType"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger id="institutionType">
+                      <SelectValue placeholder="Sélectionnez le pays de l'hôpital" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutionTypes.map((country) => (
+                        <SelectItem key={country.value} value={country.value}>
+                          {country.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.institutionType && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionType.message}
+                </p>
+              )}
             </div>
-            {errors.hospitalPhone && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.hospitalPhone.message}
-              </p>
-            )}
           </div>
-        </div>
-        <div>
-          <Label htmlFor="hospitalAddress">Adresse de l&apos;hôpital</Label>
-          <div className="relative">
-            <Input id="hospitalAddress" {...register("hospitalAddress")} />
-            <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="institutionPhone">
+                Numéro de téléphone de l&apos;hopital
+              </Label>
+              <div className="relative">
+                <Input
+                  id="institutionPhone"
+                  {...register("institutionPhone")}
+                />
+                <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              {errors.institutionPhone && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionPhone.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="institutionEmail">Email de l&apos;hopital</Label>
+              <div className="relative">
+                <Input
+                  id="institutionEmail"
+                  {...register("institutionEmail")}
+                />
+                <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              {errors.institutionEmail && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionEmail.message}
+                </p>
+              )}
+            </div>
           </div>
-          {errors.hospitalAddress && (
-            <p className="text-red-500 text-xs mt-1">
-              {errors.hospitalAddress.message}
-            </p>
-          )}
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="institutionAddress">
+                Adresse de l&apos;hôpital
+              </Label>
+              <div className="relative">
+                <Input
+                  id="institutionAddress"
+                  {...register("institutionAddress")}
+                />
+                <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              {errors.institutionAddress && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionAddress.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="institutionCity">Ville de l&apos;hôpital</Label>
+              <Input id="institutionCity" {...register("institutionCity")} />
+              {errors.institutionCity && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionCity.message}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="institutionState">Etat de l&apos;hôpital</Label>
+              <div className="relative">
+                <Input
+                  id="institutionState"
+                  {...register("institutionState")}
+                />
+                <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              {errors.institutionState && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionState.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="institutionZipCode">
+                Code postal de l&apos;hôpital
+              </Label>
+              <Input
+                id="institutionZipCode"
+                {...register("institutionZipCode")}
+              />
+              {errors.institutionZipCode && (
+                <p className="text-red-500 text-xs mt-0.5">
+                  {errors.institutionZipCode.message}
+                </p>
+              )}
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <Label htmlFor="hospitalCity">Ville de l&apos;hôpital</Label>
-            <Input id="hospitalCity" {...register("hospitalCity")} />
-            {errors.hospitalCity && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.hospitalCity.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="hospitalPostalCode">
-              Code postal de l&apos;hôpital
-            </Label>
-            <Input
-              id="hospitalPostalCode"
-              {...register("hospitalPostalCode")}
+            <Label htmlFor="institutionCountry">Pays de l&apos;hôpital</Label>
+            <Controller
+              control={control}
+              name="institutionCountry"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger id="institutionCountry">
+                    <SelectValue placeholder="Sélectionnez le pays de l'hôpital" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem key={country.value} value={country.value}>
+                        {country.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             />
-            {errors.hospitalPostalCode && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.hospitalPostalCode.message}
+            {errors.institutionCountry && (
+              <p className="text-red-500 text-xs mt-0.5">
+                {errors.institutionCountry.message}
               </p>
             )}
           </div>
-          <div>
-            <Label htmlFor="hospitalCountry">Pays de l&apos;hôpital</Label>
-            <Input id="hospitalCountry" {...register("hospitalCountry")} />
-            {errors.hospitalCountry && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.hospitalCountry.message}
-              </p>
-            )}
-          </div>
-        </div>
 
-        <div className="flex items-center space-x-2">
-          <Checkbox id="termsAccepted" {...register("termsAccepted")} />
-          <label htmlFor="termsAccepted" className="text-sm font-medium">
-            J&apos;accepte les conditions d&apos;utilisation
-          </label>
+          <div className="flex flex-col items-start">
+            <Controller
+              name="terms"
+              control={control}
+              render={({ field }) => (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="terms"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <label htmlFor="terms" className="text-sm font-medium">
+                    J&apos;accepte les <span className="font-bold">CGU</span>{" "}
+                    ainsi que{" "}
+                    <span className="font-bold">
+                      la charte de Medi
+                      <span className="text-[#107ACA]">Care</span>
+                    </span>
+                  </label>
+                </div>
+              )}
+            />
+            {errors.terms && (
+              <p className="text-red-500 text-xs mt-0.5">
+                {errors.terms.message}
+              </p>
+            )}
+          </div>
         </div>
-        {errors.termsAccepted && (
-          <p className="text-red-500 text-xs mt-1">
-            {errors.termsAccepted.message}
-          </p>
-        )}
 
         <Button
           type="submit"
-          className="w-full bg-[#107ACA] hover:bg-[#0e6cb3]"
+          className="w-full bg-[#107ACA] hover:bg-[#0e6cb3] mt-2"
           size="lg"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Inscription en cours..." : "S&apos;inscrire"}
+          {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
         </Button>
       </form>
     </div>

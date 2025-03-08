@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "@/utils/hash";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
@@ -33,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     // Check if the hospital exists
-    const hospitalExists = await prisma.hospital.findUnique({
+    const hospitalExists = await prisma.institution.findUnique({
       where: { id: hospitalId },
     });
     if (!hospitalExists) {
@@ -67,8 +65,7 @@ export async function POST(req: Request) {
         userId: newUser.id,
         specialization,
         licenseNumber,
-        institutionType: "hospital",
-        hospitalId, // ✅ Correct way to associate the doctor with a hospital
+        institutionId: hospitalId, // ✅ Correct way to associate the doctor with a hospital
       },
     });
 
