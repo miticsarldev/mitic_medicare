@@ -21,27 +21,9 @@ enum UserRole {
     patient
 }
 
-enum PatientSubscriptionPlan {
-    free
-    basic
-    premium
-}
-
 enum InstitutionType {
     clinic
     hospital
-}
-
-enum InstitutionSubscriptionPlan {
-    standard
-    enterprise
-}
-
-enum SubscriptionStatus {
-    active
-    inactive
-    trial
-    expired
 }
 
 enum UserGenre {
@@ -166,7 +148,8 @@ model Doctor {
     updatedAt      DateTime     @updatedAt
 
     // Relations
-    appointments Appointment[]
+    appointments                  Appointment[]
+    IndependantDoctorSubscription IndependantDoctorSubscription[]
 }
 
 model Patient {
@@ -195,6 +178,46 @@ model Appointment {
     date      DateTime
     status    AppointmentStatus @default(PENDING)
     createdAt DateTime          @default(now())
+}
+
+model MedicalHistory {
+    id            String   @id @default(cuid())
+    patientId     String
+    patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    title         String
+    details       String?
+    createdBy     String
+    createdByUser User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    @@index([patientId]) // Index for quick lookups
+}
+
+// Here is the schema for the subscription
+
+enum PatientSubscriptionPlan {
+    free
+    basic
+    premium
+}
+
+enum InstitutionSubscriptionPlan {
+    standard
+    enterprise
+}
+
+enum IndependantDoctorSubscriptionPlan {
+    free
+    basic
+    premium
+}
+
+enum SubscriptionStatus {
+    active
+    inactive
+    trial
+    expired
 }
 
 model PatientSubscription {
@@ -227,16 +250,16 @@ model InstitutionSubscription {
     @@unique([institutionId, plan]) // Prevent duplicate plans for the same institution
 }
 
-model MedicalHistory {
-    id            String   @id @default(cuid())
-    patientId     String
-    patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-    title         String
-    details       String?
-    createdBy     String
-    createdByUser User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
+model IndependantDoctorSubscription {
+    id        String                            @id @default(cuid())
+    doctorId  String
+    doctor    Doctor                            @relation(fields: [doctorId], references: [id])
+    plan      IndependantDoctorSubscriptionPlan
+    status    SubscriptionStatus
+    startDate DateTime
+    endDate   DateTime
+    createdAt DateTime                          @default(now())
+    updatedAt DateTime                          @updatedAt
 
-    @@index([patientId]) // Index for quick lookups
+    @@unique([doctorId, plan]) // Prevent duplicate plans for the same doctor
 }

@@ -1,8 +1,22 @@
+import { UserRole } from "@prisma/client";
+
 export const countries = [
-  { value: "Mali", label: "Mali" },
   { value: "Burkina-Faso", label: "Burkina-Faso" },
+  { value: "Côte d'Ivoire", label: "Côte d'Ivoire" },
+  { value: "Guineé", label: "Guineé" },
+  { value: "Mali", label: "Mali" },
   { value: "Niger", label: "Niger" },
+  { value: "Sénégal", label: "Sénégal" },
+  { value: "Togo", label: "Togo" },
 ];
+
+export const roleLabels: Record<UserRole, string> = {
+  patient: "Patient",
+  hospital_admin: "Administrateur du centre",
+  super_admin: "Super Administrateur",
+  independent_doctor: "Docteur Indépendant",
+  hospital_doctor: "Docteur de centre",
+};
 
 export const institutionTypes = [
   { value: "clinic", label: "Clinique" },

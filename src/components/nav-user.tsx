@@ -26,7 +26,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { user } from "@/lib/mock";
+import { signOut, useSession } from "next-auth/react";
+import { roleLabels } from "@/constant";
 
 type NavItemProps = {
   btnClassName?: string;
@@ -35,6 +36,8 @@ type NavItemProps = {
 
 export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
   const { isMobile } = useSidebar();
+  const session = useSession();
+  const user = session.data?.user;
 
   return (
     <SidebarMenu>
@@ -49,12 +52,23 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
               )}
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.userProfile.avatarUrl} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarImage
+                  src={user?.userProfile?.avatarUrl ?? undefined}
+                  alt={`${user?.name} Image Profile`}
+                />
+                <AvatarFallback className="rounded-lg">
+                  {user?.name
+                    ?.split(" ")
+                    .map((n) => n.charAt(0))
+                    .join("")}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-bold">{user?.name}</span>
+                <span className="truncate text-xs">{user?.email}</span>
+                <span className="truncate font-bold text-[10px] leading-3 text-accent-foreground text-center">
+                  {user?.role && (roleLabels[user.role] ?? "")}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -71,16 +85,16 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage
-                        src={user.userProfile.avatarUrl}
-                        alt={user.name}
+                        src={user?.userProfile?.avatarUrl ?? undefined}
+                        alt={`${user?.name} Image Profile`}
                       />
                       <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">
-                        {user.name}
+                        {user?.name}
                       </span>
-                      <span className="truncate text-xs">{user.email}</span>
+                      <span className="truncate text-xs">{user?.email}</span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
@@ -90,18 +104,18 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Sparkles />
-                Upgrade to Pro
+                Passer à Pro
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <BadgeCheck />
-                Account
+                Mon Profil
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />
-                Billing
+                Facturations
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
@@ -109,9 +123,9 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => signOut()}>
               <LogOut />
-              Log out
+              Se déconnecter
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
