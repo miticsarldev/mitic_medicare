@@ -1,8 +1,8 @@
 import Navbar from "@/components/navbar";
 import Image from "next/image";
-import IndependentDoctorRegistration from "@/components/independant-doctor-register-form";
+import RegisterClinicForm from "@/components/register-clinic";
 
-export default function IndependentDoctorRegister() {
+export default function RegisterClinic() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-blue-200 dark:from-background dark:to-blue-950/50">
       <div className="max-w-screen-xl mx-auto">
@@ -11,20 +11,20 @@ export default function IndependentDoctorRegister() {
         {/* Main Content */}
         <main className="container mx-auto px-4 py-8 md:py-6 flex flex-col md:flex-row items-stretch">
           {/* Image Section */}
-          <div className="hidden md:flex w-1/2 relative">
+          <div className="hidden md:flex relative">
             <Image
               src="/doctors.png"
               alt="Doctors"
               width={400}
               height={200}
               priority
-              className="rounded-l-lg relative md:w-[70%] object-cover"
+              className="rounded-l-lg h-auto relative w-full object-cover"
             />
           </div>
 
           {/* Form Section */}
           <div className="bg-card dark:bg-card/50 rounded-lg shadow-lg backdrop-blur-sm">
-            <IndependentDoctorRegistration />
+            <RegisterClinicForm />
           </div>
         </main>
       </div>

@@ -15,8 +15,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { specialties } from "@/constant";
 import Navbar from "@/components/navbar";
+import { specialities } from "@/constant";
 
 const hospitalDoctorSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
@@ -159,7 +159,7 @@ export default function HospitalDoctorRegistration() {
                     <SelectValue placeholder="Sélectionnez une spécialité" />
                   </SelectTrigger>
                   <SelectContent>
-                    {specialties.map((specialty) => (
+                    {specialities.map((specialty) => (
                       <SelectItem key={specialty.value} value={specialty.value}>
                         {specialty.label}
                       </SelectItem>

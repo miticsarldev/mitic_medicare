@@ -1,17 +1,30 @@
+"use client";
+
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/navbar";
 import Image from "next/image";
 import LoginForm from "@/components/login-form";
 import RegisterForm from "@/components/register-form";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
+  const [activeTab, setActiveTab] = useState("login");
+  const router = useRouter();
+
+  // Function to reset everything (clear form & switch tab)
+  const resetPage = () => {
+    setActiveTab("login"); // Reset tab to login
+    router.replace("/auth"); // Refresh page
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-blue-200 dark:from-background dark:to-blue-950/50">
+    <div className="h-screen bg-gradient-to-b from-background to-blue-200 dark:from-background dark:to-blue-950/50">
       <div className="max-w-screen-xl mx-auto">
         {/* Header */}
         <Navbar />
         {/* Main Content */}
-        <main className="container px-4 py-8 md:py-6 flex flex-col md:flex-row items-stretch">
+        <main className="container mx-auto px-4 py-8 md:py-6 flex flex-col md:flex-row items-stretch">
           {/* Image Section */}
           <div className="hidden md:flex w-1/2 relative">
             <Image
@@ -19,8 +32,8 @@ export default function AuthPage() {
               alt="Doctors"
               width={400}
               height={200}
-              objectFit="cover"
-              className="rounded-l-lg absolute top-[-60px]"
+              priority
+              className="rounded-l-lg relative h-fit w-full object-cover"
             />
           </div>
 
@@ -35,7 +48,12 @@ export default function AuthPage() {
             </h1>
 
             <div className="bg-card dark:bg-card/50 rounded-lg shadow-lg p-6 backdrop-blur-sm">
-              <Tabs defaultValue="login" className="w-full">
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                defaultValue="login"
+                className="w-full"
+              >
                 <TabsList className="grid w-full grid-cols-2 mb-4">
                   <TabsTrigger value="login">Connexion</TabsTrigger>
                   <TabsTrigger value="register">Inscription</TabsTrigger>
@@ -48,7 +66,7 @@ export default function AuthPage() {
 
                 {/* Register Tab */}
                 <TabsContent value="register">
-                  <RegisterForm />
+                  <RegisterForm resetPage={resetPage} />
                 </TabsContent>
               </Tabs>
             </div>

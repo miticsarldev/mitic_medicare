@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
@@ -26,15 +26,49 @@ const registerSchema = z.object({
   gender: z.enum(["female", "male"], {
     required_error: "Veuillez sélectionner votre genre",
   }),
-  lastName: z.string().min(1, "Le nom est requis"),
-  firstName: z.string().min(1, "Le prénom est requis"),
+  lastName: z
+    .string()
+    .min(2, "Le nom doit contenir au moins 2 caractères")
+    .max(50, "Le nom ne peut pas dépasser 50 caractères")
+    .regex(
+      /^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/,
+      "Le nom ne doit contenir que des lettres"
+    ),
+  firstName: z
+    .string()
+    .min(2, "Le prénom doit contenir au moins 2 caractères")
+    .max(50, "Le prénom ne peut pas dépasser 50 caractères")
+    .regex(
+      /^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/,
+      "Le prénom ne doit contenir que des lettres"
+    ),
   phoneNumber: z
     .string()
-    .min(10, "Le numéro de téléphone doit avoir au moins 10 chiffres"),
-  email: z.string().email("L&apos;adresse email doit avoir un format valide"),
+    .regex(
+      /^\+?[0-9]{9,15}$/,
+      "Numéro de téléphone invalide. Ex: +223123456789"
+    ),
+  email: z
+    .string()
+    .email("L'adresse email doit être valide")
+    .transform((val) => val.toLowerCase()),
   password: z
     .string()
-    .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+    .max(100, "Le mot de passe est trop long")
+    .regex(
+      /[A-Z]/,
+      "Le mot de passe doit contenir au moins une lettre majuscule"
+    )
+    .regex(
+      /[a-z]/,
+      "Le mot de passe doit contenir au moins une lettre minuscule"
+    )
+    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
+    .regex(
+      /[\W_]/,
+      "Le mot de passe doit contenir au moins un caractère spécial"
+    ),
   terms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les politiques et confidentialité",
   }),
@@ -42,19 +76,21 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-const RegisterForm = () => {
+const RegisterForm = ({ resetPage }: { resetPage: () => void }) => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
   const {
+    control,
+    reset,
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      gender: "female",
+      gender: undefined,
       lastName: "",
       firstName: "",
       phoneNumber: "",
@@ -65,16 +101,12 @@ const RegisterForm = () => {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
+    console.log(data);
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: `${data.firstName} ${data.lastName}`,
-          email: data.email,
-          password: data.password,
-          role: "patient",
-        }),
+        body: JSON.stringify(data),
       });
 
       const result = await response.json();
@@ -83,17 +115,23 @@ const RegisterForm = () => {
 
       toast({
         title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès.",
+        description:
+          "Votre compte a été créé avec succès, vous pouvez maintenant vous connecter.",
       });
 
-      router.push("/auth");
+      reset();
+      resetPage();
+      router.replace("/auth");
     } catch (err) {
       console.error(err);
+
       toast({
         variant: "destructive",
-        title: "Échec de l&apos;inscription",
+        title: "Échec de l'inscription",
         description:
-          "Une erreur s&apos;est produite lors de l&apos;inscription. Veuillez réessayer.",
+          err instanceof Error
+            ? err.message
+            : "Une erreur inattendue s'est produite.",
       });
     }
   };
@@ -185,20 +223,26 @@ const RegisterForm = () => {
       </h2>
 
       <div className="flex justify-center">
-        <RadioGroup
-          defaultValue="femme"
-          className="flex gap-4"
-          {...register("gender")}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="femme" id="femme" />
-            <Label htmlFor="femme">Femme</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="homme" id="homme" />
-            <Label htmlFor="homme">Homme</Label>
-          </div>
-        </RadioGroup>
+        <Controller
+          name="gender"
+          control={control}
+          render={({ field }) => (
+            <RadioGroup
+              className="flex gap-4"
+              onValueChange={field.onChange}
+              value={field.value}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="female" id="female" />
+                <Label htmlFor="female">Féminin</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="male" id="male" />
+                <Label htmlFor="male">Masculin</Label>
+              </div>
+            </RadioGroup>
+          )}
+        />
       </div>
       {errors.gender && (
         <p className="text-red-500 text-sm mt-1">{errors.gender.message}</p>
@@ -224,6 +268,19 @@ const RegisterForm = () => {
       </div>
 
       <div className="relative">
+        <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <Input
+          type="email"
+          placeholder="Adresse email"
+          {...register("email")}
+          className="w-full pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+        />
+        {errors.email && (
+          <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+        )}
+      </div>
+
+      <div className="relative">
         <Input
           placeholder="Numéro"
           {...register("phoneNumber")}
@@ -234,19 +291,6 @@ const RegisterForm = () => {
           <p className="text-red-500 text-sm mt-1">
             {errors.phoneNumber.message}
           </p>
-        )}
-      </div>
-
-      <div className="relative">
-        <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        <Input
-          type="email"
-          placeholder="Adresse email"
-          {...register("email")}
-          className="w-full pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-        />
-        {errors.email && (
-          <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
         )}
       </div>
 
@@ -269,15 +313,27 @@ const RegisterForm = () => {
         )}
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox id="terms" {...register("terms")} />
-        <label htmlFor="terms" className="text-sm font-medium">
-          Accepter les politiques et confidentialité
-        </label>
+      <div className="flex flex-col items-start">
+        <Controller
+          name="terms"
+          control={control}
+          render={({ field }) => (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="terms"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+              <label htmlFor="terms" className="text-sm font-medium">
+                Accepter les politiques et confidentialité
+              </label>
+            </div>
+          )}
+        />
+        {errors.terms && (
+          <p className="text-red-500 text-sm mt-1">{errors.terms.message}</p>
+        )}
       </div>
-      {errors.terms && (
-        <p className="text-red-500 text-sm mt-1">{errors.terms.message}</p>
-      )}
 
       <Button
         type="submit"

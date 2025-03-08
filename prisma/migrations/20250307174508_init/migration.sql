@@ -1,59 +1,52 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM
-('super_admin', 'hospital_admin', 'independent_doctor', 'hospital_doctor', 'patient');
+CREATE TYPE "UserRole" AS ENUM ('super_admin', 'hospital_admin', 'independent_doctor', 'hospital_doctor', 'patient');
 
 -- CreateEnum
-CREATE TYPE "InstitutionType" AS ENUM
-('independent_doctor', 'hospital');
+CREATE TYPE "InstitutionType" AS ENUM ('clinic', 'hospital');
 
 -- CreateEnum
-CREATE TYPE "PatientSubscriptionPlan" AS ENUM
-('free', 'basic', 'premium');
+CREATE TYPE "PatientSubscriptionPlan" AS ENUM ('free', 'basic', 'premium');
 
 -- CreateEnum
-CREATE TYPE "DoctorSubscriptionPlan" AS ENUM
-('basic', 'premium');
+CREATE TYPE "InstitutionSubscriptionPlan" AS ENUM ('standard', 'enterprise');
 
 -- CreateEnum
-CREATE TYPE "HospitalSubscriptionPlan" AS ENUM
-('standard', 'enterprise');
+CREATE TYPE "SubscriptionStatus" AS ENUM ('active', 'inactive', 'trial', 'expired');
 
 -- CreateEnum
-CREATE TYPE "SubscriptionStatus" AS ENUM
-('active', 'inactive', 'trial', 'expired');
+CREATE TYPE "UserGenre" AS ENUM ('male', 'female');
+
+-- CreateEnum
+CREATE TYPE "AppointmentStatus" AS ENUM ('PENDING', 'CONFIRMED', 'CANCELED');
 
 -- CreateTable
-CREATE TABLE "User"
-(
+CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
     "password" TEXT NOT NULL,
     "role" "UserRole" NOT NULL,
     "emailVerified" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "doctorSubscriptionId" TEXT,
-    "hospitalSubscriptionId" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "UserProfile"
-(
+CREATE TABLE "UserProfile" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "institutionId" TEXT,
     "institutionType" "InstitutionType",
-    "phone" TEXT,
-    "address" TEXT,
+    "phone" VARCHAR(20),
+    "address" VARCHAR(255),
     "city" TEXT,
     "state" TEXT,
     "zipCode" TEXT,
     "country" TEXT,
     "bio" TEXT,
     "avatarUrl" TEXT,
+    "genre" "UserGenre",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -61,8 +54,7 @@ CREATE TABLE "UserProfile"
 );
 
 -- CreateTable
-CREATE TABLE "Account"
-(
+CREATE TABLE "Account" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -80,8 +72,7 @@ CREATE TABLE "Account"
 );
 
 -- CreateTable
-CREATE TABLE "Session"
-(
+CREATE TABLE "Session" (
     "id" TEXT NOT NULL,
     "sessionToken" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -91,18 +82,18 @@ CREATE TABLE "Session"
 );
 
 -- CreateTable
-CREATE TABLE "VerificationToken"
-(
+CREATE TABLE "VerificationToken" (
     "identifier" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "expires" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateTable
-CREATE TABLE "Hospital"
-(
+CREATE TABLE "Institution" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "type" "InstitutionType" NOT NULL,
+    "adminId" TEXT NOT NULL,
     "address" TEXT NOT NULL,
     "city" TEXT NOT NULL,
     "state" TEXT NOT NULL,
@@ -113,33 +104,28 @@ CREATE TABLE "Hospital"
     "website" TEXT,
     "description" TEXT,
     "logoUrl" TEXT,
-    "adminId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Hospital_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Institution_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Doctor"
-(
+CREATE TABLE "Doctor" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "institutionId" TEXT,
     "specialization" TEXT NOT NULL,
     "licenseNumber" TEXT NOT NULL,
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
-    "institutionId" TEXT,
-    "institutionType" "InstitutionType",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "hospitalId" TEXT,
 
     CONSTRAINT "Doctor_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Patient"
-(
+CREATE TABLE "Patient" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "dateOfBirth" TIMESTAMP(3) NOT NULL,
@@ -148,73 +134,53 @@ CREATE TABLE "Patient"
     "medicalNotes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "hospitalId" TEXT,
-    "patientSubscriptionId" TEXT,
 
     CONSTRAINT "Patient_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Appointment"
-(
+CREATE TABLE "Appointment" (
     "id" TEXT NOT NULL,
     "patientId" TEXT NOT NULL,
     "doctorId" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "status" "AppointmentStatus" NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Appointment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "PatientSubscription"
-(
+CREATE TABLE "PatientSubscription" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "patientId" TEXT NOT NULL,
     "plan" "PatientSubscriptionPlan" NOT NULL,
     "status" "SubscriptionStatus" NOT NULL,
     "startDate" TIMESTAMP(3) NOT NULL,
     "endDate" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" TEXT,
 
     CONSTRAINT "PatientSubscription_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "DoctorSubscription"
-(
+CREATE TABLE "InstitutionSubscription" (
     "id" TEXT NOT NULL,
-    "doctorId" TEXT NOT NULL,
-    "plan" "DoctorSubscriptionPlan" NOT NULL,
+    "institutionId" TEXT NOT NULL,
+    "plan" "InstitutionSubscriptionPlan" NOT NULL,
     "status" "SubscriptionStatus" NOT NULL,
     "startDate" TIMESTAMP(3) NOT NULL,
     "endDate" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "DoctorSubscription_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "InstitutionSubscription_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "HospitalSubscription"
-(
-    "id" TEXT NOT NULL,
-    "hospitalId" TEXT NOT NULL,
-    "plan" "HospitalSubscriptionPlan" NOT NULL,
-    "status" "SubscriptionStatus" NOT NULL,
-    "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "HospitalSubscription_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "MedicalHistory"
-(
+CREATE TABLE "MedicalHistory" (
     "id" TEXT NOT NULL,
     "patientId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -233,6 +199,9 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "UserProfile_userId_key" ON "UserProfile"("userId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "UserProfile_phone_key" ON "UserProfile"("phone");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");
 
 -- CreateIndex
@@ -245,31 +214,25 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Hospital_adminId_key" ON "Hospital"("adminId");
+CREATE UNIQUE INDEX "Institution_adminId_key" ON "Institution"("adminId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Doctor_userId_key" ON "Doctor"("userId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Doctor_licenseNumber_key" ON "Doctor"("licenseNumber");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Patient_userId_key" ON "Patient"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PatientSubscription_userId_key" ON "PatientSubscription"("userId");
+CREATE UNIQUE INDEX "PatientSubscription_patientId_plan_key" ON "PatientSubscription"("patientId", "plan");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "DoctorSubscription_doctorId_key" ON "DoctorSubscription"("doctorId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "HospitalSubscription_hospitalId_key" ON "HospitalSubscription"("hospitalId");
+CREATE UNIQUE INDEX "InstitutionSubscription_institutionId_plan_key" ON "InstitutionSubscription"("institutionId", "plan");
 
 -- CreateIndex
 CREATE INDEX "MedicalHistory_patientId_idx" ON "MedicalHistory"("patientId");
-
--- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_doctorSubscriptionId_fkey" FOREIGN KEY ("doctorSubscriptionId") REFERENCES "DoctorSubscription"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_hospitalSubscriptionId_fkey" FOREIGN KEY ("hospitalSubscriptionId") REFERENCES "HospitalSubscription"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserProfile" ADD CONSTRAINT "UserProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -281,22 +244,16 @@ ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId"
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Hospital" ADD CONSTRAINT "Hospital_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Institution" ADD CONSTRAINT "Institution_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Doctor" ADD CONSTRAINT "Doctor_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Doctor" ADD CONSTRAINT "Doctor_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Doctor" ADD CONSTRAINT "Doctor_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Patient" ADD CONSTRAINT "Patient_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Patient" ADD CONSTRAINT "Patient_patientSubscriptionId_fkey" FOREIGN KEY ("patientSubscriptionId") REFERENCES "PatientSubscription"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Patient" ADD CONSTRAINT "Patient_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -305,13 +262,16 @@ ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_patientId_fkey" FOREIGN KE
 ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "Doctor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PatientSubscription" ADD CONSTRAINT "PatientSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PatientSubscription" ADD CONSTRAINT "PatientSubscription_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DoctorSubscription" ADD CONSTRAINT "DoctorSubscription_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "Doctor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PatientSubscription" ADD CONSTRAINT "PatientSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "HospitalSubscription" ADD CONSTRAINT "HospitalSubscription_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "InstitutionSubscription" ADD CONSTRAINT "InstitutionSubscription_institutionId_fkey" FOREIGN KEY ("institutionId") REFERENCES "Institution"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "MedicalHistory" ADD CONSTRAINT "MedicalHistory_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MedicalHistory" ADD CONSTRAINT "MedicalHistory_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
