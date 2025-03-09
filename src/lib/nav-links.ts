@@ -81,20 +81,10 @@ export const superAdminNavItems = [
     items: [
       {
         title: "Paramètres",
-        url: "/system/settings",
+        url: "/dashboard/superadmin/system/settings",
         icon: Settings,
       },
       { title: "Logs", url: "/dashboard/superadmin/system/logs" },
-      { title: "Sauvegardes", url: "/dashboard/superadmin/system/backups" },
-      {
-        title: "Performances",
-        url: "/dashboard/superadmin/system/performance",
-      },
-      { title: "Sécurité", url: "/dashboard/superadmin/system/security" },
-      {
-        title: "Intégrations API",
-        url: "/dashboard/superadmin/system/api-integrations",
-      },
     ],
   },
   {
@@ -107,10 +97,6 @@ export const superAdminNavItems = [
       {
         title: "Avis & Témoignages",
         url: "/dashboard/superadmin/content/reviews",
-      },
-      {
-        title: "Pages Statique",
-        url: "/dashboard/superadmin/content/static-pages",
       },
     ],
   },
@@ -143,8 +129,6 @@ export const superAdminNavItems = [
         title: "Statut du serveur",
         url: "/dashboard/superadmin/server/status",
       },
-      { title: "Logs du serveur", url: "/dashboard/superadmin/server/logs" },
-      { title: "Maintenance", url: "/dashboard/superadmin/server/maintenance" },
       {
         title: "Base de données",
         url: "/dashboard/superadmin/server/database",
