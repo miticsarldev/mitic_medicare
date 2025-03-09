@@ -1,58 +1,73 @@
-import React from "react";
-import { usersData } from "@/components/user-data";
-import { stats } from "@/components/stats";
-import { Chart } from "@/components/chart";
+import React from "react"; 
+import { patientAppointments, patientStats } from "@/data/appointment-data";
+import { PatientChart } from "@/components/patient-chart";
 
-const MainPage = () => {
-  const recentAppointments = usersData.slice(0, 6);
+const PatientDashboard = () => {
+  const recentAppointments = patientAppointments.slice(0, 6);
 
   return (
     <div>
-      <div>Ici un Patient</div>
-      {/* Sections avec icônes et chiffres */}
+      {/* Statistiques */}
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-        {stats.map((stat, index) => (
+        {patientStats.map((stat, index) => (
           <div
-            key={index}
-            className="aspect-video rounded-xl bg-muted/50 p-6 flex flex-col justify-between"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">{stat.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {stat.description}
-                </p>
-              </div>
-              {stat.icon}
+          key={index}
+          className="aspect-video rounded-2xl bg-muted/50 p-6 flex flex-col gap-4 justify-between shadow-md"
+        >
+          {/* Titre & Icône */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-primary">{stat.title}</h3>
+              <p className="text-sm text-muted-foreground">{stat.description}</p>
             </div>
-            <p className="text-3xl font-bold">{stat.value}</p>
+            <div className="text-3xl text-primary">{stat.icon}</div>
           </div>
+        
+          {/* Valeur mise en évidence */}
+          <div className="flex items-center justify-center">
+            <p className="text-4xl font-bold text-center text-primary">{stat.value}</p>
+          </div>
+        </div>
+        
         ))}
       </div>
-      <Chart />
-      {/* Section "Rendez-vous Récents" */}
+
+      {/* Conteneur principal avec espacement */}
+      <div className="grid gap-6">
+        
+        {/* Titre du graphique */}
+        <div className="text-xl font-semibold">Évolution des Consultations</div>
+        
+        {/* Graphique dans un encadré stylisé */}
+        <div className="rounded-2xl bg-muted/50 p-6 shadow-md">
+          <PatientChart />
+        </div>
+        
+      </div>
+
+      {/* Rendez-vous récents */}
       <div className="rounded-xl bg-muted/50 p-6">
         <h2 className="text-xl font-semibold mb-4">Rendez-vous Récents</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full bg-background rounded-lg">
             <thead>
               <tr className="text-left border-b">
-                <th className="p-5">Nom</th>
-                <th className="p-4">Médecin</th>
+                <th className="p-5">Médecin</th>
+                <th className="p-4">Spécialité</th>
                 <th className="p-4">Date</th>
-                <th className="p-4">Status</th>
+                <th className="p-4">Statut</th>
               </tr>
             </thead>
             <tbody>
               {recentAppointments.map((appointment) => (
                 <tr key={appointment.id} className="border-b">
-                  <td className="p-3">{appointment.name}</td>
                   <td className="p-3">{appointment.doctor}</td>
-                  <td className="p-3">{appointment.appointmentDate}</td>
+                  <td className="p-3">{appointment.specialty}</td>
+                  <td className="p-3">{appointment.date}</td>
                   <td className="p-3">
                     <span
                       className={`px-3 py-1 text-sm rounded-full ${
-                        appointment.status === "Confirmé"
+                        appointment.status === "Terminé"
                           ? "bg-green-100 text-green-800"
                           : appointment.status === "En attente"
                           ? "bg-yellow-100 text-yellow-800"
@@ -72,4 +87,4 @@ const MainPage = () => {
   );
 };
 
-export default MainPage;
+export default PatientDashboard;

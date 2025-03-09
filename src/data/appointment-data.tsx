@@ -1,3 +1,5 @@
+import { CreditCard, FileText, User } from "lucide-react";
+
 export const appointmentsData = [
     {
       id: 1,
@@ -60,3 +62,16 @@ export const appointmentsData = [
       status: "En attente",
     },
   ];
+
+
+export const patientStats = [
+  { title: "Total Consultations", value: "12", description: "Consultations terminées", icon: <FileText /> },
+  { title: "Médecins Visités", value: "5", description: "Nombre total de médecins consultés", icon: <User /> },
+  { title: "Paiements Effectués", value: "150000", description: "Total des paiements effectués", icon: <CreditCard /> }
+];
+
+export const patientAppointments = [
+  { id: 1, doctor: "Dr. Aly Coulibaly", specialty: "Medecin Genéraliste", date: "2025-03-10", status: "En attente" },
+  { id: 2, doctor: "Dr. Alou Koné", specialty: "Cardiologie", date: "2025-02-20", status: "Annulé" },
+  { id: 3, doctor: "Dr. Oumar Koîta", specialty: "Dermatologie", date: "2025-01-15", status: "Terminé" }
+];
