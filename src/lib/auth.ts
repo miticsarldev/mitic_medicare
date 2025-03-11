@@ -57,6 +57,7 @@ export const authOptions: AuthOptions = {
           image: user.userProfile?.avatarUrl,
           userProfile: user.userProfile,
           role: user.role,
+          emailVerified: user.emailVerified,
         };
       }
       return token;
@@ -73,6 +74,7 @@ export const authOptions: AuthOptions = {
             image: token.image as string | null | undefined,
             userProfile: token.userProfile,
             role: token.role,
+            emailVerified: token.email,
           },
         };
       }

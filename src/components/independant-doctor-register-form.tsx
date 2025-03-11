@@ -130,14 +130,7 @@ export default function IndependentDoctorRegistration() {
   };
 
   return (
-    <div className="space-y-4 p-4">
-      <h1 className="text-lg sm:text-xl font-semibold text-center">
-        Inscription fiche praticien indépendant ou cabinet professionnel
-      </h1>
-      <p className="text-xs sm:text-sm text-center text-muted-foreground">
-        Remplissez ce formulaire pour créer votre fiche praticien indépendant ou
-        de votre cabinet professionnel.
-      </p>
+    <div className="space-y-4 p-0">
       <form onSubmit={handleSubmit(onSubmit)}>
         <p className="text-sm font-semibold text-accent-foreground border-b mb-2">
           Informations personnelles *

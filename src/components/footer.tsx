@@ -35,6 +35,7 @@ export function Footer({ className }: React.HTMLAttributes<HTMLElement>) {
                     width={40}
                     height={40}
                     priority
+                    unoptimized
                   />
                 </div>
                 <span className="font-semibold text-4xl hidden sm:inline-block">

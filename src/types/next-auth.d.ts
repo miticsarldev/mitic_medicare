@@ -15,6 +15,7 @@ declare module "next-auth" {
       email: string;
       name: string | null;
       role: UserRole;
+      emailVerified: Date | null;
       createdAt: Date;
       updatedAt: Date;
 
@@ -31,6 +32,7 @@ declare module "next-auth" {
     email: string;
     name: string | null;
     role: UserRole;
+    emailVerified: Date | null;
     createdAt: Date;
     updatedAt: Date;
     userProfile?: UserProfile;
@@ -45,6 +47,7 @@ declare module "next-auth" {
     email: string;
     name: string | null;
     role: UserRole;
+    emailVerified: Date | null;
     createdAt: Date;
     updatedAt: Date;
     userProfile?: UserProfile;

@@ -76,7 +76,7 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-const RegisterForm = ({ resetPage }: { resetPage: () => void }) => {
+const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -120,7 +120,6 @@ const RegisterForm = ({ resetPage }: { resetPage: () => void }) => {
       });
 
       reset();
-      resetPage();
       router.replace("/auth");
     } catch (err) {
       console.error(err);

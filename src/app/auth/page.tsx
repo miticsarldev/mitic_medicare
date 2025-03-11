@@ -1,83 +1,183 @@
-"use client";
+import Image from "next/image";
+import Link from "next/link";
+import { CheckCircle2, ChevronRight, Lock } from "lucide-react";
 
-import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/navbar";
-import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
 import LoginForm from "@/components/login-form";
 import RegisterForm from "@/components/register-form";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { ClientAnimationWrapper } from "@/components/client-animation-wrapper";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState("login");
-  const router = useRouter();
-  const session = useSession();
+const AuthTabs = () => {
+  return (
+    <Tabs defaultValue="login" className="w-full">
+      <TabsList className="w-full grid grid-cols-2">
+        <TabsTrigger value="login">Se connecter</TabsTrigger>
+        <TabsTrigger value="register">S&apos;inscrire</TabsTrigger>
+      </TabsList>
+      <TabsContent value="login">
+        <LoginForm />
+      </TabsContent>
+      <TabsContent value="register">
+        <RegisterForm />
+      </TabsContent>
+    </Tabs>
+  );
+};
 
-  useEffect(() => {
-    if (session.status === "authenticated") {
-      router.push("/dashboard");
-    }
-  }, [session, router]);
+export default async function AuthPage() {
+  const session = await getServerSession(authOptions);
 
-  // Function to reset everything (clear form & switch tab)
-  const resetPage = () => {
-    setActiveTab("login"); // Reset tab to login
-    router.replace("/auth"); // Refresh page
-  };
+  if (session?.user) {
+    redirect("/dashboard");
+  }
 
   return (
-    <div className="h-screen bg-gradient-to-b from-background to-blue-200 dark:from-background dark:to-blue-950/50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/30">
       <div className="max-w-screen-xl mx-auto">
         {/* Header */}
         <Navbar />
+
         {/* Main Content */}
-        <main className="container mx-auto px-4 py-8 md:py-6 flex flex-col md:flex-row items-stretch">
-          {/* Image Section */}
-          <div className="hidden md:flex w-1/2 relative">
-            <Image
-              src="/doctors.png"
-              alt="Doctors"
-              width={400}
-              height={200}
-              priority
-              className="rounded-l-lg relative h-fit w-full object-cover"
-            />
-          </div>
+        <main className="mx-auto px-4 py-2 md:py-4 lg:py-8">
+          <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-12">
+            {/* Left Column - Image and Text */}
+            <ClientAnimationWrapper
+              className="w-full lg:w-1/2 max-w-xl"
+              initialAnimation={{ opacity: 0, x: -20 }}
+              animateAnimation={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="text-center lg:text-left mb-8">
+                <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20 dark:bg-primary/20">
+                  Plateforme de santé sécurisée
+                </Badge>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">
+                  Votre santé, notre priorité
+                </h1>
+                <p className="text-lg text-gray-600 dark:text-gray-300 max-w-md mx-auto lg:mx-0">
+                  Rejoignez la plateforme qui connecte patients et
+                  professionnels de santé pour un parcours de soins simplifié et
+                  personnalisé.
+                </p>
+              </div>
 
-          {/* Form Section */}
-          <div className="w-full md:w-1/2 max-w-md mx-auto space-y-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-center px-4">
-              Vous avez déjà utilisé{" "}
-              <span className="text-primary">
-                Medi<span className="text-[#107ACA]">Care</span>
-              </span>{" "}
-              ?
-            </h1>
+              <div className="relative">
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
 
-            <div className="bg-card dark:bg-card/50 rounded-lg shadow-lg p-6 backdrop-blur-sm">
-              <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                defaultValue="login"
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="login">Connexion</TabsTrigger>
-                  <TabsTrigger value="register">Inscription</TabsTrigger>
-                </TabsList>
+                <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl">
+                  <Image
+                    src="/healthcare-professional.webp"
+                    alt="Professionnels de santé"
+                    width={800}
+                    height={600}
+                    priority
+                    className="w-full h-auto object-cover"
+                  />
 
-                {/* Login Tab */}
-                <TabsContent value="login">
-                  <LoginForm />
-                </TabsContent>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6">
+                    <div className="text-white">
+                      <h3 className="text-xl font-bold mb-2">
+                        Plateforme médicale de confiance
+                      </h3>
+                      <p className="text-white/80 mb-4">
+                        Plus de 2 millions de patients et 50 000 professionnels
+                        de santé nous font confiance
+                      </p>
 
-                {/* Register Tab */}
-                <TabsContent value="register">
-                  <RegisterForm resetPage={resetPage} />
-                </TabsContent>
-              </Tabs>
-            </div>
+                      <div className="flex flex-wrap gap-3">
+                        <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          <span className="text-sm font-medium">
+                            Données sécurisées
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          <span className="text-sm font-medium">
+                            Conforme RGPD
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          <span className="text-sm font-medium">
+                            Hébergeur agréé
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ClientAnimationWrapper>
+
+            {/* Right Column - Auth Forms */}
+            <ClientAnimationWrapper
+              className="w-full lg:w-1/2 max-w-md"
+              initialAnimation={{ opacity: 0, x: 20 }}
+              animateAnimation={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center justify-center mb-6">
+                    <div className="flex items-center gap-0.5">
+                      <div className="relative w-auto h-6">
+                        <Image
+                          src="/logos/logo_mitic_dark.png"
+                          alt="Logo"
+                          className="h-6 w-auto object-cover"
+                          width={40}
+                          height={40}
+                          priority
+                          unoptimized
+                        />
+                      </div>
+                      <span className="font-semibold text-4xl hidden sm:inline-block">
+                        <span className="text-foreground">care</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <AuthTabs />
+                </div>
+
+                <div className="p-6 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-center gap-2">
+                  <Lock className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Connexion sécurisée et chiffrée
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-8 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  En vous inscrivant, vous acceptez nos{" "}
+                  <Link href="#" className="text-primary hover:underline">
+                    Conditions d&apos;utilisation
+                  </Link>{" "}
+                  et notre{" "}
+                  <Link href="#" className="text-primary hover:underline">
+                    Politique de confidentialité
+                  </Link>
+                </p>
+
+                <div className="mt-6 flex justify-center">
+                  <Link
+                    href="#"
+                    className="text-sm text-primary hover:underline flex items-center"
+                  >
+                    Découvrir nos offres pour les professionnels de santé
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Link>
+                </div>
+              </div>
+            </ClientAnimationWrapper>
           </div>
         </main>
       </div>
