@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 
 export function NewsletterSection() {
@@ -10,13 +12,17 @@ export function NewsletterSection() {
 
   return (
     <div className="p-6 bg-gray-100 dark:bg-gray-900 flex flex-col items-center">
-      <h2 className="text-2xl font-bold dark:text-white">Abonnez-vous à Notre Newsletter</h2>
+      <h2 className="text-2xl font-bold dark:text-white">
+        Abonnez-vous à Notre Newsletter
+      </h2>
       <p className="text-gray-500 dark:text-gray-400 mb-6">
         Recevez les dernières nouvelles de notre plateforme
       </p>
 
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-4xl">
-        <h3 className="text-lg font-semibold mb-3 dark:text-white">Pour la Newsletter</h3>
+        <h3 className="text-lg font-semibold mb-3 dark:text-white">
+          Pour la Newsletter
+        </h3>
         <form
           onSubmit={handleSubmit}
           className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden"

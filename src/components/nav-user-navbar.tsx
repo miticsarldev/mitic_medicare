@@ -19,26 +19,33 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
+import type { Session } from "next-auth";
+import { getProfileLink } from "@/lib/utils";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function NavUserNavbar({ user }: { user: any }) {
+export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
+  const profileLink = getProfileLink(user?.role ?? "super_admin");
+
+  console.log({ user });
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-2 rounded-full">
         <div className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 relative">
-          <Avatar>
+          <Avatar className="h-8 w-8">
             <AvatarImage
-              src={user?.image || "https://github.com/shadcn.png"}
+              src={
+                user?.userProfile?.avatarUrl
+                  ? user?.userProfile?.avatarUrl
+                  : "https://github.com/shadcn.png"
+              }
               alt={user?.name || "Utilisateur"}
             />
-            <AvatarFallback>{`${
-              user?.name
-                ? user?.name
-                : ""
-                    .split(" ")
-                    .map((name) => name.charAt(0).toUpperCase())
-                    .join("")
-            }`}</AvatarFallback>
+            <AvatarFallback>
+              {`${user?.name
+                ?.split(" ")
+                .map((name) => name.charAt(0).toUpperCase())
+                .join("")}`}
+            </AvatarFallback>
           </Avatar>
         </div>
       </DropdownMenuTrigger>
@@ -52,15 +59,17 @@ export function NavUserNavbar({ user }: { user: any }) {
               <span>Dashboard</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem className="flex items-center gap-1">
-            <Link href="/admin" className="flex items-center gap-1">
-              <UserIcon className="size-4" />
-              <span>Mon Profile</span>
-            </Link>
-          </DropdownMenuItem>
-          {user?.role === "ADMIN" && (
+          {user?.role !== "super_admin" && (
+            <DropdownMenuItem className="flex items-center gap-1">
+              <Link href={profileLink} className="flex items-center gap-1">
+                <UserIcon className="size-4" />
+                <span>Mon Profile</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
+          {user?.role === "hospital_admin" && (
             <DropdownMenuItem>
-              <Link href="/admin" className="flex items-center gap-1">
+              <Link href={profileLink} className="flex items-center gap-1">
                 <CreditCard />
                 <span>Mon entreprise</span>
               </Link>
