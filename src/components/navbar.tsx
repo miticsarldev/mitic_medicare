@@ -1,46 +1,145 @@
-"use client";
-
-import React from "react";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ModeToggle } from "./mode-toggle";
-import { useSession } from "next-auth/react";
-import { NavUserNavbar } from "./nav-user-navbar";
-// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-// import { Menu } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { Menu } from "lucide-react";
 
-const Navbar = () => {
-  //   const [isOpen, setIsOpen] = React.useState(false);
-  const { data: session } = useSession();
+import { authOptions } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "./mode-toggle";
+import { NavUserNavbar } from "./nav-user-navbar";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import Image from "next/image";
+
+// Navigation links
+const navigationLinks = [
+  { name: "Accueil", href: "/" },
+  { name: "Services", href: "/services" },
+  { name: "Tarifs", href: "/pricing" },
+  { name: "À propos", href: "/about" },
+  { name: "Contact", href: "/contact" },
+];
+
+export default async function Navbar() {
+  const session = await getServerSession(authOptions);
 
   return (
-    <nav className="flex items-center justify-between p-4">
-      <div className="flex items-center gap-4">
-        <Link href="/" className="text-2xl w-full font-bold whitespace-nowrap">
-          <span className="text-[#107ACA]">Medi</span>Care
-        </Link>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-4">
-        {session ? (
-          <NavUserNavbar user={session.user} />
-        ) : (
-          <Link
-            href="/auth"
-            className="shadow text-white bg-[#107ACA] h-9 px-4 py-2 hover:bg-[#0A5A8A] inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-          >
-            Se Connecter
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center justify-between mx-auto px-4">
+        {/* Logo and brand */}
+        <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center space-x-0.5">
+            <div className="h-6 w-auto rounded-full flex items-center justify-center">
+              <Image
+                src="/logos/logo_mitic_dark.png"
+                alt="Logo"
+                className="h-6 w-auto object-cover"
+                width={40}
+                height={40}
+                priority
+              />
+            </div>
+            <span className="font-semibold text-4xl hidden sm:inline-block">
+              <span className="text-foreground">care</span>
+            </span>
           </Link>
-        )}
-        <Button
-          variant="outline"
-          className="border-[#107ACA] text-[#107ACA] shadow h-9 px-4 py-2 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-        >
-          Centre aide
-        </Button>
-        <ModeToggle />
-      </div>
-    </nav>
-  );
-};
+        </div>
 
-export default Navbar;
+        {/* Desktop navigation */}
+        <nav className="hidden md:flex items-center space-x-6">
+          {navigationLinks.map((link) => (
+            <Link
+              key={link.name}
+              href={link.href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              {link.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Actions section */}
+        <div className="flex items-center gap-2">
+          {/* Help center button - hidden on mobile */}
+          <Button
+            variant="outline"
+            className="border-[#107ACA] text-[#107ACA] hidden sm:flex"
+            size="sm"
+          >
+            Centre d&apos;aide
+          </Button>
+
+          {/* User section */}
+          {session ? (
+            <NavUserNavbar user={session.user} />
+          ) : (
+            <Link href="/auth">
+              <Button className="bg-[#107ACA] hover:bg-[#0A5A8A]" size="sm">
+                Se connecter
+              </Button>
+            </Link>
+          )}
+
+          {/* Theme toggle */}
+          <ModeToggle />
+
+          {/* Mobile menu */}
+          <Sheet>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="outline" size="icon" className="h-8 w-8">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[250px] sm:w-[300px]">
+              <SheetHeader className="pb-6">
+                <SheetTitle>
+                  <Link href="/" className="flex items-center space-x-2">
+                    <div className="h-6 w-auto rounded-full flex items-center justify-center">
+                      <Image
+                        src="/logos/logo_mitic_dark.png"
+                        alt="Logo"
+                        className="h-6 w-auto object-cover"
+                        width={40}
+                        height={40}
+                        priority
+                      />
+                    </div>
+                    <span className="font-semibold text-4xl">
+                      <span className="text-foreground">Care</span>
+                    </span>
+                  </Link>
+                </SheetTitle>
+                <SheetDescription />
+              </SheetHeader>
+              <nav className="flex flex-col space-y-4">
+                {navigationLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary py-2"
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+                <div className="h-px bg-border my-2" />
+                <Button
+                  variant="outline"
+                  className="border-[#107ACA] text-[#107ACA] w-full justify-start"
+                  size="sm"
+                >
+                  Centre d&apos;aide
+                </Button>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+    </header>
+  );
+}

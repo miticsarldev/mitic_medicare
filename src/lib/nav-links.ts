@@ -204,20 +204,20 @@ export const doctorNavItems = [
   {
     title: "Mon Profil & Paramètres",
     icon: Settings,
-    url: "/dashboard/hopital_doctor/profile",
+    url: "/dashboard/hopital_doctor/settings",
     items: [
-      { title: "Mon Profil", url: "/dashboard/hopital_doctor/profile/details" },
+      { title: "Mon Profil", url: "/dashboard/hopital_doctor/settings/profil" },
       {
         title: "Disponibilités",
-        url: "/dashboard/hopital_doctor/profile/availability",
+        url: "/dashboard/hopital_doctor/settings/availability",
       },
       {
         title: "Tarification",
-        url: "/dashboard/hopital_doctor/profile/pricing",
+        url: "/dashboard/hopital_doctor/settings/pricing",
       },
       {
         title: "Paramètres",
-        url: "/dashboard/hopital_doctor/profile/settings",
+        url: "/dashboard/hopital_doctor/settings/settings",
       },
     ],
   },
