@@ -16,15 +16,6 @@ import {
 } from "@/components/ui/sheet";
 import Image from "next/image";
 
-// Navigation links
-const navigationLinks = [
-  { name: "Accueil", href: "/" },
-  { name: "Services", href: "/services" },
-  { name: "Tarifs", href: "/pricing" },
-  { name: "À propos", href: "/about" },
-  { name: "Contact", href: "/contact" },
-];
-
 export default async function Navbar() {
   const session = await getServerSession(authOptions);
 
@@ -42,6 +33,7 @@ export default async function Navbar() {
                 width={40}
                 height={40}
                 priority
+                unoptimized
               />
             </div>
             <span className="font-semibold text-4xl hidden sm:inline-block">
@@ -50,22 +42,8 @@ export default async function Navbar() {
           </Link>
         </div>
 
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex items-center space-x-6">
-          {navigationLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              {link.name}
-            </Link>
-          ))}
-        </nav>
-
         {/* Actions section */}
         <div className="flex items-center gap-2">
-          {/* Help center button - hidden on mobile */}
           <Button
             variant="outline"
             className="border-[#107ACA] text-[#107ACA] hidden sm:flex"
@@ -118,15 +96,6 @@ export default async function Navbar() {
                 <SheetDescription />
               </SheetHeader>
               <nav className="flex flex-col space-y-4">
-                {navigationLinks.map((link) => (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary py-2"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
                 <div className="h-px bg-border my-2" />
                 <Button
                   variant="outline"

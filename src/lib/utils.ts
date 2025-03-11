@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import prisma from "./prisma";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -20,3 +21,31 @@ export function getProfileLink(role: UserRole) {
       return "/";
   }
 }
+
+export const getVerificationTokenByEmail = async (identifier: string) => {
+  try {
+    const verificationToken = await prisma.verificationToken.findFirst({
+      where: {
+        identifier: identifier,
+      },
+    });
+
+    return verificationToken;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getVerificationTokenByToken = async (token: string) => {
+  try {
+    const verificationToken = await prisma.verificationToken.findFirst({
+      where: {
+        token: token,
+      },
+    });
+
+    return verificationToken;
+  } catch (error) {
+    console.log(error);
+  }
+};
