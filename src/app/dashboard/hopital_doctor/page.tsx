@@ -1,6 +1,6 @@
 import React from "react";
 import { usersData } from "@/components/user-data";
-import { stats } from "@/components/stats";
+import { stats2 } from "@/components/stats";
 import { Chart } from "@/components/chart";
 
 const MainPage = () => {
@@ -11,7 +11,7 @@ const MainPage = () => {
       <div>Ici un Docteur d&apos;hopital</div>
       {/* Sections avec icônes et chiffres */}
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-        {stats.map((stat, index) => (
+        {stats2.map((stat, index) => (
           <div
             key={index}
             className="aspect-video rounded-xl bg-muted/50 p-6 flex flex-col justify-between"
