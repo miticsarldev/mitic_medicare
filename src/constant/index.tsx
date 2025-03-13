@@ -250,3 +250,46 @@ export const upcomingAppointments = [
     reason: "Consultation",
   },
 ];
+export const appointmentsByDate = {
+  "2025-03-13": [
+    { id: 1, patient: "Maïlène Durand", time: "09:00", reason: "Consultation générale", status: "pending" },
+    { id: 2, patient: "Lucas Morel", time: "10:30", reason: "Suivi diabète", status: "pending" },
+    { id: 3, patient: "Inès Fabre", time: "14:00", reason: "Douleurs dorsales", status: "accepted" },
+    { id: 4, patient: "Thomas Leclerc", time: "16:00", reason: "Bilan de santé", status: "rejected" },
+  ],
+  "2025-03-14": [
+    { id: 5, patient: "Camille Lefevre", time: "08:30", reason: "Examen annuel", status: "pending" },
+    { id: 6, patient: "Émile Lambert", time: "11:00", reason: "Suivi hypertension", status: "pending" },
+  ],
+  "2025-03-15": [
+    { id: 7, patient: "Jules Carpentier", time: "09:45", reason: "Consultation pédiatrique", status: "pending" },
+    { id: 8, patient: "Nina Roche", time: "13:00", reason: "Allergies saisonnières", status: "accepted" },
+  ],
+};
+export const patientReviews = [
+  { id: 1, patient: "Sophie Martin", rating: 5, comment: "Excellent médecin, très à l'écoute." },
+  { id: 2, patient: "David Garcia", rating: 4, comment: "Consultation efficace, je recommande." },
+  { id: 3, patient: "Laura Dubois", rating: 5, comment: "Très satisfaite de la prise en charge." },
+];
+export const revenueData = [
+  { month: "Jan", revenue: 12000 },
+  { month: "Fév", revenue: 15000 },
+  { month: "Mar", revenue: 13000 },
+  { month: "Avr", revenue: 17000 },
+  { month: "Mai", revenue: 16000 },
+];
+
+export const pendingAppointments = [
+  { id: 1, patient: "Jean Dupont", date: "12 Mars 2024", time: "10:00 AM" },
+  { id: 2, patient: "Alice Moreau", date: "12 Mars 2024", time: "11:30 AM" },
+  { id: 3, patient: "Marc Lemoine", date: "13 Mars 2024", time: "02:00 PM" },
+];
+
+export const patientData = {
+  recentActivity: [
+    { type: "appointment", description: "Consultation avec Mme. Dupont", date: new Date(2024, 2, 12, 10, 0) },
+    { type: "medication", description: "Prescription de Levothyrox", date: new Date(2024, 2, 11, 14, 30) },
+    { type: "test", description: "Résultats d'analyse de sang", date: new Date(2024, 2, 10, 9, 15) },
+    { type: "appointment", description: "Suivi avec M. Lemoine", date: new Date(2024, 2, 9, 16, 0) },
+  ],
+};
