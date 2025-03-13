@@ -143,21 +143,21 @@ export const doctorNavItems = [
     title: "Tableau de bord",
     icon: BarChart,
     description: "Vue d'ensemble du médecin",
-    url: "/dashboard/hopital_doctor",
+    url: "/dashboard/independant_doctor",
     items: [
       {
         title: "Aperçu",
-        url: "/dashboard/hopital_doctor/overview",
+        url: "/dashboard/independant_doctor/overview",
         icon: ClipboardList,
       },
       {
         title: "Statistiques & Analyse",
-        url: "/dashboard/hopital_doctor/statistics",
+        url: "/dashboard/independant_doctor/statistics",
         icon: FileText,
       },
       {
         title: "Avis & Retours",
-        url: "/dashboard/hopital_doctor/reviews",
+        url: "/dashboard/independant_doctor/reviews",
         icon: MessageSquare,
       },
     ],
