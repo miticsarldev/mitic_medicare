@@ -526,11 +526,6 @@ export const hospitalDoctorNavItems = [
         title: "Liste des Patients",
         url: "/dashboard/hopital_doctor/patients/list",
       },
-      {
-        title: "Dossiers Médicaux",
-        url: "/dashboard/hopital_doctor/patients/medical-records",
-        icon: FolderHeart,
-      },
     ],
   },
   {

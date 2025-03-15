@@ -6,7 +6,11 @@ export const patients = [
     phone: "+223 74 20 30 44",
     status: "Actif",
     lastVisit: "2023-10-15",
-    motif: "Contrôle de routine"
+    motif: "Contrôle de routine",
+    dateOfBirth: "1985-05-12",
+    bloodType: "A+",
+    allergies: ["Noix"],
+    medicalNotes: "Patient suivi pour hypertension artérielle."
   },
   {
     id: 2,
@@ -15,7 +19,11 @@ export const patients = [
     phone: "+223 74 23 65 78",
     status: "Inactif",
     lastVisit: "2023-09-20",
-    motif: "Consultation pour douleurs"
+    motif: "Consultation pour douleurs",
+    dateOfBirth: "1990-08-25",
+    bloodType: "O-",
+    allergies: ["Aspirine"],
+    medicalNotes: "Douleurs chroniques au niveau des articulations."
   },
   {
     id: 3,
@@ -24,7 +32,11 @@ export const patients = [
     phone: "+223 74 20 30 44",
     status: "Actif",
     lastVisit: "2023-10-10",
-    motif: "Suivi post-opératoire"
+    motif: "Suivi post-opératoire",
+    dateOfBirth: "1978-03-17",
+    bloodType: "B+",
+    allergies: ["Iode"],
+    medicalNotes: "Récupération après chirurgie de la vésicule biliaire."
   },
   {
     id: 4,
@@ -33,7 +45,11 @@ export const patients = [
     phone: "+223 74 21 31 45",
     status: "Actif",
     lastVisit: "2023-10-20",
-    motif: "Problèmes respiratoires"
+    motif: "Problèmes respiratoires",
+    dateOfBirth: "1982-11-30",
+    bloodType: "AB+",
+    allergies: ["Pollen"],
+    medicalNotes: "Asthme diagnostiqué en 2015."
   },
   {
     id: 5,
@@ -42,7 +58,11 @@ export const patients = [
     phone: "+223 74 22 32 46",
     status: "Inactif",
     lastVisit: "2023-09-25",
-    motif: "Allergies saisonnières"
+    motif: "Allergies saisonnières",
+    dateOfBirth: "1995-07-14",
+    bloodType: "A-",
+    allergies: ["Pollen", "Acariens"],
+    medicalNotes: "Traitement antihistaminique en cours."
   },
   {
     id: 6,
@@ -51,16 +71,24 @@ export const patients = [
     phone: "+223 74 23 33 47",
     status: "Actif",
     lastVisit: "2023-10-25",
-    motif: "Douleurs articulaires"
+    motif: "Douleurs articulaires",
+    dateOfBirth: "1988-02-09",
+    bloodType: "O+",
+    allergies: [],
+    medicalNotes: "Arthrite rhumatoïde sous traitement."
   },
-    {
+  {
     id: 7,
     name: "Aminata Sissoko",
     email: "aminatasissoko@gmail.com",
     phone: "+223 74 24 34 48",
     status: "Actif",
     lastVisit: "2023-10-28",
-    motif: "Contrôle de grossesse"
+    motif: "Contrôle de grossesse",
+    dateOfBirth: "1993-04-22",
+    bloodType: "B-",
+    allergies: [],
+    medicalNotes: "Grossesse à 24 semaines, suivi mensuel."
   },
   {
     id: 8,
@@ -69,7 +97,11 @@ export const patients = [
     phone: "+223 74 25 35 49",
     status: "Inactif",
     lastVisit: "2023-09-30",
-    motif: "Problèmes digestifs"
+    motif: "Problèmes digestifs",
+    dateOfBirth: "1980-12-05",
+    bloodType: "A+",
+    allergies: ["Lactose"],
+    medicalNotes: "Intolérance au lactose, régime sans lactose recommandé."
   },
   {
     id: 9,
@@ -78,7 +110,11 @@ export const patients = [
     phone: "+223 74 26 36 50",
     status: "Actif",
     lastVisit: "2023-11-01",
-    motif: "Migraines"
+    motif: "Migraines",
+    dateOfBirth: "1987-06-18",
+    bloodType: "O-",
+    allergies: ["Chocolat"],
+    medicalNotes: "Migraines chroniques, traitement préventif en cours."
   },
   {
     id: 10,
@@ -87,7 +123,11 @@ export const patients = [
     phone: "+223 74 27 37 51",
     status: "Inactif",
     lastVisit: "2023-10-05",
-    motif: "Fatigue chronique"
+    motif: "Fatigue chronique",
+    dateOfBirth: "1991-09-11",
+    bloodType: "AB-",
+    allergies: [],
+    medicalNotes: "Fatigue persistante, analyses en cours."
   },
   {
     id: 11,
@@ -96,7 +136,11 @@ export const patients = [
     phone: "+223 74 28 38 52",
     status: "Actif",
     lastVisit: "2023-11-05",
-    motif: "Suivi diabète"
+    motif: "Suivi diabète",
+    dateOfBirth: "1975-01-28",
+    bloodType: "A+",
+    allergies: [],
+    medicalNotes: "Diabète de type 2, traitement par insuline."
   },
   {
     id: 12,
@@ -105,6 +149,10 @@ export const patients = [
     phone: "+223 74 29 39 53",
     status: "Inactif",
     lastVisit: "2023-10-10",
-    motif: "Problèmes de peau"
-  },
+    motif: "Problèmes de peau",
+    dateOfBirth: "1984-10-15",
+    bloodType: "B+",
+    allergies: ["Latex"],
+    medicalNotes: "Eczéma chronique, traitement local en cours."
+  }
 ];
