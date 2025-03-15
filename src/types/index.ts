@@ -16,4 +16,14 @@ export interface Doctor {
     phone: string;
     email: string;
   }
-  
+ export type Appointment = {
+    id: string;
+    patientName: string;
+    date: Date;
+    motif: string;
+    status: string;
+    notes: string;
+    prescription: boolean;
+    followUp: string | null;
+    avatar: string;
+  };

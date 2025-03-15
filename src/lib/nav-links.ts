@@ -526,11 +526,6 @@ export const hospitalDoctorNavItems = [
         title: "Liste des Patients",
         url: "/dashboard/hopital_doctor/patients/list",
       },
-      {
-        title: "Dossiers Médicaux",
-        url: "/dashboard/hopital_doctor/patients/medical-records",
-        icon: FolderHeart,
-      },
     ],
   },
   {
@@ -587,7 +582,7 @@ export function getNavItems(role: UserRole) {
     case "independent_doctor":
       return doctorNavItems;
     case "hospital_doctor":
-      return hospitalAdminNavItems;
+      return hospitalDoctorNavItems;
     case "patient":
       return patientNavItems;
     default:
