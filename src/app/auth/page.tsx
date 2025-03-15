@@ -44,7 +44,7 @@ export default async function AuthPage() {
 
         {/* Main Content */}
         <main className="mx-auto px-4 py-2 md:py-4 lg:py-8">
-          <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-12">
+          <div className="flex flex-col-reverse items-center lg:flex-row lg:items-start justify-between gap-8 lg:gap-12">
             {/* Left Column - Image and Text */}
             <ClientAnimationWrapper
               className="w-full lg:w-1/2 max-w-xl"
@@ -67,8 +67,8 @@ export default async function AuthPage() {
               </div>
 
               <div className="relative">
-                <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
+                <div className="hidden sm:block z-20 absolute -top-10 -left-10 w-40 h-40 bg-primary rounded-full blur-3xl" />
+                <div className="hidden sm:block z-20 absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500 rounded-full blur-3xl" />
 
                 <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl">
                   <Image

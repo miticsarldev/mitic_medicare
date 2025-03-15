@@ -204,6 +204,7 @@ enum PatientSubscriptionPlan {
 }
 
 enum InstitutionSubscriptionPlan {
+    free
     standard
     enterprise
 }
@@ -254,7 +255,7 @@ model InstitutionSubscription {
 model IndependantDoctorSubscription {
     id        String                            @id @default(cuid())
     doctorId  String
-    doctor    Doctor                            @relation(fields: [doctorId], references: [id])
+    doctor    Doctor                            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
     plan      IndependantDoctorSubscriptionPlan
     status    SubscriptionStatus
     startDate DateTime
