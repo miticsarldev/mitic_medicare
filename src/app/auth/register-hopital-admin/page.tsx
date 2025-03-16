@@ -130,7 +130,7 @@ export default function HospitalAdminRegister() {
               animateAnimation={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="bg-white dark:bg-gray-800 lg:w-full rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-900 lg:w-full rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
                 <div className="px-4 py-4 md:p-6">
                   <div className="flex items-center justify-center mb-2">
                     <div className="flex items-center gap-0.5">

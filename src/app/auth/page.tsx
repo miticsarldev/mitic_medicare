@@ -123,7 +123,7 @@ export default async function AuthPage() {
               animateAnimation={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
                 <div className="p-6 md:p-8">
                   <div className="flex items-center justify-center mb-6">
                     <div className="flex items-center gap-0.5">
