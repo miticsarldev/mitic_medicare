@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,7 +32,37 @@ const LoginForm = () => {
 
   useEffect(() => {
     if (session) {
-      router.push("/dashboard");
+      if (!session.user.emailVerified) {
+        signOut({ redirect: false }).then(() => {
+          localStorage.setItem(
+            "mitic-pending-verification",
+            JSON.stringify({
+              email: session.user.email,
+              role: session.user.role,
+            })
+          );
+
+          router.push(`/auth/email-verification-required`);
+        });
+      } else if (
+        !session.user.isApproved &&
+        (session.user.role === "hospital_admin" ||
+          session.user.role === "independent_doctor")
+      ) {
+        signOut({ redirect: false }).then(() => {
+          localStorage.setItem(
+            "mitic-pending-approval",
+            JSON.stringify({
+              email: session.user.email,
+              role: session.user.role,
+            })
+          );
+
+          router.push(`/auth/approval-required`);
+        });
+      } else {
+        router.push("/dashboard");
+      }
     }
   }, [session, router]);
 
@@ -55,7 +85,6 @@ const LoginForm = () => {
         redirect: false,
         email: data.email,
         password: data.password,
-        callbackUrl: "/dashboard",
       });
 
       if (result?.ok) {
@@ -63,8 +92,6 @@ const LoginForm = () => {
           title: "Connexion réussie",
           description: "Vous êtes maintenant connecté à votre compte.",
         });
-
-        router.push("/dashboard");
       } else {
         toast({
           variant: "destructive",

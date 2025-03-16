@@ -44,6 +44,7 @@ model User {
     password      String    @db.Text
     role          UserRole
     emailVerified DateTime?
+    isApproved    Boolean   @default(false)
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
 

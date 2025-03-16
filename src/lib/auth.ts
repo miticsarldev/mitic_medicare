@@ -42,7 +42,10 @@ export const authOptions: AuthOptions = {
           throw new Error("Incorrect password");
         }
 
-        return { ...user, userProfile: user.userProfile ?? undefined };
+        return {
+          ...user,
+          userProfile: user.userProfile ?? undefined,
+        };
       },
     }),
   ],
@@ -58,6 +61,7 @@ export const authOptions: AuthOptions = {
           userProfile: user.userProfile,
           role: user.role,
           emailVerified: user.emailVerified,
+          isApproved: user.isApproved,
         };
       }
       return token;
@@ -74,7 +78,8 @@ export const authOptions: AuthOptions = {
             image: token.image as string | null | undefined,
             userProfile: token.userProfile,
             role: token.role,
-            emailVerified: token.email,
+            emailVerified: token.emailVerified,
+            isApproved: token.isApproved,
           },
         };
       }
