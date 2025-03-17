@@ -251,19 +251,19 @@ export const upcomingAppointments = [
   },
 ];
 export const appointmentsByDate = {
-  "2025-03-13": [
-    { id: 1, patient: "Maïlène Durand", time: "09:00", reason: "Consultation générale", status: "pending" },
-    { id: 2, patient: "Lucas Morel", time: "10:30", reason: "Suivi diabète", status: "pending" },
-    { id: 3, patient: "Inès Fabre", time: "14:00", reason: "Douleurs dorsales", status: "accepted" },
-    { id: 4, patient: "Thomas Leclerc", time: "16:00", reason: "Bilan de santé", status: "rejected" },
+  "2025-03-17": [
+    { id: 1, patient: "Mariam Diallo", time: "09:00", reason: "Consultation générale", status: "pending" },
+    { id: 2, patient: "Alima Konté", time: "10:30", reason: "Suivi diabète", status: "pending" },
+    { id: 3, patient: "Fatoumata Sow", time: "14:00", reason: "Douleurs dorsales", status: "accepted" },
+    { id: 4, patient: "Issa Sylla", time: "16:00", reason: "Bilan de santé", status: "rejected" },
   ],
-  "2025-03-14": [
-    { id: 5, patient: "Camille Lefevre", time: "08:30", reason: "Examen annuel", status: "pending" },
-    { id: 6, patient: "Émile Lambert", time: "11:00", reason: "Suivi hypertension", status: "pending" },
+  "2025-03-18": [
+    { id: 5, patient: "Amara konaté", time: "08:30", reason: "Examen annuel", status: "pending" },
+    { id: 6, patient: "Papa touré", time: "11:00", reason: "Suivi hypertension", status: "pending" },
   ],
-  "2025-03-15": [
-    { id: 7, patient: "Jules Carpentier", time: "09:45", reason: "Consultation pédiatrique", status: "pending" },
-    { id: 8, patient: "Nina Roche", time: "13:00", reason: "Allergies saisonnières", status: "accepted" },
+  "2025-03-19": [
+    { id: 7, patient: "Penda Diarra", time: "09:45", reason: "Consultation pédiatrique", status: "pending" },
+    { id: 8, patient: "Massiré Dramé", time: "13:00", reason: "Allergies saisonnières", status: "accepted" },
   ],
 };
 export const patientReviews = [
@@ -280,9 +280,9 @@ export const revenueData = [
 ];
 
 export const pendingAppointments = [
-  { id: 1, patient: "Jean Dupont", date: "12 Mars 2024", time: "10:00 AM" },
-  { id: 2, patient: "Alice Moreau", date: "12 Mars 2024", time: "11:30 AM" },
-  { id: 3, patient: "Marc Lemoine", date: "13 Mars 2024", time: "02:00 PM" },
+  { id: 1, patient: "Jean Dupont", date: "16 Mars 2024", time: "10:00 AM" },
+  { id: 2, patient: "Alice Moreau", date: "18 Mars 2024", time: "11:30 AM" },
+  { id: 3, patient: "Marc Lemoine", date: "17 Mars 2024", time: "04:00 PM" },
 ];
 
 export const patientData = {
