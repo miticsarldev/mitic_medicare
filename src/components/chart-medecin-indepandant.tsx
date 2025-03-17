@@ -6,15 +6,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-// Données des rendez-vous et des revenus
 const appointmentsData = [
-  { month: "Janvier", confirmes: 15, annules: 5, nonLieu: 2, revenue: 2500 },
-  { month: "Février", confirmes: 20, annules: 8, nonLieu: 1, revenue: 3200 },
-  { month: "Mars", confirmes: 18, annules: 4, nonLieu: 3, revenue: 2800 },
-  { month: "Avril", confirmes: 22, annules: 6, nonLieu: 2, revenue: 3500 },
-  { month: "Mai", confirmes: 19, annules: 7, nonLieu: 3, revenue: 4000 },
-  { month: "Juin", confirmes: 25, annules: 5, nonLieu: 2, revenue: 3700 },
+  { month: "Janvier", status: "confirmer", revenue: 2500 },
+  { month: "Janvier", status: "annuler", revenue: 2500 },
+  { month: "Janvier", status: "nonLieu", revenue: 2500 },
+  { month: "Janvier", status: "nonLieu", revenue: 2500 },
+  { month: "Janvier", status: "nonLieu", revenue: 2500 },
+  { month: "Février", status: "confirmer", revenue: 3200 },
+  { month: "Février", status: "annuler", revenue: 3200 },
+  { month: "Février", status: "nonLieu", revenue: 3200 },
+  { month: "Mars", status: "confirmer", revenue: 2800 },
+  { month: "Mars", status: "annuler", revenue: 2800 },
+  { month: "Mars", status: "nonLieu", revenue: 2800 },
+  { month: "Avril", status: "confirmer", revenue: 3500 },
+  { month: "Avril", status: "annuler", revenue: 3500 },
+  { month: "Avril", status: "nonLieu", revenue: 3500 },
+  { month: "Mai", status: "confirmer", revenue: 4000 },
+  { month: "Mai", status: "annuler", revenue: 4000 },
+  { month: "Mai", status: "nonLieu", revenue: 4000 },
+  { month: "Juin", status: "confirmer", revenue: 3700 },
+  { month: "Juin", status: "annuler", revenue: 3700 },
+  { month: "Juin", status: "nonLieu", revenue: 3700 },
 ];
+
+// Fonction pour compter les statuts par mois
+const aggregateData = () => {
+  const result = {};
+  appointmentsData.forEach(({ month, status }) => {
+    if (!result[month]) {
+      result[month] = { month, confirmer: 0, annuler: 0, nonLieu: 0 };
+    }
+    result[month][status]++;
+  });
+  return Object.values(result);
+};
 
 // Composant réutilisable pour le menu d'options
 const OptionsMenu = () => (
@@ -55,19 +80,20 @@ const ChartCard = ({ title, description, children }: { title: string; descriptio
 
 // Composant principal
 export function AppointmentsChart() {
+  const processedData = aggregateData();
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* Graphique des rendez-vous */}
       <ChartCard title="Rendez-vous Passés" description="Répartition des rendez-vous confirmés, annulés et non-lieu">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={appointmentsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <BarChart data={processedData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip formatter={(value) => [`${value} rendez-vous`, ""]} labelFormatter={(label) => `Mois: ${label}`} />
             <Legend />
-            <Bar dataKey="confirmes" name="Confirmés" fill="#4CAF50" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="annules" name="Annulés" fill="#FF5252" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="confirmer" name="Confirmés" fill="#4CAF50" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="annuler" name="Annulés" fill="#FF5252" radius={[4, 4, 0, 0]} />
             <Bar dataKey="nonLieu" name="Non-lieu" fill="#FFC107" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -86,7 +112,7 @@ export function AppointmentsChart() {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" />
             <YAxis />
-            <Tooltip formatter={(value) => [`${value} €`, "Revenus"]} labelFormatter={(label) => `Mois: ${label}`} />
+            <Tooltip formatter={(value) => [`${value} XOF`, "Revenus"]} labelFormatter={(label) => `Mois: ${label}`} />
             <Legend />
             <Area type="monotone" dataKey="revenue" name="Revenus" stroke="#4CAF50" fillOpacity={1} fill="url(#colorRevenue)" />
           </AreaChart>
