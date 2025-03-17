@@ -10,6 +10,8 @@ const appointmentsData = [
   { month: "Janvier", status: "confirmer", revenue: 2500 },
   { month: "Janvier", status: "annuler", revenue: 2500 },
   { month: "Janvier", status: "nonLieu", revenue: 2500 },
+  { month: "Janvier", status: "nonLieu", revenue: 2500 },
+  { month: "Janvier", status: "nonLieu", revenue: 2500 },
   { month: "Février", status: "confirmer", revenue: 3200 },
   { month: "Février", status: "annuler", revenue: 3200 },
   { month: "Février", status: "nonLieu", revenue: 3200 },
@@ -110,7 +112,7 @@ export function AppointmentsChart() {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" />
             <YAxis />
-            <Tooltip formatter={(value) => [`${value} €`, "Revenus"]} labelFormatter={(label) => `Mois: ${label}`} />
+            <Tooltip formatter={(value) => [`${value} XOF`, "Revenus"]} labelFormatter={(label) => `Mois: ${label}`} />
             <Legend />
             <Area type="monotone" dataKey="revenue" name="Revenus" stroke="#4CAF50" fillOpacity={1} fill="url(#colorRevenue)" />
           </AreaChart>

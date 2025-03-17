@@ -1,11 +1,12 @@
 "use client";
 import React, { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Button } from "@/components/ui/button"; 
 import { RefreshCw, Download } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { performanceStats } from "@/components/stats";
+import { Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "@/components/ui/charts";
+import { Tooltip } from "@radix-ui/react-tooltip";
 
 const StatisticsPage = () => {
   const [timeRange, setTimeRange] = useState("30d");
@@ -49,7 +50,7 @@ const StatisticsPage = () => {
       </div>
 
       {/* Performance Metrics */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {performanceStats.map((stat, index) => (
           <Card key={index}>
             <CardHeader>

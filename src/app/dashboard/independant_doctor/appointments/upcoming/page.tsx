@@ -3,35 +3,11 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Card,
-  CardContent,
-  CardDescription, 
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  CalendarIcon,
-  Clock,
-  MoreHorizontal,
-  User,
-  MapPin, 
-} from "lucide-react";
+import { CalendarIcon, Clock, MoreHorizontal, User, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -86,8 +62,19 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+type Appointment = {
+  id: string;
+  doctorName?: string;
+  patientName: string;
+  date: Date;
+  status: string;
+  notes: string;
+  location: string;
+  avatar: string;
+};
+
 export default function Page() {
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const appointmentsForDate = date
@@ -100,9 +87,11 @@ export default function Page() {
     : [];
 
     const handleCancelAppointment = () => { 
+      if (!selectedAppointment) return;
       console.log(`Cancelling appointment ${selectedAppointment.id}`);
       setCancelDialogOpen(false);
     };
+    
 
   return (
     <div className="space-y-6 p-4">

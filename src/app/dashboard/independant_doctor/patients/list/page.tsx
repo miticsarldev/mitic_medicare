@@ -1,25 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns"; 
+import { format } from "date-fns";
 import {
   ArrowUpDown,
-  Calendar, 
-  Download, 
-  MoreHorizontal, 
-  Search, 
-  User, 
+  Calendar,
+  Download,
+  MoreHorizontal,
+  Search,
+  User,
   FileText,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card"; 
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
-  DropdownMenu, 
+  DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem, 
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -47,7 +47,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"; 
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -388,63 +388,40 @@ const patients = [
 
 export default function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus] = useState<string>("all");
-  const [selectedSubscription] =
-    useState<string>("all");
   const [selectedPatient, setSelectedPatient] = useState<
     (typeof patients)[0] | null
   >(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); 
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortBy, setSortBy] = useState<string>("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
 
-  // Filter patients based on search, status, and subscription
-  const filteredPatients = patients.filter((patient) => {
-    const matchesSearch =
+  // Filtrer et trier les patients
+  const filteredPatients = patients.filter((patient) =>
+    patient.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const sortedPatients = [...patients]
+    .filter((patient) =>
       searchQuery === "" ||
       patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.id.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus =
-      selectedStatus === "all" || patient.status === selectedStatus;
-    const matchesSubscription =
-      selectedSubscription === "all" ||
-      patient.subscription === selectedSubscription;
-
-    return matchesSearch && matchesStatus && matchesSubscription;
-  });
-
-  // Sort patients
-  const sortedPatients = [...filteredPatients].sort((a, b) => {
-    let comparison = 0;
-
-    if (sortBy === "name") {
-      comparison = a.name.localeCompare(b.name);
-    } else if (sortBy === "registrationDate") {
-      comparison =
-        new Date(a.registrationDate).getTime() -
-        new Date(b.registrationDate).getTime();
-    } else if (sortBy === "lastLogin") {
-      comparison =
-        new Date(a.lastLogin).getTime() - new Date(b.lastLogin).getTime();
-    } else if (sortBy === "appointmentsCount") {
-      comparison = a.appointmentsCount - b.appointmentsCount;
-    }
-
-    return sortOrder === "asc" ? comparison : -comparison;
-  });
+      patient.id.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const comparison = a[sortBy] > b[sortBy] ? 1 : -1;
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   // Pagination
   const totalPages = Math.ceil(sortedPatients.length / itemsPerPage);
   const paginatedPatients = sortedPatients.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
-  );
+  ); 
 
   // Handle sort
   const handleSort = (column: string) => {
@@ -461,7 +438,6 @@ export default function PatientsPage() {
     setSelectedPatient(patient);
     setIsDetailOpen(true);
   };
-
 
   // Handle patient deletion
   const handleDeletePatient = () => {
@@ -481,14 +457,14 @@ export default function PatientsPage() {
             Liste des patients que vous avez pris en charge
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row"> 
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" /> Exporter
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="list" className="w-full"> 
+      <Tabs defaultValue="list" className="w-full">
         <TabsContent value="list" className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
@@ -503,7 +479,7 @@ export default function PatientsPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                  </div> 
+                  </div>
                   <Select
                     value={itemsPerPage.toString()}
                     onValueChange={(value) => setItemsPerPage(parseInt(value))}
@@ -518,14 +494,14 @@ export default function PatientsPage() {
                       <SelectItem value="50">50 par page</SelectItem>
                     </SelectContent>
                   </Select>
-                </div> 
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
-                    <TableRow> 
+                    <TableRow>
                       <TableHead>
                         <div
                           className="flex items-center cursor-pointer"
@@ -540,7 +516,7 @@ export default function PatientsPage() {
                       </TableHead>
                       <TableHead className="hidden md:table-cell">
                         Adresse
-                      </TableHead> 
+                      </TableHead>
                       <TableHead className="hidden md:table-cell">
                         <div
                           className="flex items-center cursor-pointer"
@@ -562,7 +538,7 @@ export default function PatientsPage() {
                       </TableRow>
                     ) : (
                       paginatedPatients.map((patient) => (
-                        <TableRow key={patient.id}>  
+                        <TableRow key={patient.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8">
@@ -589,13 +565,13 @@ export default function PatientsPage() {
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {patient.address}
-                          </TableCell> 
+                          </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {format(
                               new Date(patient.lastLogin),
                               "dd/MM/yyyy HH:mm"
                             )}
-                          </TableCell> 
+                          </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -610,8 +586,8 @@ export default function PatientsPage() {
                                 >
                                   <User className="mr-2 h-4 w-4" />
                                   Voir les détails RDV
-                                </DropdownMenuItem> 
-                                <DropdownMenuSeparator /> 
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -675,7 +651,7 @@ export default function PatientsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>  
+        </TabsContent>
       </Tabs>
 
       {/* Patient Detail Dialog */}
@@ -696,8 +672,8 @@ export default function PatientsPage() {
                       </AvatarFallback>
                     </Avatar>
                     <span>{selectedPatient.name}</span>
-                  </DialogTitle> 
-                </div> 
+                  </DialogTitle>
+                </div>
               </DialogHeader>
               <div className="grid gap-4 py-4 md:grid-cols-2">
                 <div className="space-y-4">
@@ -790,7 +766,7 @@ export default function PatientsPage() {
                             </span>
                           )}
                         </div>
-                      </div> 
+                      </div>
                     </div>
                   </div>
 
