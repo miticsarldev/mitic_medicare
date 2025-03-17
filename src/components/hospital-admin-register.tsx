@@ -144,7 +144,8 @@ const HospitalAdminRegisterForm = () => {
       toast({
         title: "Inscription réussie",
         description:
-          "Votre compte administrateur d'hôpital a été créé avec succès.",
+          "Votre compte administrateur d'hôpital a été créé avec succès. Un email de confirmation vous a été envoyé. Veuillez le vérifier pour activer votre compte.",
+        duration: 10000,
       });
 
       router.push("/auth");
@@ -484,7 +485,7 @@ const HospitalAdminRegisterForm = () => {
                     J&apos;accepte les <span className="font-bold">CGU</span>{" "}
                     ainsi que{" "}
                     <span className="font-bold">
-                      la charte de Medi
+                      la charte de MITIC
                       <span className="text-[#107ACA]">Care</span>
                     </span>
                   </label>

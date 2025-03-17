@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/utils/hash";
 import prisma from "@/lib/prisma";
+import { generateVerificationToken } from "@/lib/token";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -88,6 +90,16 @@ export async function POST(req: Request) {
 
       return user;
     });
+
+    // Send verification email
+    const token = await generateVerificationToken(normalizedEmail);
+
+    await sendVerificationEmail(
+      newUser.name,
+      normalizedEmail,
+      token.token,
+      "independent_doctor"
+    );
 
     return NextResponse.json(
       { message: "Médecin indépendant enregistré.", user: newUser },

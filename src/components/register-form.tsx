@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -79,7 +78,6 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
 
   const {
     control,
@@ -101,7 +99,6 @@ const RegisterForm = () => {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
-    console.log(data);
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -116,11 +113,11 @@ const RegisterForm = () => {
       toast({
         title: "Inscription réussie",
         description:
-          "Votre compte a été créé avec succès, vous pouvez maintenant vous connecter.",
+          "Votre compte a été créé avec succès. Un email de confirmation vous a été envoyé. Veuillez le vérifier pour activer votre compte.",
+        duration: 10000,
       });
 
       reset();
-      router.replace("/auth");
     } catch (err) {
       console.error(err);
 

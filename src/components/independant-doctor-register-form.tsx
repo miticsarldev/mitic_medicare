@@ -111,11 +111,13 @@ export default function IndependentDoctorRegistration() {
 
       toast({
         title: "Inscription réussie",
-        description: "Votre fiche praticien a été créée avec succès.",
+        description:
+          "Votre fiche praticien a été créée avec succès. Un email de confirmation vous a été envoyé. Veuillez le vérifier pour activer votre compte.",
+        duration: 10000,
       });
 
       // After successful registration, you might want to redirect to a dashboard or profile page
-      router.push("/auth/validation");
+      router.push("/auth");
     } catch (err) {
       console.error(err);
       toast({
@@ -136,7 +138,7 @@ export default function IndependentDoctorRegistration() {
           Informations personnelles *
         </p>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
             <div>
               <Label htmlFor="lastName">Nom *</Label>
               <Input
@@ -164,7 +166,7 @@ export default function IndependentDoctorRegistration() {
               )}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
             <div>
               <Label htmlFor="email">Adresse email *</Label>
               <Input
@@ -285,7 +287,7 @@ export default function IndependentDoctorRegistration() {
                     J&apos;accepte les <span className="font-bold">CGU</span>{" "}
                     ainsi que{" "}
                     <span className="font-bold">
-                      la charte de Medi
+                      la charte de MITIC
                       <span className="text-[#107ACA]">Care</span>
                     </span>
                   </label>

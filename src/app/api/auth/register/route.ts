@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { hashPassword } from "@/utils/hash";
 import prisma from "@/lib/prisma";
-// import { generateVerificationToken } from "@/lib/token";
+import { generateVerificationToken } from "@/lib/token";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -75,11 +76,15 @@ export async function POST(req: Request) {
     });
 
     // Send verification email
-    //   const token = generateVerificationToken(normalizedEmail);
-    // await sendVerificationEmail(normalizedEmail, token);
+    const token = await generateVerificationToken(normalizedEmail);
+    await sendVerificationEmail(newUser.name, normalizedEmail, token.token);
 
     return NextResponse.json(
-      { message: "Utilisateur enregistré avec succès.", user: newUser },
+      {
+        message:
+          "Utilisateur enregistré avec succès. Vérifiez votre email pour confirmer votre compte.",
+        user: newUser,
+      },
       { status: 201 }
     );
   } catch (error) {

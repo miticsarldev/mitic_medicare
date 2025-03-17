@@ -26,7 +26,7 @@ export default function IndependentDoctorRegister() {
 
         {/* Main Content */}
         <main className="mx-auto px-4 py-2 md:py-4 lg:py-8">
-          <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-12">
+          <div className="flex flex-col-reverse items-center lg:flex-row lg:items-start lg:justify-between gap-8 lg:gap-12">
             {/* Left Column - Image and Text */}
             <ClientAnimationWrapper
               className="w-full lg:w-1/2 max-w-xl"
@@ -72,8 +72,8 @@ export default function IndependentDoctorRegister() {
               </div>
 
               <div className="relative">
-                <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
+                <div className="hidden sm:block absolute -top-10 -left-10 w-40 h-40 bg-primary rounded-full blur-3xl" />
+                <div className="hidden sm:block absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500 rounded-full blur-3xl" />
 
                 <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl">
                   <Image
@@ -123,13 +123,13 @@ export default function IndependentDoctorRegister() {
 
             {/* Right Column - Registration Form */}
             <ClientAnimationWrapper
-              className="w-full lg:w-1/2 max-w-md lg:sticky lg:top-24 self-start"
+              className="w-full lg:w-1/2 flex flex-col items-center lg:items-end lg:sticky lg:top-24 self-start"
               initialAnimation={{ opacity: 0, x: 20 }}
               animateAnimation={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
-                <div className="px-2 py-4 md:p-4">
+              <div className="bg-white dark:bg-gray-800 lg:w-full rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+                <div className="px-4 py-4 md:p-6">
                   <div className="flex items-center justify-center mb-2">
                     <div className="flex items-center gap-0.5">
                       <div className="relative w-auto h-6">
