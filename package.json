@@ -14,6 +14,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@fullcalendar/react": "^6.1.15",
     "@hookform/resolvers": "^4.0.0",
     "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/client": "^6.5.0",
@@ -55,6 +56,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
     "framer": "^2.4.1",
+    "fullcalendar": "^6.1.15",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.475.0",
     "next": "^14.2.24",
