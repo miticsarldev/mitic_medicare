@@ -19,7 +19,7 @@ export default function DoctorSchedulePage() {
   };
 
   // Événements du calendrier (simulés)
-  const [events, setEvents] = useState([
+  const [events] = useState([
     {
       id: "1",
       title: "Consultation - Sophie Martin",
@@ -152,7 +152,7 @@ export default function DoctorSchedulePage() {
             <User className="w-8 h-8 text-blue-500" />
             <div>
               <p className={`text-lg font-semibold ${textColor}`}>12 patients</p>
-              <p className={`text-sm ${secondaryTextColor}`}>Aujourd'hui</p>
+              <p className={`text-sm ${secondaryTextColor}`}>Aujourd&apos;hui</p>
             </div>
           </div>
           <div className={`flex items-center gap-4 p-4 border ${borderColor} rounded-md`}>

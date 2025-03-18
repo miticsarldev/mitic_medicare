@@ -63,7 +63,7 @@ export default function HospitalInfoPage() {
             <Bed className="w-8 h-8 text-green-500" />
             <div>
               <p className={`text-lg font-semibold ${textColor}`}>{hospital.beds} lits</p>
-              <p className={`text-sm ${secondaryTextColor}`}>Capacité d'accueil</p>
+              <p className={`text-sm ${secondaryTextColor}`}>Capacité d&apos;accueil</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
