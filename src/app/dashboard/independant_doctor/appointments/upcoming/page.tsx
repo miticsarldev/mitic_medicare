@@ -175,20 +175,6 @@ export default function Page() {
                           </>
                         )}
                       </DropdownMenuContent>
-
-                      {/* <DropdownMenuItem
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setCancelDialogOpen(true);
-                        }}
-                        className="text-destructive"
-                      >
-                        Annuler le rendez-vous
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>Reprogrammer</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setFormDialogOpen(true)}>Ajouter un diagnostic</DropdownMenuItem>
-                      <DropdownMenuItem>Détails</DropdownMenuItem> */}
-                    
                   </DropdownMenu>
                 </div>
               </CardHeader>
