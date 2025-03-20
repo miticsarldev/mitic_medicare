@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const existingPhone = await prisma.userProfile.findFirst({
+    const existingPhone = await prisma.user.findUnique({
       where: { phone: phoneNumber },
     });
 
@@ -55,11 +55,11 @@ export async function POST(req: Request) {
       data: {
         name,
         email: normalizedEmail,
+        phone: phoneNumber,
         password: hashedPassword,
-        role: "patient",
-        userProfile: {
+        role: "PATIENT",
+        profile: {
           create: {
-            phone: phoneNumber,
             genre,
           },
         },
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         },
       },
       include: {
-        userProfile: true,
+        profile: true,
         patient: true,
       },
     });

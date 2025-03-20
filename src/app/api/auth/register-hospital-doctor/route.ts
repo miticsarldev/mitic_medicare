@@ -4,11 +4,19 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, specialization, licenseNumber, hospitalId } =
-      await req.json();
+    const {
+      name,
+      email,
+      phone,
+      password,
+      specialization,
+      licenseNumber,
+      hospitalId,
+    } = await req.json();
 
     if (
       !email ||
+      !phone ||
       !password ||
       !name ||
       !specialization ||
@@ -30,13 +38,35 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check if user already exists by phone
+    const existingUserByPhone = await prisma.user.findUnique({
+      where: { phone },
+    });
+    if (existingUserByPhone) {
+      return NextResponse.json(
+        { error: "Numéro de téléphone déjà utilisé." },
+        { status: 400 }
+      );
+    }
+
     // Check if the hospital exists
-    const hospitalExists = await prisma.institution.findUnique({
+    const hospitalExists = await prisma.hospital.findUnique({
       where: { id: hospitalId },
     });
     if (!hospitalExists) {
       return NextResponse.json(
         { error: "L'hôpital spécifié n'existe pas." },
+        { status: 400 }
+      );
+    }
+
+    // Check if license number is already used
+    const existingLicense = await prisma.doctor.findFirst({
+      where: { licenseNumber },
+    });
+    if (existingLicense) {
+      return NextResponse.json(
+        { error: "Numéro de licence déjà utilisé." },
         { status: 400 }
       );
     }
@@ -49,12 +79,11 @@ export async function POST(req: Request) {
       data: {
         name,
         email,
+        phone,
         password: hashedPassword,
-        role: "hospital_doctor",
-        userProfile: {
-          create: {
-            institutionType: "hospital",
-          },
+        role: "HOSPITAL_DOCTOR",
+        profile: {
+          create: {},
         },
       },
     });
@@ -65,7 +94,8 @@ export async function POST(req: Request) {
         userId: newUser.id,
         specialization,
         licenseNumber,
-        institutionId: hospitalId, // ✅ Correct way to associate the doctor with a hospital
+        isIndependent: false,
+        hospitalId,
       },
     });
 

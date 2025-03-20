@@ -580,15 +580,15 @@ export const hospitalDoctorNavItems = [
 
 export function getNavItems(role: UserRole) {
   switch (role) {
-    case "super_admin":
+    case "SUPER_ADMIN":
       return superAdminNavItems;
-    case "hospital_admin":
+    case "HOSPITAL_ADMIN":
       return hospitalAdminNavItems;
-    case "independent_doctor":
+    case "INDEPENDENT_DOCTOR":
       return doctorNavItems;
-    case "hospital_doctor":
+    case "HOSPITAL_DOCTOR":
       return hospitalAdminNavItems;
-    case "patient":
+    case "PATIENT":
       return patientNavItems;
     default:
       return [];

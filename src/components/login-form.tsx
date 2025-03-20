@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Mail } from "lucide-react";
+import { Eye, EyeOff, User } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,8 +13,21 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
+// Combined schema that accepts either email or phone
 const loginSchema = z.object({
-  email: z.string().email("L'adresse email doit avoir un format valide"),
+  identifier: z.string().refine(
+    (val) => {
+      // Email regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // Phone regex (basic international format)
+      const phoneRegex = /^\+?[0-9]{8,15}$/;
+
+      return emailRegex.test(val) || phoneRegex.test(val);
+    },
+    {
+      message: "Veuillez entrer un email ou un numéro de téléphone valide",
+    }
+  ),
   password: z
     .string()
     .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
@@ -46,8 +59,8 @@ const LoginForm = () => {
         });
       } else if (
         !session.user.isApproved &&
-        (session.user.role === "hospital_admin" ||
-          session.user.role === "independent_doctor")
+        (session.user.role === "HOSPITAL_ADMIN" ||
+          session.user.role === "INDEPENDENT_DOCTOR")
       ) {
         signOut({ redirect: false }).then(() => {
           localStorage.setItem(
@@ -73,7 +86,7 @@ const LoginForm = () => {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
       rememberMe: false,
     },
@@ -83,7 +96,7 @@ const LoginForm = () => {
     try {
       const result = await signIn("credentials", {
         redirect: false,
-        email: data.email,
+        identifier: data.identifier,
         password: data.password,
       });
 
@@ -116,15 +129,17 @@ const LoginForm = () => {
         Veuillez saisir vos informations
       </h2>
       <div className="relative">
-        <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <User className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         <Input
-          {...register("email")}
-          type="email"
-          placeholder="Adresse email"
+          {...register("identifier")}
+          type="text"
+          placeholder="Email ou numéro de téléphone"
           className="w-full pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         />
-        {errors.email && (
-          <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+        {errors.identifier && (
+          <p className="text-red-500 text-sm mt-1">
+            {errors.identifier.message}
+          </p>
         )}
       </div>
       <div className="relative">
