@@ -217,7 +217,7 @@ export const doctorNavItems = [
       },
       {
         title: "Paramètres",
-        url: "/dashboard/hopital_doctor/settings/settings",
+        url: "/dashboard/independant_doctor/settings/settings",
       },
     ],
   },
