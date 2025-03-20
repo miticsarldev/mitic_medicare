@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Clock, MoreHorizontal, User, MapPin } from "lucide-react";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale"; 
+import { fr } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
@@ -79,30 +79,44 @@ export default function Page() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const appointmentsForDate = date
     ? doctorAppointments.filter(
-        (appointment) =>
-          appointment.date.getDate() === date.getDate() &&
-          appointment.date.getMonth() === date.getMonth() &&
-          appointment.date.getFullYear() === date.getFullYear()
-      )
+      (appointment) =>
+        appointment.date.getDate() === date.getDate() &&
+        appointment.date.getMonth() === date.getMonth() &&
+        appointment.date.getFullYear() === date.getFullYear()
+    )
     : [];
+  const [formDialogOpen, setFormDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    id: "",
+    patientName: "",
+    date: "",
+    diagnostic: "",
+    medications: "",
+    notes: "",
+  });
 
-    const handleCancelAppointment = () => { 
-      if (!selectedAppointment) return;
-      console.log(`Cancelling appointment ${selectedAppointment.id}`);
-      setCancelDialogOpen(false);
-    };
-    
+  const handleCancelAppointment = () => {
+    if (!selectedAppointment) return;
+    console.log(`Cancelling appointment ${selectedAppointment.id}`);
+    setCancelDialogOpen(false);
+  };
+
+  const handleFormSubmit = () => {
+    console.log("Submitting form:", formData);
+    setFormDialogOpen(false);
+  };
+
 
   return (
     <div className="space-y-6 p-4">
       <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Prochains Rendez-vous
-          </h2>
-          <p className="text-muted-foreground">
-            Consultez et gérez vos rendez-vous médicaux à venir.
-          </p>
-        </div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Prochains Rendez-vous
+        </h2>
+        <p className="text-muted-foreground">
+          Consultez et gérez vos rendez-vous médicaux à venir.
+        </p>
+      </div>
       <Tabs defaultValue="list" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="list">Liste</TabsTrigger>
@@ -121,7 +135,7 @@ export default function Page() {
                     <AvatarFallback>
                       {appointment.patientName.charAt(0)}
                     </AvatarFallback>
-                  </Avatar> 
+                  </Avatar>
                   <div>
                     <CardTitle>{appointment.patientName}</CardTitle>
                     <CardDescription>{appointment.notes}</CardDescription>
@@ -132,23 +146,49 @@ export default function Page() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
-                                          <MoreHorizontal className="h-4 w-4" />
-                                          <span className="sr-only">Options</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Options</span>
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedAppointment(appointment);
-                            setCancelDialogOpen(true);
-                          }}
-                          className="text-destructive"
-                        >
-                          Annuler le rendez-vous
+                    </DropdownMenuTrigger> 
+                      <DropdownMenuContent align="end">
+                        {appointment.status === "CONFIRMED" && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedAppointment(appointment);
+                                setCancelDialogOpen(true);
+                              }}
+                              className="text-destructive"
+                            >
+                              Annuler le rendez-vous
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setFormDialogOpen(true)}>
+                              Ajouter un diagnostic
+                            </DropdownMenuItem>
+                          </>
+                        )}
+
+                        {appointment.status === "PENDING" && (
+                          <>
+                            <DropdownMenuItem>Reprogrammer</DropdownMenuItem>
+                            <DropdownMenuItem>Détails</DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+
+                      {/* <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setCancelDialogOpen(true);
+                        }}
+                        className="text-destructive"
+                      >
+                        Annuler le rendez-vous
                       </DropdownMenuItem>
                       <DropdownMenuItem>Reprogrammer</DropdownMenuItem>
-                      <DropdownMenuItem>Détails</DropdownMenuItem>
-                    </DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => setFormDialogOpen(true)}>Ajouter un diagnostic</DropdownMenuItem>
+                      <DropdownMenuItem>Détails</DropdownMenuItem> */}
+                    
                   </DropdownMenu>
                 </div>
               </CardHeader>
@@ -185,44 +225,61 @@ export default function Page() {
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
           <DialogHeader>
-                  <DialogTitle>Annuler le rendez-vous</DialogTitle>
-                  <DialogDescription>
-                    Êtes-vous sûr de vouloir annuler ce rendez-vous ? Cette action ne
-                    peut pas être annulée.
-                  </DialogDescription>
+            <DialogTitle>Annuler le rendez-vous</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir annuler ce rendez-vous ? Cette action ne
+              peut pas être annulée.
+            </DialogDescription>
           </DialogHeader>
           {selectedAppointment && (
-                  <div className="grid gap-2 py-4">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {selectedAppointment.doctorName}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                        {format(selectedAppointment.date, "EEEE d MMMM yyyy", {
-                          locale: fr,
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{format(selectedAppointment.date, "HH:mm")}</span>
-                    </div>
-                  </div>
+            <div className="grid gap-2 py-4">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">
+                  {selectedAppointment.doctorName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  {format(selectedAppointment.date, "EEEE d MMMM yyyy", {
+                    locale: fr,
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span>{format(selectedAppointment.date, "HH:mm")}</span>
+              </div>
+            </div>
           )}
           <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setCancelDialogOpen(false)}
-                  >
-                    Annuler
-                  </Button>
-                  <Button variant="destructive" onClick={handleCancelAppointment}>
-                    Confirmer l&apos;annulation
-                  </Button>
+            <Button
+              variant="outline"
+              onClick={() => setCancelDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleCancelAppointment}>
+              Confirmer l&apos;annulation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remplir un diagnostic</DialogTitle>
+          </DialogHeader>
+          <input type="text" placeholder="Nom du patient" className="border p-2 rounded w-full" value={formData.patientName} onChange={(e) => setFormData({ ...formData, patientName: e.target.value })} />
+          <input type="date" className="border p-2 rounded w-full" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} />
+          <input type="text" placeholder="Diagnostic" className="border p-2 rounded w-full" value={formData.diagnostic} onChange={(e) => setFormData({ ...formData, diagnostic: e.target.value })} />
+          <input type="text" placeholder="Médicaments" className="border p-2 rounded w-full" value={formData.medications} onChange={(e) => setFormData({ ...formData, medications: e.target.value })} />
+          <textarea placeholder="Notes" className="border p-2 rounded w-full" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })}></textarea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormDialogOpen(false)}>Annuler</Button>
+            <Button onClick={handleFormSubmit}>Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

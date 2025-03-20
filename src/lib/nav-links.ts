@@ -175,11 +175,7 @@ export const doctorNavItems = [
         title: "Dossiers Médicaux",
         url: "/dashboard/independant_doctor/patients/medical-records",
         icon: FolderHeart,
-      },
-      {
-        title: "Demandes Spéciales",
-        url: "/dashboard/independant_doctor/patients/requests",
-      },
+      }
     ],
   },
   {
@@ -194,11 +190,7 @@ export const doctorNavItems = [
       {
         title: "Prochains Rendez-vous",
         url: "/dashboard/independant_doctor/appointments/upcoming",
-      },
-      {
-        title: "Historique des Rendez-vous",
-        url: "/dashboard/independant_doctor/appointments/history",
-      },
+      }
     ],
   },
   {
