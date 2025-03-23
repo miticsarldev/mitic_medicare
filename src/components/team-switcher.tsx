@@ -107,7 +107,7 @@ export function TeamSwitcher() {
           <div
             className={cn(
               "absolute inset-0 opacity-0 bg-gradient-to-r transition-opacity duration-300 group-hover:opacity-10",
-              roleStyle.gradient
+              roleStyle?.gradient
             )}
           />
 
@@ -116,7 +116,7 @@ export function TeamSwitcher() {
             <Avatar
               className={cn(
                 "size-8 ring-2 ring-offset-2 transition-all duration-300",
-                `ring-${roleStyle.borderColor}`,
+                `ring-${roleStyle?.borderColor}`,
                 "group-hover:ring-offset-4"
               )}
             >
@@ -127,7 +127,7 @@ export function TeamSwitcher() {
               <AvatarFallback
                 className={cn(
                   "bg-gradient-to-br text-white font-medium",
-                  roleStyle.gradient
+                  roleStyle?.gradient
                 )}
               >
                 {user?.name
@@ -143,7 +143,7 @@ export function TeamSwitcher() {
                 "absolute -bottom-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center",
                 "border-2 border-background",
                 "bg-gradient-to-br text-white",
-                roleStyle.gradient
+                roleStyle?.gradient
               )}
             >
               <RoleIcon className="h-3 w-3" />
@@ -158,14 +158,14 @@ export function TeamSwitcher() {
                 variant="outline"
                 className={cn(
                   "px-2 py-0.5 text-xs font-normal transition-colors duration-300",
-                  roleStyle.bgColor,
-                  roleStyle.textColor,
-                  roleStyle.borderColor,
+                  roleStyle?.bgColor,
+                  roleStyle?.textColor,
+                  roleStyle?.borderColor,
                   "group-hover:bg-white"
                 )}
               >
                 <RoleIcon className="h-3 w-3 mr-1" />
-                {roleStyle.name}
+                {roleStyle?.name}
               </Badge>
             </div>
           </div>
