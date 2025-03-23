@@ -83,9 +83,9 @@ export function TeamSwitcher() {
   const user = session?.data?.user;
 
   const roleStyle = user?.role
-    ? roleStyles[user.role.toLowerCase()]
+    ? roleStyles[user.role]
     : {
-        name: user?.role,
+        name: user?.role ?? "PATIENT",
         icon: User,
         gradient: "from-gray-500 to-gray-400",
         textColor: "text-gray-700",
@@ -146,7 +146,7 @@ export function TeamSwitcher() {
                 roleStyle?.gradient
               )}
             >
-              <RoleIcon className="h-3 w-3" />
+              {RoleIcon && <RoleIcon className="h-3 w-3" />}
             </div>
           </div>
 
@@ -164,7 +164,7 @@ export function TeamSwitcher() {
                   "group-hover:bg-white"
                 )}
               >
-                <RoleIcon className="h-3 w-3 mr-1" />
+                {RoleIcon && <RoleIcon className="h-3 w-3 mr-1" />}
                 {roleStyle?.name}
               </Badge>
             </div>

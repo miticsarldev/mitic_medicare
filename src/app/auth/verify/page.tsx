@@ -76,8 +76,6 @@ const VerifyEmail = () => {
         );
         const data = await response.json();
 
-        console.log({ data, response });
-
         if (response.ok) {
           // Success case - email verified successfully
           setStatus("success");

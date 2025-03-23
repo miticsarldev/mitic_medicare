@@ -13,7 +13,7 @@ type LayoutProps = {
   children: React.ReactNode;
 };
 
-export default async function Page({ children }: LayoutProps) {
+export default function Page({ children }: LayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
