@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState } from "react";
@@ -40,7 +41,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, FileText, MoreHorizontal, Search } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  FileText,
+  MoreHorizontal,
+  Search,
+} from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Appointment } from "@/types";
@@ -63,7 +70,8 @@ const appointmentHistory = [
     date: new Date(2024, 10, 5, 14, 0),
     motif: "Consultation pour douleurs",
     status: "CONFIRMED",
-    notes: "Éruption cutanée en voie de guérison. Continuer la crème prescrite.",
+    notes:
+      "Éruption cutanée en voie de guérison. Continuer la crème prescrite.",
     prescription: true,
     followUp: "Si nécessaire",
     avatar: "/placeholder.svg?height=40&width=40",
@@ -123,13 +131,16 @@ const getStatusBadge = (status) => {
 export default function DoctorAppointmentHistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   // Filtrer les rendez-vous
   const filteredAppointments = appointmentHistory.filter((appointment) => {
     const matchesSearch =
-      appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.patientName
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       appointment.motif.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
@@ -189,7 +200,9 @@ export default function DoctorAppointmentHistoryPage() {
                   <TableRow>
                     <TableHead>Patient</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead className="hidden md:table-cell">Motif</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Motif
+                    </TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
