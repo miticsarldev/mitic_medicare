@@ -94,7 +94,7 @@ export function TeamSwitcher() {
         description: "Utilisateur",
       };
 
-  const RoleIcon = roleStyle.icon;
+  const RoleIcon = roleStyle?.icon;
 
   return (
     <SidebarMenu>
