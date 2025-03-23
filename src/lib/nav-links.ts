@@ -165,55 +165,58 @@ export const doctorNavItems = [
   {
     title: "Mes Patients",
     icon: Users,
-    url: "/dashboard/hopital_doctor/patients",
+    url: "/dashboard/independant_doctor/patients",
     items: [
       {
         title: "Liste des Patients",
-        url: "/dashboard/hopital_doctor/patients/list",
+        url: "/dashboard/independant_doctor/patients/list",
       },
       {
         title: "Dossiers Médicaux",
-        url: "/dashboard/hopital_doctor/patients/medical-records",
+        url: "/dashboard/independant_doctor/patients/medical-records",
         icon: FolderHeart,
       },
       {
         title: "Demandes Spéciales",
-        url: "/dashboard/hopital_doctor/patients/requests",
+        url: "/dashboard/independant_doctor/patients/requests",
       },
     ],
   },
   {
     title: "Rendez-vous",
     icon: Calendar,
-    url: "/dashboard/hopital_doctor/appointments",
+    url: "/dashboard/independant_doctor/appointments",
     items: [
       {
         title: "Tous les Rendez-vous",
-        url: "/dashboard/hopital_doctor/appointments/all",
+        url: "/dashboard/independant_doctor/appointments/all",
       },
       {
         title: "Prochains Rendez-vous",
-        url: "/dashboard/hopital_doctor/appointments/upcoming",
+        url: "/dashboard/independant_doctor/appointments/upcoming",
       },
       {
         title: "Historique des Rendez-vous",
-        url: "/dashboard/hopital_doctor/appointments/history",
+        url: "/dashboard/independant_doctor/appointments/history",
       },
     ],
   },
   {
     title: "Mon Profil & Paramètres",
     icon: Settings,
-    url: "/dashboard/hopital_doctor/settings",
+    url: "/dashboard/independant_doctor/settings",
     items: [
-      { title: "Mon Profil", url: "/dashboard/hopital_doctor/settings/profil" },
+      {
+        title: "Mon Profil",
+        url: "/dashboard/independant_doctor/settings/profil",
+      },
       {
         title: "Disponibilités",
-        url: "/dashboard/hopital_doctor/settings/availability",
+        url: "/dashboard/independant_doctor/settings/availability",
       },
       {
         title: "Tarification",
-        url: "/dashboard/hopital_doctor/settings/pricing",
+        url: "/dashboard/independant_doctor/settings/pricing",
       },
       {
         title: "Paramètres",
@@ -224,16 +227,16 @@ export const doctorNavItems = [
   {
     title: "Documentation & Assistance",
     icon: FileText,
-    url: "/dashboard/hopital_doctor/support",
+    url: "/dashboard/independant_doctor/support",
     items: [
       {
         title: "Centre d'Aide",
-        url: "/dashboard/hopital_doctor/support/help-center",
+        url: "/dashboard/independant_doctor/support/help-center",
       },
-      { title: "FAQs", url: "/dashboard/hopital_doctor/support/faq" },
+      { title: "FAQs", url: "/dashboard/independant_doctor/support/faq" },
       {
         title: "Support Technique",
-        url: "/dashboard/hopital_doctor/support/contact",
+        url: "/dashboard/independant_doctor/support/contact",
       },
     ],
   },
@@ -525,11 +528,6 @@ export const hospitalDoctorNavItems = [
       {
         title: "Liste des Patients",
         url: "/dashboard/hopital_doctor/patients/list",
-      },
-      {
-        title: "Dossiers Médicaux",
-        url: "/dashboard/hopital_doctor/patients/medical-records",
-        icon: FolderHeart,
       },
     ],
   },

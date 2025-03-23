@@ -28,6 +28,7 @@ export interface Doctor {
   location: string;
   image: string;
 }
+
 export interface Hospital {
   id: number;
   name: string;
@@ -35,3 +36,15 @@ export interface Hospital {
   phone: string;
   email: string;
 }
+
+export type Appointment = {
+  id: string;
+  patientName: string;
+  date: Date;
+  motif: string;
+  status: string;
+  notes: string;
+  prescription: boolean;
+  followUp: string | null;
+  avatar: string;
+};
