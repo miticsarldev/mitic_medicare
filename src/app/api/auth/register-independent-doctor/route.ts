@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const existingPhone = await prisma.userProfile.findFirst({
+    const existingPhone = await prisma.user.findUnique({
       where: { phone },
     });
     if (existingPhone) {
@@ -68,15 +68,10 @@ export async function POST(req: Request) {
         data: {
           name,
           email: normalizedEmail,
-          password: hashedPassword,
-          role: "independent_doctor",
-        },
-      });
-
-      await tx.userProfile.create({
-        data: {
-          userId: user.id,
           phone,
+          password: hashedPassword,
+          role: "INDEPENDENT_DOCTOR",
+          profile: { create: {} },
         },
       });
 
@@ -85,6 +80,7 @@ export async function POST(req: Request) {
           userId: user.id,
           specialization: speciality,
           licenseNumber,
+          isIndependent: true,
         },
       });
 
@@ -98,7 +94,7 @@ export async function POST(req: Request) {
       newUser.name,
       normalizedEmail,
       token.token,
-      "independent_doctor"
+      "INDEPENDENT_DOCTOR"
     );
 
     return NextResponse.json(

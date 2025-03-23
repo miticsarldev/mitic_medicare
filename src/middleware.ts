@@ -15,11 +15,11 @@ export async function middleware(req: NextRequest) {
   const userRole = token?.role as UserRole;
 
   const rolePaths: Record<UserRole, string> = {
-    super_admin: "/dashboard/superadmin",
-    hospital_admin: "/dashboard/hopital_admin",
-    patient: "/dashboard/patient",
-    independent_doctor: "/dashboard/independant_doctor",
-    hospital_doctor: "/dashboard/hopital_doctor",
+    SUPER_ADMIN: "/dashboard/superadmin",
+    HOSPITAL_ADMIN: "/dashboard/hopital_admin",
+    PATIENT: "/dashboard/patient",
+    INDEPENDENT_DOCTOR: "/dashboard/independant_doctor",
+    HOSPITAL_DOCTOR: "/dashboard/hopital_doctor",
   };
 
   // Accessible routes

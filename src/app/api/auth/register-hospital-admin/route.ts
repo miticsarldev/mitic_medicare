@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const existingPhone = await prisma.userProfile.findFirst({
+    const existingPhone = await prisma.user.findUnique({
       where: { phone },
     });
     if (existingPhone) {
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
     }
 
     // Check for existing hospital by email or phone number or name
-    const existingInstitution = await prisma.institution.findFirst({
+    const existingHospital = await prisma.hospital.findFirst({
       where: {
         name: {
           equals: institutionName.toLowerCase(),
@@ -86,33 +86,33 @@ export async function POST(req: Request) {
         },
       },
     });
-    if (existingInstitution) {
+    if (existingHospital) {
       return NextResponse.json(
-        { error: "Nom de l'institution déjà utilisé." },
+        { error: "Nom de l'hôpital déjà utilisé." },
         { status: 400 }
       );
     }
 
-    const existingInstitutionEmail = await prisma.institution.findFirst({
+    const existingInstitutionEmail = await prisma.hospital.findFirst({
       where: {
         email: institutionEmail,
       },
     });
     if (existingInstitutionEmail) {
       return NextResponse.json(
-        { error: "Adresse e-mail de l'institution déjà utilisée." },
+        { error: "Adresse e-mail de l'hôpital déjà utilisée." },
         { status: 400 }
       );
     }
 
-    const existingInstitutionPhone = await prisma.institution.findFirst({
+    const existingInstitutionPhone = await prisma.hospital.findFirst({
       where: {
         phone: institutionPhone,
       },
     });
     if (existingInstitutionPhone) {
       return NextResponse.json(
-        { error: "Numéro de téléphone de l'institution déjà utilisé." },
+        { error: "Numéro de téléphone de l'hôpital déjà utilisé." },
         { status: 400 }
       );
     }
@@ -130,22 +130,19 @@ export async function POST(req: Request) {
         data: {
           name: adminName,
           email: normalizedEmail,
+          phone,
           password: hashedPassword,
-          role: "hospital_admin",
-          userProfile: {
-            create: {
-              phone,
-              institutionType,
-            },
+          role: "HOSPITAL_ADMIN",
+          profile: {
+            create: {},
           },
         },
       });
 
-      await tx.institution.create({
+      const hospital = await tx.hospital.create({
         data: {
           adminId: user.id,
           name: institutionName,
-          type: institutionType,
           phone: institutionPhone,
           email: institutionEmail,
           address: institutionAddress,
@@ -161,6 +158,8 @@ export async function POST(req: Request) {
           userId: user.id,
           specialization: speciality,
           licenseNumber,
+          isIndependent: false,
+          hospitalId: hospital.id,
         },
       });
 
@@ -173,7 +172,7 @@ export async function POST(req: Request) {
       adminName,
       normalizedEmail,
       token.token,
-      "hospital_admin",
+      "HOSPITAL_ADMIN",
       institutionName
     );
 

@@ -1204,8 +1204,8 @@ export default function SubscriptionsPage() {
                       {plan.userType === "patient"
                         ? "Patients"
                         : plan.userType === "doctor"
-                        ? "Médecins"
-                        : "Hôpitaux"}
+                          ? "Médecins"
+                          : "Hôpitaux"}
                     </Badge>
                   </div>
                 </CardContent>

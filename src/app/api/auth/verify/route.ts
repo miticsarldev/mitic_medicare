@@ -1,9 +1,5 @@
 import prisma from "@/lib/prisma";
-import {
-  InstitutionSubscriptionPlan,
-  SubscriptionStatus,
-  UserRole,
-} from "@prisma/client";
+import { SubscriptionPlan, SubscriptionStatus, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -96,40 +92,23 @@ export async function GET(req: Request) {
 
   // should check for role
   // Assign Free Subscription to Patient (If not already assigned)
-  if (role === "patient") {
-    const existingSubscription = await prisma.patientSubscription.findFirst({
-      where: { patientId: user?.patient?.id },
-    });
-
-    if (!existingSubscription) {
-      await prisma.patientSubscription.create({
-        data: {
-          patientId: user.patient!.id!,
-          plan: "free",
-          status: "active",
-          startDate: new Date(),
-          endDate: new Date(
-            new Date().setFullYear(new Date().getFullYear() + 3)
-          ),
-        },
-      });
-    }
-  } else if (role === "independent_doctor") {
+  if (role === "INDEPENDENT_DOCTOR") {
     const doctor = await prisma.doctor.findUnique({
       where: { userId: user?.id },
     });
 
-    const existingSubscription =
-      await prisma.independantDoctorSubscription.findFirst({
-        where: { doctorId: doctor?.id },
-      });
+    const existingSubscription = await prisma.subscription.findFirst({
+      where: { doctorId: doctor?.id, subscriberType: "DOCTOR" },
+    });
 
     if (!existingSubscription && doctor) {
-      await prisma.independantDoctorSubscription.create({
+      await prisma.subscription.create({
         data: {
           doctorId: doctor?.id,
-          plan: "free",
-          status: "active",
+          subscriberType: "DOCTOR",
+          plan: SubscriptionPlan.FREE,
+          status: SubscriptionStatus.ACTIVE,
+          amount: 0,
           startDate: new Date(),
           endDate: new Date(
             new Date().setFullYear(new Date().getFullYear() + 1)
@@ -137,26 +116,28 @@ export async function GET(req: Request) {
         },
       });
     }
-  } else if (role === "hospital_admin") {
-    // Implementation of the institution subscription
-    const userInstitution = await prisma.institution.findUnique({
-      where: { adminId: user?.id },
+  } else if (role === "HOSPITAL_ADMIN") {
+    // Find the hospital associated with this admin
+    const hospital = await prisma.hospital.findUnique({
+      where: { adminId: user.id },
     });
 
-    const institutionId = userInstitution?.id;
-
-    if (institutionId) {
-      const existingSubscription =
-        await prisma.institutionSubscription.findFirst({
-          where: { institutionId },
-        });
+    if (hospital) {
+      const existingSubscription = await prisma.subscription.findFirst({
+        where: {
+          hospitalId: hospital.id,
+          subscriberType: "HOSPITAL",
+        },
+      });
 
       if (!existingSubscription) {
-        await prisma.institutionSubscription.create({
+        await prisma.subscription.create({
           data: {
-            institutionId,
-            plan: InstitutionSubscriptionPlan.free,
-            status: SubscriptionStatus.active,
+            hospitalId: hospital.id,
+            subscriberType: "HOSPITAL",
+            plan: SubscriptionPlan.FREE,
+            status: SubscriptionStatus.ACTIVE,
+            amount: 0,
             startDate: new Date(),
             endDate: new Date(
               new Date().setFullYear(new Date().getFullYear() + 1)

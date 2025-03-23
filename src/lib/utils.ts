@@ -9,13 +9,13 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getProfileLink(role: UserRole) {
   switch (role) {
-    case "hospital_admin":
+    case "HOSPITAL_ADMIN":
       return "/dashboard/hopital_admin/settings/profile";
-    case "independent_doctor":
+    case "INDEPENDENT_DOCTOR":
       return "/dashboard/independent_doctor/settings/profile";
-    case "hospital_doctor":
+    case "HOSPITAL_DOCTOR":
       return "/dashboard/hospital_doctor/settings/profile";
-    case "patient":
+    case "PATIENT":
       return "/dashboard/patient/settings/profile";
     default:
       return "/";

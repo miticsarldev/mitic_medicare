@@ -13,68 +13,131 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-    super_admin
-    hospital_admin
-    independent_doctor
-    hospital_doctor
-    patient
-}
+// ======== ENUMS ========
 
-enum InstitutionType {
-    clinic
-    hospital
+enum UserRole {
+    SUPER_ADMIN
+    HOSPITAL_ADMIN
+    INDEPENDENT_DOCTOR
+    HOSPITAL_DOCTOR
+    PATIENT
 }
 
 enum UserGenre {
-    male
-    female
+    MALE
+    FEMALE
 }
 
 enum AppointmentStatus {
     PENDING
     CONFIRMED
+    COMPLETED
     CANCELED
+    NO_SHOW
 }
+
+enum BloodType {
+    A_POSITIVE
+    A_NEGATIVE
+    B_POSITIVE
+    B_NEGATIVE
+    AB_POSITIVE
+    AB_NEGATIVE
+    O_POSITIVE
+    O_NEGATIVE
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    INACTIVE
+    TRIAL
+    EXPIRED
+}
+
+enum SubscriptionPlan {
+    FREE
+    BASIC
+    STANDARD
+    PREMIUM
+    ENTERPRISE
+}
+
+enum SubscriberType {
+    DOCTOR
+    HOSPITAL
+}
+
+enum ReviewStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum ReviewTargetType {
+    DOCTOR
+    HOSPITAL
+    PLATFORM
+}
+
+enum ContentStatus {
+    DRAFT
+    PUBLISHED
+    ARCHIVED
+}
+
+enum HospitalStatus {
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+    PENDING
+}
+
+// ======== AUTHENTICATION & USER MODELS ========
 
 model User {
     id            String    @id @default(cuid())
     name          String
     email         String    @unique @db.VarChar(255)
+    phone         String    @unique @db.VarChar(20)
     password      String    @db.Text
     role          UserRole
     emailVerified DateTime?
     isApproved    Boolean   @default(false)
+    isActive      Boolean   @default(true)
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
 
     // Relations
-    userProfile          UserProfile?
-    accounts             Account[]
-    sessions             Session[]
-    patientSubscriptions PatientSubscription[]
-    institution          Institution? // If user is an institution admin
-    doctor               Doctor?
-    patient              Patient?
-    MedicalHistory       MedicalHistory[]
+    profile          UserProfile?
+    accounts         Account[]
+    sessions         Session[]
+    hospital         Hospital?
+    doctor           Doctor?
+    patient          Patient?
+    medicalHistories MedicalHistory[]
+    notifications    Notification[]
+    sentMessages     Message[]        @relation("MessageSender")
+    receivedMessages Message[]        @relation("MessageReceiver")
+    blogPosts        BlogPost[]
+    faqs             FAQ[]
+    reviews          Review[]         @relation("ReviewAuthor")
+    reviewResponses  ReviewResponse[]
 }
 
 model UserProfile {
-    id              String           @id @default(cuid())
-    userId          String           @unique
-    user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-    institutionType InstitutionType?
-    phone           String?          @unique @db.VarChar(20)
-    address         String?          @db.VarChar(255)
-    city            String?
-    state           String?
-    zipCode         String?
-    country         String?
-    bio             String?
-    avatarUrl       String?
-    genre           UserGenre?
-    createdAt       DateTime         @default(now())
-    updatedAt       DateTime         @updatedAt
+    id        String     @id @default(cuid())
+    userId    String     @unique
+    user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    address   String?    @db.VarChar(255)
+    city      String?
+    state     String?
+    zipCode   String?
+    country   String?
+    bio       String?    @db.Text
+    avatarUrl String?
+    genre     UserGenre?
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
 }
 
 model Account {
@@ -113,12 +176,61 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
-model Institution {
-    id          String          @id @default(cuid())
+// ======== DOCTOR MODELS ========
+model Doctor {
+    id               String      @id @default(cuid())
+    userId           String      @unique
+    user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    hospitalId       String?
+    hospital         Hospital?   @relation(fields: [hospitalId], references: [id])
+    departmentId     String?
+    department       Department? @relation(fields: [departmentId], references: [id])
+    specialization   String
+    licenseNumber    String      @unique
+    education        String?     @db.Text
+    experience       String?     @db.Text
+    isVerified       Boolean     @default(false)
+    isIndependent    Boolean     @default(false)
+    availableForChat Boolean     @default(true)
+    consultationFee  Decimal?    @db.Decimal(10, 2)
+    createdAt        DateTime    @default(now())
+    updatedAt        DateTime    @updatedAt
+
+    // Relations
+    appointments   Appointment[]
+    medicalRecords MedicalRecord[]
+    prescriptions  Prescription[]
+    availabilities DoctorAvailability[]
+    subscription   Subscription?
+    doctorReviews  DoctorReview[]
+    reviews        Review[]             @relation("DoctorReviews")
+
+    @@index([specialization])
+    @@index([hospitalId])
+    @@index([departmentId])
+}
+
+model DoctorAvailability {
+    id        String   @id @default(cuid())
+    doctorId  String
+    doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+    dayOfWeek Int // 0-6 for Sunday-Saturday
+    startTime String // Format: "HH:MM" in 24-hour format
+    endTime   String // Format: "HH:MM" in 24-hour format
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([doctorId, dayOfWeek, startTime, endTime])
+}
+
+// ======== CORE HEALTHCARE MODELS ========
+
+model Hospital {
+    id          String         @id @default(cuid())
     name        String
-    type        InstitutionType
-    adminId     String          @unique
-    admin       User            @relation(fields: [adminId], references: [id], onDelete: Cascade)
+    adminId     String         @unique
+    admin       User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
     address     String
     city        String
     state       String
@@ -129,140 +241,424 @@ model Institution {
     website     String?
     description String?
     logoUrl     String?
-    createdAt   DateTime        @default(now())
-    updatedAt   DateTime        @updatedAt
+    isVerified  Boolean        @default(false)
+    status      HospitalStatus @default(ACTIVE)
+    createdAt   DateTime       @default(now())
+    updatedAt   DateTime       @updatedAt
 
     // Relations
-    doctors       Doctor[]
-    subscriptions InstitutionSubscription[]
+    doctors        Doctor[]
+    departments    Department[]
+    appointments   Appointment[]
+    medicalRecords MedicalRecord[]
+    subscription   Subscription?
+    reviews        Review[]        @relation("HospitalReviews")
+
+    @@index([name])
+    @@index([city, country])
 }
 
-model Doctor {
+model Department {
+    id          String   @id @default(cuid())
+    name        String
+    hospitalId  String
+    hospital    Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+    description String?  @db.Text
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    doctors Doctor[]
+
+    @@unique([hospitalId, name])
+}
+
+model Patient {
+    id                String     @id @default(cuid())
+    userId            String     @unique
+    user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    dateOfBirth       DateTime
+    bloodType         BloodType?
+    allergies         String?
+    emergencyContact  String?
+    emergencyPhone    String?
+    insuranceProvider String?
+    insuranceNumber   String?
+    medicalNotes      String?
+    createdAt         DateTime   @default(now())
+    updatedAt         DateTime   @updatedAt
+
+    // Relations
+    appointments     Appointment[]
+    medicalHistories MedicalHistory[]
+    medicalRecords   MedicalRecord[]
+    prescriptions    Prescription[]
+    vitalSigns       VitalSign[]
+    reviews          DoctorReview[]
+
+    @@index([userId])
+    @@index([dateOfBirth])
+}
+
+model Appointment {
+    id                 String            @id @default(cuid())
+    patientId          String
+    patient            Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    doctorId           String
+    doctor             Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+    hospitalId         String?
+    hospital           Hospital?         @relation(fields: [hospitalId], references: [id])
+    scheduledAt        DateTime
+    endTime            DateTime
+    status             AppointmentStatus @default(PENDING)
+    type               String? // e.g., "Consultation", "Follow-up", "Emergency"
+    reason             String?           @db.Text
+    notes              String?           @db.Text
+    cancellationReason String?           @db.Text
+    createdAt          DateTime          @default(now())
+    updatedAt          DateTime          @updatedAt
+
+    // Relations
+    reminders     AppointmentReminder[]
+    medicalRecord MedicalRecord?
+
+    @@index([patientId])
+    @@index([doctorId])
+    @@index([scheduledAt])
+    @@index([status])
+}
+
+model AppointmentReminder {
+    id            String      @id @default(cuid())
+    appointmentId String
+    appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+    reminderTime  DateTime
+    isSent        Boolean     @default(false)
+    sentAt        DateTime?
+    type          String // "EMAIL", "SMS", "PUSH"
+    createdAt     DateTime    @default(now())
+
+    @@index([appointmentId])
+    @@index([reminderTime])
+    @@index([isSent])
+}
+
+// ======== MEDICAL RECORDS MODELS ========
+
+model MedicalHistory {
+    id            String    @id @default(cuid())
+    patientId     String
+    patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    title         String
+    condition     String
+    diagnosedDate DateTime?
+    status        String // "ACTIVE", "RESOLVED", "CHRONIC"
+    details       String?   @db.Text
+    createdBy     String
+    createdByUser User      @relation(fields: [createdBy], references: [id])
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    @@index([patientId])
+    @@index([createdBy])
+    @@index([status])
+}
+
+model MedicalRecord {
     id             String       @id @default(cuid())
-    userId         String       @unique
-    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-    institutionId  String?
-    institution    Institution? @relation(fields: [institutionId], references: [id])
-    specialization String
-    licenseNumber  String       @unique
-    isVerified     Boolean      @default(false)
+    patientId      String
+    patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    doctorId       String
+    doctor         Doctor       @relation(fields: [doctorId], references: [id])
+    appointmentId  String?      @unique
+    appointment    Appointment? @relation(fields: [appointmentId], references: [id])
+    hospitalId     String?
+    hospital       Hospital?    @relation(fields: [hospitalId], references: [id])
+    diagnosis      String       @db.Text
+    treatment      String?      @db.Text
+    notes          String?      @db.Text
+    followUpNeeded Boolean      @default(false)
+    followUpDate   DateTime?
     createdAt      DateTime     @default(now())
     updatedAt      DateTime     @updatedAt
 
     // Relations
-    appointments                  Appointment[]
-    IndependantDoctorSubscription IndependantDoctorSubscription[]
+    prescriptions Prescription[]
+    attachments   MedicalRecordAttachment[]
+
+    @@index([patientId])
+    @@index([doctorId])
+    @@index([appointmentId])
+    @@index([createdAt])
 }
 
-model Patient {
-    id           String   @id @default(cuid())
-    userId       String   @unique
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    dateOfBirth  DateTime
-    bloodType    String?
-    allergies    String?
-    medicalNotes String?
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
+model MedicalRecordAttachment {
+    id              String        @id @default(cuid())
+    medicalRecordId String
+    medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+    fileName        String
+    fileType        String
+    fileUrl         String
+    fileSize        Int
+    uploadedAt      DateTime      @default(now())
+
+    @@index([medicalRecordId])
+}
+
+// ======== PRESCRIPTION AND VITAL SIGNS MODELS ========
+
+model Prescription {
+    id              String         @id @default(cuid())
+    patientId       String
+    patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    doctorId        String
+    doctor          Doctor         @relation(fields: [doctorId], references: [id])
+    medicalRecordId String?
+    medicalRecord   MedicalRecord? @relation(fields: [medicalRecordId], references: [id])
+    medicationName  String
+    dosage          String
+    frequency       String
+    duration        String?
+    instructions    String?        @db.Text
+    isActive        Boolean        @default(true)
+    startDate       DateTime
+    endDate         DateTime?
+    createdAt       DateTime       @default(now())
+    updatedAt       DateTime       @updatedAt
+
+    @@index([patientId])
+    @@index([doctorId])
+    @@index([medicalRecordId])
+    @@index([isActive])
+}
+
+model VitalSign {
+    id                     String   @id @default(cuid())
+    patientId              String
+    patient                Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    temperature            Decimal? @db.Decimal(5, 2)
+    heartRate              Int?
+    bloodPressureSystolic  Int?
+    bloodPressureDiastolic Int?
+    respiratoryRate        Int?
+    oxygenSaturation       Int?
+    weight                 Decimal? @db.Decimal(5, 2)
+    height                 Decimal? @db.Decimal(5, 2)
+    notes                  String?  @db.Text
+    recordedAt             DateTime @default(now())
+    createdAt              DateTime @default(now())
+
+    @@index([patientId])
+    @@index([recordedAt])
+}
+
+// ======== SUBSCRIPTION MODEL ========
+
+model Subscription {
+    id             String             @id @default(cuid())
+    subscriberType SubscriberType
+    doctorId       String?            @unique
+    doctor         Doctor?            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+    hospitalId     String?            @unique
+    hospital       Hospital?          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+    plan           SubscriptionPlan
+    status         SubscriptionStatus
+    startDate      DateTime
+    endDate        DateTime
+    amount         Decimal            @db.Decimal(10, 2)
+    currency       String             @default("USD")
+    autoRenew      Boolean            @default(true)
+    createdAt      DateTime           @default(now())
+    updatedAt      DateTime           @updatedAt
 
     // Relations
-    appointments     Appointment[]
-    subscriptions    PatientSubscription[]
-    medicalHistories MedicalHistory[]
+    payments SubscriptionPayment[]
+
+    @@index([status])
+    @@index([endDate])
 }
 
-model Appointment {
-    id        String            @id @default(cuid())
-    patientId String
-    patient   Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
-    doctorId  String
-    doctor    Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-    date      DateTime
-    status    AppointmentStatus @default(PENDING)
-    createdAt DateTime          @default(now())
+model SubscriptionPayment {
+    id             String       @id @default(cuid())
+    subscriptionId String
+    subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+    amount         Decimal      @db.Decimal(10, 2)
+    currency       String       @default("XOF")
+    paymentMethod  String // "CREDIT_CARD", "BANK_TRANSFER", "MOBILE_MONEY"
+    transactionId  String?
+    status         String // "PENDING", "COMPLETED", "FAILED"
+    paymentDate    DateTime     @default(now())
+    createdAt      DateTime     @default(now())
+
+    @@index([subscriptionId])
+    @@index([status])
+    @@index([paymentDate])
 }
 
-model MedicalHistory {
-    id            String   @id @default(cuid())
-    patientId     String
-    patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-    title         String
-    details       String?
-    createdBy     String
-    createdByUser User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
+model Notification {
+    id        String   @id @default(cuid())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    title     String
+    message   String   @db.Text
+    type      String // "APPOINTMENT", "REMINDER", "SYSTEM", etc.
+    isRead    Boolean  @default(false)
+    createdAt DateTime @default(now())
 
-    @@index([patientId]) // Index for quick lookups
+    @@index([userId])
+    @@index([isRead])
+    @@index([createdAt])
 }
 
-// Here is the schema for the subscription
+model Message {
+    id         String    @id @default(cuid())
+    senderId   String
+    sender     User      @relation("MessageSender", fields: [senderId], references: [id])
+    receiverId String
+    receiver   User      @relation("MessageReceiver", fields: [receiverId], references: [id])
+    content    String    @db.Text
+    isRead     Boolean   @default(false)
+    readAt     DateTime?
+    createdAt  DateTime  @default(now())
 
-enum PatientSubscriptionPlan {
-    free
-    basic
-    premium
+    @@index([senderId])
+    @@index([receiverId])
+    @@index([isRead])
+    @@index([createdAt])
 }
 
-enum InstitutionSubscriptionPlan {
-    free
-    standard
-    enterprise
+// ======== CONTENT MODELS ========
+model BlogPost {
+    id          String         @id @default(cuid())
+    title       String
+    slug        String         @unique
+    content     String         @db.Text
+    excerpt     String?        @db.Text
+    authorId    String
+    author      User           @relation(fields: [authorId], references: [id])
+    coverImage  String?
+    status      ContentStatus  @default(DRAFT)
+    publishedAt DateTime?
+    tags        String[]
+    categories  BlogCategory[]
+    viewCount   Int            @default(0)
+    createdAt   DateTime       @default(now())
+    updatedAt   DateTime       @updatedAt
+    comments    BlogComment[]
+
+    @@index([authorId])
+    @@index([status])
+    @@index([publishedAt])
+    @@index([slug])
 }
 
-enum IndependantDoctorSubscriptionPlan {
-    free
-    basic
-    premium
+model BlogCategory {
+    id          String     @id @default(cuid())
+    name        String     @unique
+    slug        String     @unique
+    description String?    @db.Text
+    posts       BlogPost[]
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+
+    @@index([slug])
 }
 
-enum SubscriptionStatus {
-    active
-    inactive
-    trial
-    expired
+model BlogComment {
+    id          String   @id @default(cuid())
+    content     String   @db.Text
+    postId      String
+    post        BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+    authorName  String
+    authorEmail String?
+    isApproved  Boolean  @default(false)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@index([postId])
+    @@index([isApproved])
 }
 
-model PatientSubscription {
-    id        String                  @id @default(cuid())
-    patientId String
-    patient   Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
-    plan      PatientSubscriptionPlan
-    status    SubscriptionStatus
-    startDate DateTime
-    endDate   DateTime
-    createdAt DateTime                @default(now())
-    updatedAt DateTime                @updatedAt
-    User      User?                   @relation(fields: [userId], references: [id])
-    userId    String?
+model FAQ {
+    id        String        @id @default(cuid())
+    question  String
+    answer    String        @db.Text
+    category  String
+    order     Int           @default(0)
+    authorId  String
+    author    User          @relation(fields: [authorId], references: [id])
+    status    ContentStatus @default(PUBLISHED)
+    createdAt DateTime      @default(now())
+    updatedAt DateTime      @updatedAt
 
-    @@unique([patientId, plan]) // Prevent duplicate plans for the same patient
+    @@index([category])
+    @@index([order])
+    @@index([status])
 }
 
-model InstitutionSubscription {
-    id            String                      @id @default(cuid())
-    institutionId String
-    institution   Institution                 @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-    plan          InstitutionSubscriptionPlan
-    status        SubscriptionStatus
-    startDate     DateTime
-    endDate       DateTime
-    createdAt     DateTime                    @default(now())
-    updatedAt     DateTime                    @updatedAt
+// ======== REVIEW MODELS ========
 
-    @@unique([institutionId, plan]) // Prevent duplicate plans for the same institution
+model Review {
+    id          String           @id @default(cuid())
+    title       String
+    content     String           @db.Text
+    rating      Int // 1-5 stars
+    authorId    String
+    author      User             @relation("ReviewAuthor", fields: [authorId], references: [id])
+    targetType  ReviewTargetType
+    doctorId    String?
+    doctor      Doctor?          @relation("DoctorReviews", fields: [doctorId], references: [id])
+    hospitalId  String?
+    hospital    Hospital?        @relation("HospitalReviews", fields: [hospitalId], references: [id])
+    status      ReviewStatus     @default(PENDING)
+    isAnonymous Boolean          @default(false)
+    isFeatured  Boolean          @default(false)
+    likes       Int              @default(0)
+    dislikes    Int              @default(0)
+    reports     Int              @default(0)
+    createdAt   DateTime         @default(now())
+    updatedAt   DateTime         @updatedAt
+    responses   ReviewResponse[]
+
+    @@index([authorId])
+    @@index([doctorId])
+    @@index([hospitalId])
+    @@index([status])
+    @@index([rating])
+    @@index([isFeatured])
+    @@index([createdAt])
 }
 
-model IndependantDoctorSubscription {
-    id        String                            @id @default(cuid())
-    doctorId  String
-    doctor    Doctor                            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-    plan      IndependantDoctorSubscriptionPlan
-    status    SubscriptionStatus
-    startDate DateTime
-    endDate   DateTime
-    createdAt DateTime                          @default(now())
-    updatedAt DateTime                          @updatedAt
+model ReviewResponse {
+    id         String   @id @default(cuid())
+    reviewId   String
+    review     Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+    content    String   @db.Text
+    authorId   String
+    author     User     @relation(fields: [authorId], references: [id])
+    isOfficial Boolean  @default(false)
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
 
-    @@unique([doctorId, plan]) // Prevent duplicate plans for the same doctor
+    @@index([reviewId])
+    @@index([authorId])
+}
+
+model DoctorReview {
+    id          String   @id @default(cuid())
+    doctorId    String
+    doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+    patientId   String
+    patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    rating      Int // 1-5 stars
+    comment     String?  @db.Text
+    isAnonymous Boolean  @default(false)
+    isApproved  Boolean  @default(false)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@unique([doctorId, patientId])
+    @@index([doctorId])
+    @@index([rating])
+    @@index([isApproved])
 }

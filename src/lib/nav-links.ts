@@ -198,7 +198,10 @@ export const doctorNavItems = [
     icon: Settings,
     url: "/dashboard/independant_doctor/settings",
     items: [
-      { title: "Mon Profil", url: "/dashboard/independant_doctor/settings/profil" },
+      {
+        title: "Mon Profil",
+        url: "/dashboard/independant_doctor/settings/profil",
+      },
       {
         title: "Disponibilités",
         url: "/dashboard/independant_doctor/settings/availability",
@@ -567,15 +570,15 @@ export const hospitalDoctorNavItems = [
 
 export function getNavItems(role: UserRole) {
   switch (role) {
-    case "super_admin":
+    case "SUPER_ADMIN":
       return superAdminNavItems;
-    case "hospital_admin":
+    case "HOSPITAL_ADMIN":
       return hospitalAdminNavItems;
-    case "independent_doctor":
+    case "INDEPENDENT_DOCTOR":
       return doctorNavItems;
-    case "hospital_doctor":
-      return hospitalDoctorNavItems;
-    case "patient":
+    case "HOSPITAL_DOCTOR":
+      return hospitalAdminNavItems;
+    case "PATIENT":
       return patientNavItems;
     default:
       return [];

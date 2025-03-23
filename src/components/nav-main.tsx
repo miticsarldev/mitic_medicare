@@ -27,7 +27,7 @@ export function NavMain() {
   const session = useSession();
   const user = session.data?.user;
 
-  const navItems = getNavItems(user?.role ?? UserRole.patient).map((item) => ({
+  const navItems = getNavItems(user?.role ?? UserRole.PATIENT).map((item) => ({
     ...item,
     url: item.url ?? "#",
   }));
