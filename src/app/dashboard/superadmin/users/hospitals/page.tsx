@@ -1,5 +1,7 @@
+"use client";
+
 import HospitalsPage from "@/components/superadmin/hospitals/page";
 
-export default async function Page() {
+export default function Page() {
   return <HospitalsPage />;
 }
