@@ -6,30 +6,30 @@ export async function sendVerificationEmail(
   name: string,
   email: string,
   token: string,
-  userRole: UserRole = "patient",
+  userRole: UserRole = "PATIENT",
   hospitalName?: string
 ) {
   const verificationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/verify?token=${token}&role=${userRole}`;
   let htmlContent: string;
-  if (userRole === "patient") {
+  if (userRole === "PATIENT") {
     htmlContent = await getVerificationEmailTemplate(
       name,
       verificationLink,
-      "patient",
+      "PATIENT",
       1
     );
-  } else if (userRole === "independent_doctor") {
+  } else if (userRole === "INDEPENDENT_DOCTOR") {
     htmlContent = await getVerificationEmailTemplate(
       name,
       verificationLink,
-      "independent_doctor",
+      "INDEPENDENT_DOCTOR",
       1
     );
   } else {
     htmlContent = await getVerificationEmailTemplate(
       name,
       verificationLink,
-      "hospital_admin",
+      "HOSPITAL_ADMIN",
       1,
       hospitalName
     );

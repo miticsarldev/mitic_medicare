@@ -23,7 +23,7 @@ import type { Session } from "next-auth";
 import { getProfileLink } from "@/lib/utils";
 
 export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
-  const profileLink = getProfileLink(user?.role ?? "super_admin");
+  const profileLink = getProfileLink(user?.role ?? "SUPER_ADMIN");
 
   console.log({ user });
 
@@ -59,7 +59,7 @@ export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
               <span>Dashboard</span>
             </Link>
           </DropdownMenuItem>
-          {user?.role !== "super_admin" && (
+          {user?.role !== "SUPER_ADMIN" && (
             <DropdownMenuItem className="flex items-center gap-1">
               <Link href={profileLink} className="flex items-center gap-1">
                 <UserIcon className="size-4" />
@@ -67,7 +67,7 @@ export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
               </Link>
             </DropdownMenuItem>
           )}
-          {user?.role === "hospital_admin" && (
+          {user?.role === "HOSPITAL_ADMIN" && (
             <DropdownMenuItem>
               <Link href={profileLink} className="flex items-center gap-1">
                 <CreditCard />

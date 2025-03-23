@@ -37,19 +37,19 @@ export function useBreadcrumbs() {
   const pathname = usePathname();
   const session = useSession();
   const user = useMemo(
-    () => session?.data?.user ?? { role: UserRole.super_admin },
+    () => session?.data?.user ?? { role: UserRole.SUPER_ADMIN },
     [session]
   );
 
   const breadcrumbs = useMemo(() => {
     let navItems: NavItem[];
-    if (user?.role === "super_admin") {
+    if (user?.role === "SUPER_ADMIN") {
       navItems = superAdminNavItems;
-    } else if (user?.role === "hospital_admin") {
+    } else if (user?.role === "HOSPITAL_ADMIN") {
       navItems = hospitalAdminNavItems;
-    } else if (user?.role === "independent_doctor") {
+    } else if (user?.role === "INDEPENDENT_DOCTOR") {
       navItems = doctorNavItems;
-    } else if (user?.role === "hospital_doctor") {
+    } else if (user?.role === "HOSPITAL_DOCTOR") {
       navItems = hospitalDoctorNavItems;
     } else {
       navItems = patientNavItems;

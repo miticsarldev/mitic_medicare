@@ -8,13 +8,13 @@ import VerificationEmailHospital from "../../emails/verification-email-hospital"
 export async function getVerificationEmailTemplate(
   userName: string,
   verificationLink: string,
-  userRole: UserRole = "patient",
+  userRole: UserRole = "PATIENT",
   expiryHours?: number,
   hospitalName?: string
 ) {
   let html: string;
 
-  if (userRole === "patient") {
+  if (userRole === "PATIENT") {
     html = await render(
       React.createElement(VerificationEmail, {
         verificationLink: verificationLink,
@@ -22,7 +22,7 @@ export async function getVerificationEmailTemplate(
         expiryHours: expiryHours,
       })
     );
-  } else if (userRole === "independent_doctor") {
+  } else if (userRole === "INDEPENDENT_DOCTOR") {
     html = await render(
       React.createElement(VerificationEmailDoctor, {
         verificationLink: verificationLink,

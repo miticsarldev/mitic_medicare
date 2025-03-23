@@ -218,29 +218,6 @@ const malianCities = [
   "Bankass",
 ];
 
-// const malianNeighborhoods = {
-//   'Bamako': ['Hamdallaye', 'Badalabougou', 'Kalaban Coura', 'Magnambougou', 'Djélibougou', 'Banconi', 'Lafiabougou', 'Quinzambougou', 'Faladié', 'Sogoniko', 'Médina Coura', 'Hippodrome', 'ACI 2000', 'Baco Djicoroni', 'Torokorobougou', 'Sabalibougou', 'Niamakoro', 'Daoudabougou', 'Yirimadio', 'Sotuba'],
-//   'Sikasso': ['Wayerma', 'Médine', 'Lafiabougou', 'Hamdallaye', 'Mamassoni'],
-//   'Ségou': ['Médine', 'Angoulême', 'Bougoufié', 'Dar Salam', 'Missira'],
-//   'Mopti': ['Komoguel', 'Gangal', 'Toguel', 'Bougoufié', 'Mossinkoré'],
-//   'Koutiala': ['Lafiabougou', 'Médine', 'Hamdallaye', 'Wayerma', 'Sogoniko'],
-//   'Kayes': ['Plateau', 'Légal Ségou', 'Khasso', 'Liberté', 'Lafiabougou'],
-//   'Gao': ['Sosso Koïra', 'Boulgoundjé', 'Djidara', 'Farandjiré', 'Aljanabandia'],
-//   'Kati': ['Malibougou', 'Sananfara', 'Noumorila', 'Kati Coura', 'Kati Coco'],
-//   'San': ['Lafiabougou', 'Médine', 'Darsalam', 'Hamdallaye', 'Wayerma'],
-//   'Koulikoro': ['Koulikoro Ba', 'Koulikoro Gare', 'Kolébougou', 'Katibougou', 'Souban'],
-//   'Tombouctou': ['Badjindé', 'Sankoré', 'Sareikeyna', 'Djingareyber', 'Bella Farandi'],
-//   'Nioro du Sahel': ['Kaarta', 'Assatiémala', 'Monciré', 'Diawiga', 'Guetapé'],
-//   'Bougouni': ['Dougoukolobougou', 'Massablacoura', 'Torakabougou', 'Heremakono', 'Niénédougou'],
-//   'Kidal': ['Aliou', 'Etambar', 'Enmalane', 'Tanase', 'Inkinane'],
-//   'Kolondiéba': ['Tiéblendougou', 'Fakola', 'Kadiana', 'Nangalasso', 'Tousséguéla'],
-//   'Banamba': ['Boron', 'Touba', 'Madina Sacko', 'Kiban', 'Toukoroba'],
-//   'Niono': ['Niono Central', 'Niono Extension', 'Socoma', 'Wèrèbougou', 'Sokourani'],
-//   'Dioïla': ['Banco', 'Ngolobougou', 'Wakoro', 'Kémékafo', 'Niantjila'],
-//   'Yorosso': ['Yorosso Central', 'Koury', 'Boura', 'Koumbia', 'Mahou'],
-//   'Bankass': ['Bankass Central', 'Sokoura', 'Diallassagou', 'Kani Bozon', 'Lessagou']
-// };
-
 const malianHospitals = [
   { name: "Hôpital Gabriel Touré", city: "Bamako", type: "public" },
   { name: "Hôpital du Point G", city: "Bamako", type: "public" },

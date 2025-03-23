@@ -31,7 +31,7 @@ type RoleStyle = {
 };
 
 const roleStyles: Record<UserRole, RoleStyle> = {
-  patient: {
+  PATIENT: {
     name: "Patient",
     icon: HeartPulse,
     gradient: "from-blue-500 to-cyan-400",
@@ -40,7 +40,7 @@ const roleStyles: Record<UserRole, RoleStyle> = {
     borderColor: "border-blue-300",
     description: "Accès patient",
   },
-  hospital_doctor: {
+  HOSPITAL_DOCTOR: {
     name: "Médecin",
     icon: Stethoscope,
     gradient: "from-emerald-500 to-green-400",
@@ -49,7 +49,7 @@ const roleStyles: Record<UserRole, RoleStyle> = {
     borderColor: "border-emerald-300",
     description: "Accès médecin",
   },
-  hospital_admin: {
+  HOSPITAL_ADMIN: {
     name: "Administrateur",
     icon: Shield,
     gradient: "from-purple-500 to-indigo-400",
@@ -58,7 +58,7 @@ const roleStyles: Record<UserRole, RoleStyle> = {
     borderColor: "border-purple-300",
     description: "Accès complet",
   },
-  independent_doctor: {
+  INDEPENDENT_DOCTOR: {
     name: "Médecin Indépendant",
     icon: UserCheck,
     gradient: "from-amber-500 to-orange-400",
@@ -67,7 +67,7 @@ const roleStyles: Record<UserRole, RoleStyle> = {
     borderColor: "border-amber-300",
     description: "Accès médecin indépendant",
   },
-  super_admin: {
+  SUPER_ADMIN: {
     name: "Super Administrateur",
     icon: Star,
     gradient: "from-red-500 to-pink-400",
