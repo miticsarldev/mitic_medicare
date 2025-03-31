@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { SubscriptionPlan } from "@prisma/client";
 
 export interface PatientAnalyticsType {
@@ -8,6 +9,18 @@ export interface PatientAnalyticsType {
   geographicalDistribution: { region: string; count: number }[];
 }
 
+// Define the Analytics type
+export type DoctorAnalyticsType = {
+  totalDoctors: number;
+  activeDoctors: number;
+  verifiedDoctors: number;
+  newDoctors: number;
+  registrationsActivity: { month: string; count: number }[];
+  geographicalDistribution: { city: string; count: number }[];
+  specialtyDistribution: { specialty: string; count: number }[];
+  subscriptionDistribution: { plan: string; count: number }[];
+};
+
 export interface HospitalAnalyticsType {
   totalHospitals: number;
   activeHospitals: number;
@@ -15,6 +28,18 @@ export interface HospitalAnalyticsType {
   registrationsActivity: { month: string; count: number }[];
   geographicalDistribution: { region: string; count: { id: number } }[];
   subscriptionsByPlan: { plan: SubscriptionPlan; count: number }[];
+}
+
+export interface SubscriptionAnalyticsType {
+  totalSubscriptions: number;
+  activeSubscriptions: number;
+  doctorSubscriptions: number;
+  hospitalSubscriptions: number;
+  newSubscriptions: number;
+  subscriptionsByPlan: any;
+  revenueByMonth: any;
+  totalRevenue: any;
+  avgSubscriptionValue: any;
 }
 
 export interface Doctor {

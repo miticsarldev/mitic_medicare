@@ -1,13 +1,10 @@
 import { UserRole } from "@prisma/client";
 import {
   BarChart,
-  Database,
   FileSignature,
   FileText,
   Users,
   ShieldCheck,
-  Server,
-  Activity,
   LifeBuoy,
   Settings,
   Bell,
@@ -34,57 +31,49 @@ export const superAdminNavItems = [
         url: "/dashboard/superadmin/overview",
         icon: FileSignature,
       },
-      {
-        title: "Statistiques & Analyse",
-        url: "/dashboard/superadmin/statistics",
-        icon: FileText,
-      },
-      {
-        title: "Rapports",
-        url: "/dashboard/superadmin/reports",
-        icon: FileText,
-      },
-      {
-        title: "Logs d'activité",
-        url: "/dashboard/superadmin/activity-logs",
-        icon: Activity,
-      },
     ],
   },
   {
-    title: "Utilisateurs & Subscriptions",
+    title: "Utilisateurs",
     icon: Users,
     url: "/dashboard/superadmin/users",
     items: [
       { title: "Patients", url: "/dashboard/superadmin/users/patients" },
       { title: "Docteurs", url: "/dashboard/superadmin/users/doctors" },
       { title: "Hôpitaux", url: "/dashboard/superadmin/users/hospitals" },
+    ],
+  },
+  {
+    title: "Rendez-vous",
+    icon: Users,
+    url: "/dashboard/superadmin/appointment",
+    items: [
       {
-        title: "Abonnements",
-        url: "/dashboard/superadmin/users/subscriptions",
-      },
-      {
-        title: "Demandes de vérifications",
-        url: "/dashboard/superadmin/users/verifications",
-      },
-      {
-        title: "Rôles & Permissions",
-        url: "/dashboard/superadmin/users/roles-permissions",
-        icon: ShieldCheck,
+        title: "Tous les rendez-vous",
+        url: "/dashboard/superadmin/appointment/all",
       },
     ],
   },
   {
-    title: "Système & Paramètres",
-    url: "/dashboard/superadmin/system",
-    icon: Database,
+    title: "Abonnements",
+    icon: Users,
+    url: "/dashboard/superadmin/subscriptions",
     items: [
       {
-        title: "Paramètres",
-        url: "/dashboard/superadmin/system/settings",
-        icon: Settings,
+        title: "Liste des abonnements",
+        url: "/dashboard/superadmin/subscriptions/all",
       },
-      { title: "Logs", url: "/dashboard/superadmin/system/logs" },
+    ],
+  },
+  {
+    title: "Vérifications",
+    icon: Users,
+    url: "/dashboard/superadmin/verifications",
+    items: [
+      {
+        title: "Demandes de vérifications",
+        url: "/dashboard/superadmin/verifications/all",
+      },
     ],
   },
   {
@@ -117,21 +106,6 @@ export const superAdminNavItems = [
       {
         title: "Emails & Alertes",
         url: "/dashboard/superadmin/notifications/emails",
-      },
-    ],
-  },
-  {
-    title: "Serveur & Infrastructure",
-    icon: Server,
-    url: "/dashboard/superadmin/server",
-    items: [
-      {
-        title: "Statut du serveur",
-        url: "/dashboard/superadmin/server/status",
-      },
-      {
-        title: "Base de données",
-        url: "/dashboard/superadmin/server/database",
       },
     ],
   },
@@ -175,7 +149,7 @@ export const doctorNavItems = [
         title: "Dossiers Médicaux",
         url: "/dashboard/independant_doctor/patients/medical-records",
         icon: FolderHeart,
-      }
+      },
     ],
   },
   {
@@ -190,7 +164,7 @@ export const doctorNavItems = [
       {
         title: "Prochains Rendez-vous",
         url: "/dashboard/independant_doctor/appointments/upcoming",
-      }
+      },
     ],
   },
   {

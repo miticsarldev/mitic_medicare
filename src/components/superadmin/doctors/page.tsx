@@ -82,18 +82,7 @@ import DoctorCreateEditModal from "./doctor-create-edit-modal";
 import DoctorDetails from "./doctor-details";
 import DoctorDeleteModal from "./doctor-delete-modal";
 import { Hospital } from "@/types/hospital";
-
-// Define the Analytics type
-type Analytics = {
-  totalDoctors: number;
-  activeDoctors: number;
-  verifiedDoctors: number;
-  newDoctors: number;
-  registrationsActivity: { month: string; count: number }[];
-  geographicalDistribution: { city: string; count: number }[];
-  specialtyDistribution: { specialty: string; count: number }[];
-  subscriptionDistribution: { plan: string; count: number }[];
-};
+import { DoctorAnalyticsType } from "@/types";
 
 export default function DoctorsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,7 +104,7 @@ export default function DoctorsPage() {
   const [totalDoctors, setTotalDoctors] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [analytics, setAnalytics] = useState<DoctorAnalyticsType | null>(null);
   const [rowSelection, setRowSelection] = useState({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
