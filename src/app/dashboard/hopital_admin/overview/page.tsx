@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, subDays, subMonths } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -60,41 +60,7 @@ import {
   Cell,
 } from "@/components/ui/charts";
 
-// Sample data for the dashboard
-const overviewStats = [
-  {
-    title: "Utilisateurs Totaux",
-    value: "24,892",
-    change: "+12.5%",
-    trend: "up",
-    icon: Users,
-    color: "bg-blue-500",
-  },
-  {
-    title: "Nouveaux Patients",
-    value: "1,294",
-    change: "+18.2%",
-    trend: "up",
-    icon: User,
-    color: "bg-green-500",
-  },
-  {
-    title: "Médecins Actifs",
-    value: "3,721",
-    change: "+5.3%",
-    trend: "up",
-    icon: Activity,
-    color: "bg-purple-500",
-  },
-  {
-    title: "Rendez-vous",
-    value: "8,294",
-    change: "-2.1%",
-    trend: "down",
-    icon: Calendar,
-    color: "bg-amber-500",
-  },
-];
+
 
 // Sample data for user growth chart
 const userGrowthData = Array.from({ length: 12 }, (_, i) => {
@@ -177,7 +143,7 @@ const recentHospitalActivities = [
     time: "Il y a 1 heure",
     type: "service",
   },
-  
+
 ];
 
 const hospitalDoctors = [
@@ -226,6 +192,91 @@ export default function SuperAdminOverviewPage() {
     }, 1000);
   };
 
+  // useState pour recuperer les total patients et médecins
+  const [totalPatients, setTotalPatients] = useState(0);
+  const [totalDoctors, setTotalDoctors] = useState(0);
+  const [totalAppointment, setTotalAppointment] = useState(0);
+  const [totalPrescription, setTotalPrescription] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // useEffect pour recuperer les données des patients et médecins
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [
+          patientResponse,
+          doctorResponse,
+          appointmentResponse,
+          prescriptionResponse
+        ] = await Promise.all([
+          fetch(`/api/hospital_admin/patients/analytics`),
+          fetch(`/api/hospital_admin/doctors/analytics`),
+          fetch(`/api/hospital_admin/appointment/analytics`),
+          fetch(`/api/hospital_admin/prescription/analytics`)
+        ]);
+
+        const [patientData, doctorData, appointmentData, prescriptionData] = await Promise.all([
+          patientResponse.json(),
+          doctorResponse.json(),
+          appointmentResponse.json(),
+          prescriptionResponse.json()
+        ]);
+
+        setTotalPatients(patientData.totalPatients);
+        setTotalDoctors(doctorData.totalDoctors);
+        setTotalAppointment(appointmentData.totalAppointments);
+        setTotalPrescription(prescriptionData.totalPrescriptionsToday);
+      } catch (err) {
+        console.error(err);
+        setError("Erreur lors de la récupération des statistiques.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+
+  // Sample data for the dashboard
+  const overviewStats = [
+    {
+      title: "Total de Medecin",
+      value: totalDoctors,
+      icon: Users,
+      color: "bg-blue-500",
+    },
+    {
+      title: "Total des Patients",
+      value: totalPatients,
+      icon: User,
+      color: "bg-green-500",
+    },
+    {
+      title: "Nombre de rendez-vous du jour",
+      value: totalAppointment,
+      icon: Activity,
+      color: "bg-purple-500",
+    },
+    {
+      title: "Nombre de prescription",
+      value: totalPrescription,
+      icon: Calendar,
+      color: "bg-amber-500",
+    },
+  ];
+
+  //gestion du loading et des erreurs
+  if (loading) {
+    return <div className="text-center">Chargement...</div>;
+  }
+
+  if (error && error !== "") {
+    return <div className="text-red-500">{error}</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -236,6 +287,7 @@ export default function SuperAdminOverviewPage() {
             de votre plateforme.
           </p>
         </div>
+        {/* select time zone sectiom */}
         <div className="flex flex-col gap-2 sm:flex-row">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-[180px]">
@@ -280,7 +332,7 @@ export default function SuperAdminOverviewPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center pt-1 text-xs">
+              {/* <div className="flex items-center pt-1 text-xs">
                 {stat.trend === "up" ? (
                   <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
                 ) : (
@@ -296,7 +348,7 @@ export default function SuperAdminOverviewPage() {
                 <span className="ml-1 text-muted-foreground">
                   vs période précédente
                 </span>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
         ))}
@@ -492,23 +544,22 @@ export default function SuperAdminOverviewPage() {
                       </p>
                       <Badge
                         variant="outline"
-                        className={`ml-2 ${
-                          activity.type === "doctor"
-                            ? "border-blue-500 text-blue-500"
-                            : activity.type === "hospital"
+                        className={`ml-2 ${activity.type === "doctor"
+                          ? "border-blue-500 text-blue-500"
+                          : activity.type === "hospital"
                             ? "border-purple-500 text-purple-500"
                             : activity.type === "service"
-                            ? "border-teal-500 text-teal-500"
-                            : "border-gray-500 text-gray-500"
-                        }`}
+                              ? "border-teal-500 text-teal-500"
+                              : "border-gray-500 text-gray-500"
+                          }`}
                       >
                         {activity.type === "doctor"
                           ? "Médecin"
                           : activity.type === "hospital"
-                          ? "Hôpital"
-                          : activity.type === "service"
-                          ? "Service Médical"
-                          : "Autre"}
+                            ? "Hôpital"
+                            : activity.type === "service"
+                              ? "Service Médical"
+                              : "Autre"}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -568,48 +619,48 @@ export default function SuperAdminOverviewPage() {
             </CardContent>
           </Card>
 
-          
+
         </div>
       </div>
 
-{/* Liste des Médecins */}
-  <Card>
-    <CardHeader className="flex flex-row items-center">
-      <div className="flex-1">
-        <CardTitle>Médecins de l&apos;Hôpital</CardTitle>
-        <CardDescription>Gérez les médecins et leurs disponibilités</CardDescription>
-      </div>
-      <Button variant="outline" size="sm" asChild>
-        <a href="/dashboard/hospital-admin/doctors">
-          Voir tout <ArrowRight className="ml-2 h-4 w-4" />
-        </a>
-      </Button>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        {hospitalDoctors.map((doctor) => (
-          <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-4">
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={doctor.avatar} alt={doctor.name} />
-                <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{doctor.name}</p>
-                <span className="text-xs text-muted-foreground">{doctor.specialty}</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm">Patients aujourd&apos;hui: {doctor.patientsToday}</p>
-              <Badge variant={doctor.status === "Disponible" ? "default" : doctor.status === "Absent" ? "destructive" : "outline"}>
-                {doctor.status}
-              </Badge>
-            </div>
+      {/* Liste des Médecins */}
+      <Card>
+        <CardHeader className="flex flex-row items-center">
+          <div className="flex-1">
+            <CardTitle>Médecins de l&apos;Hôpital</CardTitle>
+            <CardDescription>Gérez les médecins et leurs disponibilités</CardDescription>
           </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/dashboard/hospital-admin/doctors">
+              Voir tout <ArrowRight className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {hospitalDoctors.map((doctor) => (
+              <div key={doctor.id} className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={doctor.avatar} alt={doctor.name} />
+                    <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{doctor.name}</p>
+                    <span className="text-xs text-muted-foreground">{doctor.specialty}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm">Patients aujourd&apos;hui: {doctor.patientsToday}</p>
+                  <Badge variant={doctor.status === "Disponible" ? "default" : doctor.status === "Absent" ? "destructive" : "outline"}>
+                    {doctor.status}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
 
       {/* Quick Actions */}
