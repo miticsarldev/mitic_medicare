@@ -2,7 +2,6 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Users, Bed, Activity, FileText, Calendar as CalendarIcon, Download } from 'lucide-react';
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -63,7 +62,6 @@ const ReportList = ({ title, icon: Icon, reports, showDownload = false }) => (
 );
 
 export default function HospitalReportPage() {
-  const { theme } = useTheme();
   const { data: session, status } = useSession();
   const [totalPatients, setTotalPatients] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -78,7 +76,7 @@ export default function HospitalReportPage() {
         const response = await axios.get(`http://localhost:3000/dashboard/hopital_admin/api/${session.user.id}`);
         setTotalPatients(response.data.totalPatients);
       } catch (err) {
-        setError("Erreur lors de la récupération des patients");
+        setError("Erreur lors de la récupération des patients" + err);
       } finally {
         setLoading(false);
       }

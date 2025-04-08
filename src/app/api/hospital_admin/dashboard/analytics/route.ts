@@ -1,12 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { startOfDay, endOfDay } from "date-fns";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const session = await getServerSession(authOptions);
 

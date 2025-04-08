@@ -3,14 +3,10 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
-  ArrowDown,
   ArrowRight,
-  ArrowUp,
   Calendar,
   Download,
-  FileText,
   LifeBuoy,
-  MoreHorizontal,
   RefreshCw,
   Settings,
   User,
@@ -93,13 +89,6 @@ export default function SuperAdminOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-
-  const patientServiceData = [
-    { name: "Cardiologie", value: 40 },
-    { name: "Pédiatrie", value: 25 },
-    { name: "Urgences", value: 30 },
-    { name: "Chirurgie", value: 15 },
-  ];
 
   // useEffect pour recuperer les données des patients et médecins
   useEffect(() => {
