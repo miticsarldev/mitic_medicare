@@ -97,7 +97,9 @@ export default function SearchDoctor() {
                   </Link>
                 </div>
               ))}
-              <Pagination totalPages={0} />
+              <Pagination totalPages={0} currentPage={0} onPageChange={function (): void {
+                throw new Error("Function not implemented.");
+              } } />
               
             </div>
 

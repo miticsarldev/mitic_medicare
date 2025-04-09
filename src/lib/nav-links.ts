@@ -551,7 +551,7 @@ export function getNavItems(role: UserRole) {
     case "INDEPENDENT_DOCTOR":
       return doctorNavItems;
     case "HOSPITAL_DOCTOR":
-      return hospitalAdminNavItems;
+      return hospitalDoctorNavItems;
     case "PATIENT":
       return patientNavItems;
     default:
