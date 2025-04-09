@@ -479,11 +479,6 @@ export const hospitalDoctorNavItems = [
         url: "/dashboard/hopital_doctor/overview",
         icon: ClipboardList,
       },
-      {
-        title: "Statistiques & Analyse",
-        url: "/dashboard/hopital_doctor/statistics",
-        icon: FileText,
-      },
     ],
   },
   {
