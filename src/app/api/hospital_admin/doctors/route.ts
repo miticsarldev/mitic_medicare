@@ -4,6 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
+
+interface DoctorFilters extends Prisma.DoctorWhereInput { }
 
 export async function GET(request: NextRequest) {
     try {
@@ -29,12 +32,21 @@ export async function GET(request: NextRequest) {
         const specialization = searchParams.get("specialization");
         const isVerified = searchParams.get("isVerified");
         const isAvailable = searchParams.get("isAvailable");
+        const search = searchParams.get("search");
 
-        const filters = {
+        const filters: DoctorFilters = {
             hospitalId: hospital.id,
             ...(specialization && { specialization }),
-            ...(isVerified !== undefined && { isVerified: isVerified === "true" }),
-            ...(isAvailable !== undefined && { availableForChat: isAvailable === "true" }),
+            ...(isVerified !== null && { isVerified: isVerified === "true" }),
+            ...(isAvailable !== null && { availableForChat: isAvailable === "true" }),
+            ...(search && {
+                user: {
+                    name: {
+                        contains: search,
+                        mode: "insensitive",
+                    },
+                },
+            }),
         };
 
         const doctors = await prisma.doctor.findMany({
@@ -43,20 +55,45 @@ export async function GET(request: NextRequest) {
             take: limit,
             select: {
                 id: true,
-                user: {
-                    select: { name: true },
-                },
                 specialization: true,
+                licenseNumber: true,
+                education: true,
+                experience: true,
+                consultationFee: true,
                 isVerified: true,
+                isIndependent: true,
                 availableForChat: true,
-                doctorReviews: {
-                    select: { rating: true },
+                createdAt: true,
+                user: {
+                    select: {
+                        name: true,
+                        email: true,
+                        phone: true,
+                        profile: {
+                            select: {
+                                bio: true,
+                                avatarUrl: true,
+                                address: true,
+                                city: true,
+                                state: true,
+                                country: true,
+                            },
+                        },
+                    },
                 },
                 department: {
-                    select: { name: true },
+                    select: {
+                        name: true,
+                    },
                 },
                 appointments: {
                     select: { id: true },
+                },
+                doctorReviews: {
+                    select: { rating: true },
+                },
+                reviews: {
+                    select: { rating: true },
                 },
             },
         });
@@ -65,26 +102,41 @@ export async function GET(request: NextRequest) {
             where: filters,
         });
 
-        const doctorsWithAverageRating = doctors.map((doctor) => {
-            const totalRatings = doctor.doctorReviews.reduce((sum, review) => sum + review.rating, 0);
-            const averageRating = doctor.doctorReviews.length
-                ? totalRatings / doctor.doctorReviews.length
+        const doctorsWithDetails = doctors.map((doctor) => {
+            const totalRatings = doctor.reviews.reduce((sum, r) => sum + r.rating, 0);
+            const averageRating = doctor.reviews.length
+                ? totalRatings / doctor.reviews.length
                 : 0;
 
             return {
                 id: doctor.id,
                 name: doctor.user.name,
+                email: doctor.user.email,
+                phone: doctor.user.phone,
                 specialization: doctor.specialization,
+                licenseNumber: doctor.licenseNumber,
+                education: doctor.education,
+                experience: doctor.experience,
+                consultationFee: doctor.consultationFee,
                 isVerified: doctor.isVerified,
+                isIndependent: doctor.isIndependent,
                 availableForChat: doctor.availableForChat,
-                averageRating,
-                patientsCount: doctor.appointments.length,
+                createdAt: doctor.createdAt,
+                avatarUrl: doctor.user.profile?.avatarUrl,
+                bio: doctor.user.profile?.bio,
+                address: doctor.user.profile?.address,
+                city: doctor.user.profile?.city,
+                state: doctor.user.profile?.state,
+                country: doctor.user.profile?.country,
                 department: doctor.department?.name,
+                patientsCount: doctor.appointments.length,
+                averageRating,
+                reviewsCount: doctor.reviews.length,
             };
         });
 
         return NextResponse.json({
-            doctors: doctorsWithAverageRating,
+            doctors: doctorsWithDetails,
             totalDoctors,
             page,
             totalPages: Math.ceil(totalDoctors / limit),

@@ -1,169 +1,149 @@
-"use client";
+// app/components/DoctorTable.tsx
 
-import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+"use client"
+
+import { useEffect, useState } from "react"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Phone } from 'lucide-react';
 
 type Doctor = {
-    id: string;
-    name: string;
-    specialization: string;
-    isVerified: boolean;
-    availableForChat: boolean;
-    averageRating: number;
-    patientsCount: number;
-    department?: string;
-};
+  id: string
+  name: string
+  specialization: string
+  isVerified: boolean
+  availableForChat: boolean
+  averageRating: number
+  patientsCount: number
+  phone: string
+  department?: string
+  education?: string
+  experience?: string
+  consultationFee?: string
+}
 
-export default function DoctorsList() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
+export default function DoctorTable() {
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-    const [doctors, setDoctors] = useState<Doctor[]>([]);
-    const [totalPages, setTotalPages] = useState(1);
-    const [loading, setLoading] = useState(false);
+  // Pagination
+  const [page, setPage] = useState(1)
+  const limit = 10
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const specialization = searchParams.get("specialization") || "";
-    const isVerified = searchParams.get("isVerified") || "";
-    const isAvailable = searchParams.get("isAvailable") || "";
+  // Filtres
+  const [search, setSearch] = useState("")
 
-    const fetchDoctors = async () => {
-        setLoading(true);
-        const query = new URLSearchParams({
-            page: page.toString(),
-            limit: "10",
-            ...(specialization && { specialization }),
-            ...(isVerified && { isVerified }),
-            ...(isAvailable && { isAvailable }),
-        }).toString();
+  const fetchDoctors = async () => {
+    setLoading(true)
+    setError(null)
 
-        const res = await fetch(`/api/hospital_admin/doctors?${query}`);
-        const data = await res.json();
+    try {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        search: search.trim(),
+      })
 
-        if (res.ok) {
-            setDoctors(data.doctors);
-            setTotalPages(data.totalPages);
-        }
-        setLoading(false);
-    };
+      const res = await fetch(`/api/hospital_admin/doctors?${queryParams}`)
+      const data = await res.json()
 
-    useEffect(() => {
-        fetchDoctors();
-    }, [searchParams.toString()]);
+      if (!res.ok) throw new Error(data.message || "Erreur inconnue")
 
-    const updateFilters = (key: string, value: string) => {
-        const params = new URLSearchParams(searchParams);
-        if (value) {
-            params.set(key, value);
-        } else {
-            params.delete(key);
-        }
-        params.set("page", "1");
-        router.push(`?${params.toString()}`);
-    };
+      setDoctors(data.doctors || [])
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || "Une erreur est survenue")
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    const changePage = (newPage: number) => {
-        const params = new URLSearchParams(searchParams);
-        params.set("page", newPage.toString());
-        router.push(`?${params.toString()}`);
-    };
+  useEffect(() => {
+    fetchDoctors()
+  }, [page, search])
 
-    return (
-        <div className="space-y-6 p-4">
-            <h1 className="text-2xl font-bold mb-4">Liste des Médecins</h1>
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value)
+    setPage(1) // reset page
+  }
 
-            {/* Filtres */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-gray-50 p-6 rounded-xl shadow">
-                {/* Spécialisation */}
-                <div className="flex flex-col space-y-1">
-                    <label htmlFor="specialization" className="text-sm font-medium text-gray-700">
-                        Spécialisation
-                    </label>
-                    <input
-                        id="specialization"
-                        type="text"
-                        placeholder="Ex : Cardiologue"
-                        value={specialization}
-                        onChange={(e) => updateFilters("specialization", e.target.value)}
-                        className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                </div>
+  return (
+    <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Liste des médecins</h1>
+    
+        {/* Barre de recherche */}
+      <div className="flex items-center justify-between gap-4">
+        <Input
+          placeholder="Filtrer par nom ou spécialisation..."
+          value={search}
+          onChange={handleSearchChange}
+          className="w-full max-w-sm"
+        />
+      </div>
 
-                {/* Vérification */}
-                <div className="flex flex-col space-y-1">
-                    <label htmlFor="isVerified" className="text-sm font-medium text-gray-700">
-                        Vérification
-                    </label>
-                    <select
-                        id="isVerified"
-                        value={isVerified}
-                        onChange={(e) => updateFilters("isVerified", e.target.value)}
-                        className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="">Toutes</option>
-                        <option value="true">Vérifié</option>
-                        <option value="false">Non vérifié</option>
-                    </select>
-                </div>
+      {loading ? (
+        <div>Chargement...</div>
+      ) : error ? (
+        <div className="text-red-500">{error}</div>
+      ) : doctors.length === 0 ? (
+        <div className="text-gray-500">Aucun médecin trouvé.</div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nom</TableHead>
+              <TableHead>Spécialisation</TableHead>
+              <TableHead>Département</TableHead>
+              <TableHead>Éducation</TableHead>
+              <TableHead>Expérience</TableHead>
+              <TableHead>Vérifié</TableHead>
+              <TableHead>Numero</TableHead>
+              <TableHead>Note Moyenne</TableHead>
+              <TableHead>Patients</TableHead>
+              <TableHead>Frais</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {doctors.map((doc) => (
+              <TableRow key={doc.id}>
+                <TableCell>{doc.name}</TableCell>
+                <TableCell>{doc.specialization}</TableCell>
+                <TableCell>{doc.department || "-"}</TableCell>
+                <TableCell>{doc.education || "-"}</TableCell>
+                <TableCell>{doc.experience || "-"}</TableCell>
+                <TableCell>{doc.isVerified ? "✅" : "❌"}</TableCell>
+                <TableCell>{doc.phone || "-"}</TableCell>
+                <TableCell>{doc.averageRating?.toFixed(1) ?? "-"}</TableCell>
+                <TableCell>{doc.patientsCount ?? "-"}</TableCell>
+                <TableCell>{doc.consultationFee ? `${doc.consultationFee} €` : "-"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
-                {/* Disponibilité */}
-                <div className="flex flex-col space-y-1">
-                    <label htmlFor="isAvailable" className="text-sm font-medium text-gray-700">
-                        Disponibilité
-                    </label>
-                    <select
-                        id="isAvailable"
-                        value={isAvailable}
-                        onChange={(e) => updateFilters("isAvailable", e.target.value)}
-                        className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="">Toutes</option>
-                        <option value="true">Disponible</option>
-                        <option value="false">Indisponible</option>
-                    </select>
-                </div>
-            </div>
-
-
-            {/* Liste */}
-            {loading ? (
-                <p className="text-center">Chargement...</p>
-            ) : doctors.length === 0 ? (
-                <p className="text-center">Aucun médecin trouvé.</p>
-            ) : (
-                <div className="grid gap-4">
-                    {doctors.map((doc) => (
-                        <div key={doc.id} className="border p-4 rounded-lg shadow-sm bg-white">
-                            <h2 className="text-xl font-semibold">{doc.name}</h2>
-                            <p className="text-gray-600">{doc.specialization} – {doc.department || "Aucun département"}</p>
-                            <p className="text-sm text-gray-500">
-                                Note moyenne : {doc.averageRating.toFixed(1)} ★ | Patients : {doc.patientsCount}
-                            </p>
-                            <p className="text-sm">
-                                {doc.isVerified ? "✅ Vérifié" : "❌ Non vérifié"} | {doc.availableForChat ? "💬 Disponible" : "⛔ Indisponible"}
-                            </p>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex justify-center mt-6 space-x-2">
-                    {Array.from({ length: totalPages }, (_, i) => (
-                        <button
-                            key={i + 1}
-                            onClick={() => changePage(i + 1)}
-                            className={`px-4 py-2 rounded ${page === i + 1
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
-                </div>
-            )}
+      {/* gestion conditionnel de la pagination */}
+      {doctors.length > 10 && (
+        <div className="flex justify-between items-center mt-4">
+          <Button
+            disabled={page === 1}
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+          >
+            Précédent
+          </Button>
+          <span>Page {page}</span>
+          <Button onClick={() => setPage((prev) => prev + 1)}>Suivant</Button>
         </div>
-    );
+      )}
+    </div>
+  )
 }
