@@ -6,7 +6,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
-interface DoctorFilters extends Prisma.DoctorWhereInput { }
 
 export async function GET(request: NextRequest) {
     try {
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest) {
         const isAvailable = searchParams.get("isAvailable");
         const search = searchParams.get("search");
 
-        const filters: DoctorFilters = {
+        const filters: Prisma.DoctorWhereInput = {
             hospitalId: hospital.id,
             ...(specialization && { specialization }),
             ...(isVerified !== null && { isVerified: isVerified === "true" }),

@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import {
   Table,
   TableHeader,
@@ -40,7 +39,7 @@ export default function DoctorTable() {
   // Filtres
   const [search, setSearch] = useState("")
 
-  const fetchDoctors = async () => {
+  const fetchDoctors = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -59,26 +58,25 @@ export default function DoctorTable() {
       setDoctors(data.doctors || [])
     } catch (err) {
       console.error(err)
-      setError("Une erreur est survenue lors de la récupération des médecins.");
+      setError("Une erreur est survenue lors de la récupération des médecins.")
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, search]) // ✅ dépendances contrôlées
 
   useEffect(() => {
     fetchDoctors()
-  }, [page, search])
+  }, [fetchDoctors]) // ✅ plus de warning
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value)
-    setPage(1) // reset page
+    setPage(1)
   }
 
   return (
     <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Liste des médecins</h1>
-    
-        {/* Barre de recherche */}
+      <h1 className="text-2xl font-bold">Liste des médecins</h1>
+
       <div className="flex items-center justify-between gap-4">
         <Input
           placeholder="Filtrer par nom ou spécialisation..."
@@ -122,14 +120,15 @@ export default function DoctorTable() {
                 <TableCell>{doc.phone || "-"}</TableCell>
                 <TableCell>{doc.averageRating?.toFixed(1) ?? "-"}</TableCell>
                 <TableCell>{doc.patientsCount ?? "-"}</TableCell>
-                <TableCell>{doc.consultationFee ? `${doc.consultationFee} €` : "-"}</TableCell>
+                <TableCell>
+                  {doc.consultationFee ? `${doc.consultationFee} €` : "-"}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
 
-      {/* gestion conditionnel de la pagination */}
       {doctors.length > 10 && (
         <div className="flex justify-between items-center mt-4">
           <Button

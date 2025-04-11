@@ -13,6 +13,12 @@ interface Department {
     name: string;
 }
 
+// type Error 
+
+type Error = {
+    message: string;
+};
+
 export default function DoctorForm() {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(false);
@@ -99,8 +105,8 @@ export default function DoctorForm() {
                 avatarUrl: '',
                 genre: '',
             });
-        } catch (err: any) {
-            setMessage(`❌ ${err.message}`);
+        } catch (err) {
+            setMessage('Erreur soumission formulaire :' + (err as Error).message);
         } finally {
             setSubmitLoading(false);
         }
