@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Stethoscope, Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus } from "lucide-react";
+import {  Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { patients } from '@/data/patient-data';
 import {
   Dialog,
   DialogContent,
@@ -18,47 +17,156 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
+interface PatientDetails {
+  id: string;
+  user: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  dateOfBirth: Date;
+  bloodType?: string;
+  allergies?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  medicalNotes?: string;
+  medicalHistories: {
+    id: string;
+    title: string;
+    condition: string;
+    diagnosedDate?: Date;
+    status: string;
+    details?: string;
+  }[];
+  appointments: {
+    id: string;
+    doctor: {
+      user: {
+        name: string;
+      };
+    };
+    scheduledAt: Date;
+    status: string;
+    type?: string;
+    reason?: string;
+    notes?: string;
+    medicalRecord?: {
+      id: string;
+      diagnosis: string;
+      treatment?: string;
+      prescriptions: {
+        id: string;
+        medicationName: string;
+        dosage: string;
+        frequency: string;
+        duration?: string;
+        instructions?: string;
+      }[];
+    };
+  }[];
+  vitalSigns: {
+    id: string;
+    temperature?: number;
+    heartRate?: number;
+    bloodPressureSystolic?: number;
+    bloodPressureDiastolic?: number;
+    oxygenSaturation?: number;
+    weight?: number;
+    height?: number;
+    recordedAt: Date;
+  }[];
+}
+
 export default function PatientMedicalRecord() {
   const { patientId } = useParams();
-  const patient = patients.find(p => p.id === parseInt(Array.isArray(patientId) ? patientId[0] : patientId));
+  const [patient, setPatient] = useState<PatientDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [isModalOpen, setIsModalOpen] = useState(false); // État pour gérer l'ouverture du modal
-  const [title, setTitle] = useState(""); // État pour le titre
-  const [details, setDetails] = useState(""); // État pour les détails
-  const [date, setDate] = useState(""); // État pour la date
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [condition, setCondition] = useState("");
+  const [details, setDetails] = useState("");
+  const [diagnosedDate, setDiagnosedDate] = useState("");
 
-  if (!patient) {
-    return <div>Patient non trouvé</div>;
-  }
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      try {
+        const response = await fetch(`/api/hospital_doctor/patient/${patientId}`);
+        if (!response.ok) {
+          throw new Error('Patient non trouvé');
+        }
+        const data = await response.json();
+        setPatient(data);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Une erreur est survenue");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const medicalHistory = [
-    { id: 1, type: "Maladie", description: "Hypertension artérielle", date: "2018" },
-    { id: 2, type: "Intervention", description: "Appendicectomie", date: "2010" },
-    { id: 3, type: "Allergie", description: "Pénicilline", date: "2005" },
-  ];
+    fetchPatientData();
+  }, [patientId]);
 
-  const consultations = [
-    { id: 1, date: "12 Mars 2024", reason: "Contrôle annuel", diagnosis: "Tout va bien" },
-    { id: 2, date: "10 Février 2024", reason: "Douleurs thoraciques", diagnosis: "Reflux gastro-œsophagien" },
-    { id: 3, date: "15 Janvier 2024", reason: "Vaccination", diagnosis: "Vaccin contre la grippe administré" },
-  ];
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>Erreur: {error}</div>;
+  if (!patient) return <div>Patient non trouvé</div>;
 
-  const prescriptions = [
-    { id: 1, medication: "Paracétamol", dosage: "500mg", frequency: "3 fois par jour", duration: "7 jours" },
-    { id: 2, medication: "Oméprazole", dosage: "20mg", frequency: "1 fois par jour", duration: "30 jours" },
-  ];
+  // Formater les données pour l'affichage
+  const formatDate = (date: Date) => new Date(date).toLocaleDateString();
+  const formatBloodType = (type?: string) => type ? type.replace('_', ' ') : 'Non spécifié';
 
-  const labResults = [
-    { id: 1, test: "Analyse sanguine", date: "10 Mars 2024", result: "Normal" },
-    { id: 2, test: "Radiographie thoracique", date: "11 Mars 2024", result: "Aucune anomalie détectée" },
-  ];
+  // Filtrer les consultations complétées
+  const completedAppointments = patient.appointments
+    .filter(app => app.status === 'COMPLETED')
+    .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
 
-  // Fonction pour gérer la soumission du formulaire
-  const handleSubmit = (e) => {
+  // Récupérer toutes les prescriptions
+  const prescriptions = completedAppointments
+    .flatMap(app => app.medicalRecord?.prescriptions || [])
+    .filter(pres => pres);
+
+  // Récupérer les signes vitaux
+  const latestVitalSigns = patient.vitalSigns.length > 0 
+    ? patient.vitalSigns.reduce((latest, current) => 
+        new Date(current.recordedAt) > new Date(latest.recordedAt) ? current : latest
+      )
+    : null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Pour l'instant, on affiche simplement les données dans la console
-    console.log({ title, details, date });
-    setIsModalOpen(false); // Fermer le modal après soumission
+    
+    try {
+      const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          condition,
+          details,
+          diagnosedDate: diagnosedDate || undefined,
+          status: 'ACTIVE'
+        })
+      });
+
+      if (response.ok) {
+        const updatedPatient = await response.json();
+        setPatient(updatedPatient);
+        setIsModalOpen(false);
+        setTitle('');
+        setCondition('');
+        setDetails('');
+        setDiagnosedDate('');
+      }
+    } catch (err) {
+      console.error("Erreur lors de l'ajout de l'historique", err);
+    }
   };
 
   return (
@@ -70,9 +178,9 @@ export default function PatientMedicalRecord() {
             <CardTitle className="flex items-center gap-4">
               <User className="w-8 h-8 text-blue-500" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{patient.name}</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{patient.user.name}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Date de naissance: {patient.dateOfBirth} | Groupe sanguin : {patient.bloodType}
+                  Date de naissance: {formatDate(patient.dateOfBirth)} | Groupe sanguin : {formatBloodType(patient.bloodType)}
                 </p>
               </div>
             </CardTitle>
@@ -82,18 +190,22 @@ export default function PatientMedicalRecord() {
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <p className="text-sm text-gray-900 dark:text-gray-100">
-              Allergies : {patient.allergies.join(", ")}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-green-500" />
-            <p className="text-sm text-gray-900 dark:text-gray-100">
-              Dernière consultation : {patient.lastVisit} 
-            </p>
-          </div>
+          {patient.allergies && (
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                Allergies : {patient.allergies}
+              </p>
+            </div>
+          )}
+          {completedAppointments.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-green-500" />
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                Dernière consultation : {formatDate(completedAppointments[0].scheduledAt)} avec Dr. {completedAppointments[0].doctor.user.name}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -106,48 +218,77 @@ export default function PatientMedicalRecord() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-3">
-            {medicalHistory.map((item) => (
-              <li key={item.id} className="flex items-center gap-4 p-3 border rounded-md dark:border-gray-700">
-                <Badge variant="outline" className="shrink-0">
-                  {item.type}
-                </Badge>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{item.description}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.date}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {patient.medicalHistories.length > 0 ? (
+            <ul className="space-y-3">
+              {patient.medicalHistories.map((history) => (
+                <li key={history.id} className="flex items-center gap-4 p-3 border rounded-md dark:border-gray-700">
+                  <Badge variant="outline" className="shrink-0">
+                    {history.status}
+                  </Badge>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{history.title} - {history.condition}</p>
+                    {history.diagnosedDate && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Diagnostiqué le: {formatDate(history.diagnosedDate)}
+                      </p>
+                    )}
+                    {history.details && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{history.details}</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400">Aucun antécédent médical enregistré</p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Section : Consultations récentes */}
-      <Card className="bg-white dark:bg-gray-800 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Stethoscope className="w-6 h-6 text-blue-500" />
-            Consultations récentes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            {consultations.map((consultation) => (
-              <li key={consultation.id} className="p-3 border rounded-md dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{consultation.reason}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{consultation.date}</p>
-                  </div>
-                  <Badge variant="outline" className="shrink-0">
-                    {consultation.diagnosis}
-                  </Badge>
+      {/* Section : Signes vitaux */}
+      {latestVitalSigns && (
+        <Card className="bg-white dark:bg-gray-800 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+              <Activity className="w-6 h-6 text-orange-500" />
+              Signes vitaux récents
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {latestVitalSigns.temperature && (
+                <div className="border rounded-md p-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
+                  <p className="font-medium">{latestVitalSigns.temperature}°C</p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+              )}
+              {latestVitalSigns.bloodPressureSystolic && latestVitalSigns.bloodPressureDiastolic && (
+                <div className="border rounded-md p-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
+                  <p className="font-medium">
+                    {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
+                  </p>
+                </div>
+              )}
+              {latestVitalSigns.heartRate && (
+                <div className="border rounded-md p-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
+                  <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
+                </div>
+              )}
+              {latestVitalSigns.oxygenSaturation && (
+                <div className="border rounded-md p-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
+                  <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Mesuré le: {formatDate(latestVitalSigns.recordedAt)}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Section : Prescriptions en cours */}
       <Card className="bg-white dark:bg-gray-800 shadow-sm">
@@ -158,59 +299,42 @@ export default function PatientMedicalRecord() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-3">
-            {prescriptions.map((prescription) => (
-              <li key={prescription.id} className="p-3 border rounded-md dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{prescription.medication}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {prescription.dosage} - {prescription.frequency} ({prescription.duration})
-                    </p>
+          {prescriptions.length > 0 ? (
+            <ul className="space-y-3">
+              {prescriptions.map((prescription) => (
+                <li key={prescription.id} className="p-3 border rounded-md dark:border-gray-700">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{prescription.medicationName}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {prescription.dosage} - {prescription.frequency} {prescription.duration && `(${prescription.duration})`}
+                      </p>
+                      {prescription.instructions && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Instructions: {prescription.instructions}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="shrink-0">
+                      En cours
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="shrink-0">
-                    En cours
-                  </Badge>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400">Aucune prescription active</p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Section : Résultats d'analyses */}
-      <Card className="bg-white dark:bg-gray-800 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Activity className="w-6 h-6 text-orange-500" />
-            Résultats d&aposanalyses
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            {labResults.map((result) => (
-              <li key={result.id} className="p-3 border rounded-md dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{result.test}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{result.date}</p>
-                  </div>
-                  <Badge variant="outline" className="shrink-0">
-                    {result.result}
-                  </Badge>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-
+      {/* Modal pour ajouter un historique médical */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter un historique</DialogTitle>
+            <DialogTitle>Ajouter un historique médical</DialogTitle>
             <DialogDescription>
-              Remplissez les détails pour ajouter un nouvel historique médical.
+              Renseignez les détails de la condition médicale du patient.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -220,32 +344,43 @@ export default function PatientMedicalRecord() {
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titre de l'historique"
+                placeholder="Ex: Hypertension artérielle"
                 required
               />
             </div>
             <div>
-              <Label htmlFor="details">Détails</Label>
+              <Label htmlFor="condition">Condition</Label>
+              <Input
+                id="condition"
+                value={condition}
+                onChange={(e) => setCondition(e.target.value)}
+                placeholder="Ex: Chronique"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="diagnosedDate">Date de diagnostic (optionnel)</Label>
+              <Input
+                id="diagnosedDate"
+                type="date"
+                value={diagnosedDate}
+                onChange={(e) => setDiagnosedDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="details">Détails (optionnel)</Label>
               <Textarea
                 id="details"
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
-                placeholder="Détails de l'historique"
-                required
+                placeholder="Détails supplémentaires sur la condition"
               />
             </div>
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button type="submit">Ajouter</Button>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit">Enregistrer</Button>
             </div>
           </form>
         </DialogContent>

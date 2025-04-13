@@ -449,11 +449,6 @@ export const hospitalDoctorNavItems = [
         url: "/dashboard/hopital_doctor/overview",
         icon: ClipboardList,
       },
-      {
-        title: "Statistiques & Analyse",
-        url: "/dashboard/hopital_doctor/statistics",
-        icon: FileText,
-      },
     ],
   },
   {
@@ -521,7 +516,7 @@ export function getNavItems(role: UserRole) {
     case "INDEPENDENT_DOCTOR":
       return doctorNavItems;
     case "HOSPITAL_DOCTOR":
-      return hospitalAdminNavItems;
+      return hospitalDoctorNavItems;
     case "PATIENT":
       return patientNavItems;
     default:
