@@ -8,8 +8,8 @@ import {
 
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-6 p-4 gap-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4">
         <div>
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-72 mt-2" />
@@ -17,7 +17,7 @@ export default function Loading() {
         <Skeleton className="h-10 w-40" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 p-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -32,7 +32,7 @@ export default function Loading() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 p-4">
         <Card className="lg:col-span-3">
           <CardHeader>
             <Skeleton className="h-6 w-48" />

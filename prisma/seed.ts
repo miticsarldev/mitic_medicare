@@ -876,6 +876,7 @@ async function main() {
         password: password,
         role: UserRole.PATIENT,
         emailVerified: randomBoolean(0.8) ? new Date() : null,
+        dateOfBirth: randomDate(new Date(1950, 0, 1), new Date(2005, 11, 31)),
         isApproved: true,
         isActive: true,
         profile: {
@@ -896,7 +897,6 @@ async function main() {
     const patient = await prisma.patient.create({
       data: {
         userId: patientUser.id,
-        dateOfBirth: randomDate(new Date(1950, 0, 1), new Date(2005, 11, 31)),
         bloodType: randomItem([
           BloodType.A_POSITIVE,
           BloodType.A_NEGATIVE,

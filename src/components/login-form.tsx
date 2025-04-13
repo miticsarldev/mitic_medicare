@@ -3,7 +3,6 @@
 import { Eye, EyeOff, User } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -159,15 +158,6 @@ const LoginForm = () => {
         {errors.password && (
           <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
         )}
-      </div>
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="remember"
-          className="text-[#107ACA] border-[#107ACA] focus:ring-[#107ACA]"
-        />
-        <label htmlFor="remember" className="text-sm font-medium">
-          Se souvenir de moi
-        </label>
       </div>
       <Button
         type="submit"

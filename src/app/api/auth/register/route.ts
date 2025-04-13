@@ -57,6 +57,7 @@ export async function POST(req: Request) {
         email: normalizedEmail,
         phone: phoneNumber,
         password: hashedPassword,
+        dateOfBirth: new Date(),
         role: "PATIENT",
         profile: {
           create: {
@@ -64,9 +65,7 @@ export async function POST(req: Request) {
           },
         },
         patient: {
-          create: {
-            dateOfBirth: new Date(),
-          },
+          create: {},
         },
       },
       include: {

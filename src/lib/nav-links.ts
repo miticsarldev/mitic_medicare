@@ -13,7 +13,6 @@ import {
   FolderHeart,
   MessageSquare,
   UserCheck,
-  Heart,
   UserPlus,
   Stethoscope,
 } from "lucide-react";
@@ -221,11 +220,6 @@ export const patientNavItems = [
         url: "/dashboard/patient/overview",
         icon: UserCheck,
       },
-      {
-        title: "Statistiques & Suivi",
-        url: "/dashboard/patient/statistics",
-        icon: FileText,
-      },
     ],
   },
   {
@@ -234,12 +228,8 @@ export const patientNavItems = [
     url: "/dashboard/patient/appointments",
     items: [
       {
-        title: "Prochains Rendez-vous",
-        url: "/dashboard/patient/appointments/upcoming",
-      },
-      {
-        title: "Historique des Rendez-vous",
-        url: "/dashboard/patient/appointments/history",
+        title: "Tous mes Rendez-vous",
+        url: "/dashboard/patient/appointments/all",
       },
       {
         title: "Prendre un Rendez-vous",
@@ -255,10 +245,6 @@ export const patientNavItems = [
       {
         title: "Voir Mon Dossier",
         url: "/dashboard/patient/medical-records/view",
-      },
-      {
-        title: "Mises à jour",
-        url: "/dashboard/patient/medical-records/updates",
       },
     ],
   },
@@ -279,33 +265,6 @@ export const patientNavItems = [
     ],
   },
   {
-    title: "Avis & Feedback",
-    icon: MessageSquare,
-    url: "/dashboard/patient/reviews",
-    items: [
-      {
-        title: "Donner un Avis",
-        url: "/dashboard/patient/reviews/give-feedback",
-      },
-      { title: "Mes Avis", url: "/dashboard/patient/reviews/my-feedback" },
-    ],
-  },
-  {
-    title: "Abonnement & Services",
-    icon: Heart,
-    url: "/dashboard/patient/subscriptions",
-    items: [
-      {
-        title: "Mon Abonnement",
-        url: "/dashboard/patient/subscriptions/details",
-      },
-      {
-        title: "Mettre à Niveau",
-        url: "/dashboard/patient/subscriptions/upgrade",
-      },
-    ],
-  },
-  {
     title: "Paramètres & Sécurité",
     icon: Settings,
     url: "/dashboard/patient/settings",
@@ -318,11 +277,22 @@ export const patientNavItems = [
     ],
   },
   {
+    title: "Avis & Feedback",
+    icon: MessageSquare,
+    url: "/dashboard/patient/reviews",
+    items: [
+      {
+        title: "Donner un Avis",
+        url: "/dashboard/patient/reviews/give-feedback",
+      },
+      { title: "Mes Avis", url: "/dashboard/patient/reviews/my-feedback" },
+    ],
+  },
+  {
     title: "Assistance & Aide",
     icon: LifeBuoy,
     url: "/dashboard/patient/support",
     items: [
-      { title: "Centre d'Aide", url: "/dashboard/patient/support/help-center" },
       { title: "FAQs", url: "/dashboard/patient/support/faq" },
       { title: "Support Client", url: "/dashboard/patient/support/contact" },
     ],

@@ -50,7 +50,25 @@ export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
-        <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          <div className="flex flex-col">
+            <span>{user?.name}</span>
+            <span className="font-light text-sm text-muted-foreground">
+              {user?.role === "SUPER_ADMIN"
+                ? "Administrateur"
+                : user?.role === "HOSPITAL_ADMIN"
+                  ? "Administrateur d'hôpital"
+                  : user?.role === "HOSPITAL_DOCTOR"
+                    ? "Médecin d'hôpital"
+                    : user?.role === "INDEPENDENT_DOCTOR"
+                      ? "Médecin Independant"
+                      : "Patient"}
+            </span>
+            <span className="font-light text-xs text-muted-foreground">
+              {user?.email}
+            </span>
+          </div>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem className="flex items-center gap-1">

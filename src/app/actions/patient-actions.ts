@@ -260,6 +260,7 @@ export async function createPatient(formData: FormData) {
         email,
         phone,
         password: hashedPassword,
+        dateOfBirth: new Date(dateOfBirth),
         role: "PATIENT",
         isActive: true,
         emailVerified: new Date(),
@@ -281,7 +282,6 @@ export async function createPatient(formData: FormData) {
     await prisma.patient.create({
       data: {
         userId: user.id,
-        dateOfBirth: new Date(dateOfBirth),
         bloodType: bloodType ? (bloodType as BloodType) : null,
         allergies,
         emergencyContact,
@@ -384,7 +384,7 @@ export async function bulkExportPatients(patientIds: string[]) {
       name: patient.user.name,
       email: patient.user.email,
       phone: patient.user.phone,
-      dateOfBirth: patient.dateOfBirth.toISOString().split("T")[0],
+      dateOfBirth: patient?.user?.dateOfBirth?.toISOString().split("T")[0],
       gender: patient.user.profile?.genre === "MALE" ? "Homme" : "Femme",
       address: patient.user.profile?.address || "",
       status: patient.user.isActive ? "active" : "inactive",

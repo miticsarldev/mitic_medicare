@@ -86,6 +86,7 @@ export async function PUT(
         email: data.email,
         phone: data.phone,
         isActive: data.status === "active",
+        dateOfBirth: new Date(data.dateOfBirth),
       },
     });
 
@@ -132,7 +133,6 @@ export async function PUT(
         id: patient.id,
       },
       data: {
-        dateOfBirth: new Date(data.dateOfBirth),
         bloodType: data.bloodType || null,
         allergies: data.allergies.join(","),
         emergencyContact: data.emergencyContact,
