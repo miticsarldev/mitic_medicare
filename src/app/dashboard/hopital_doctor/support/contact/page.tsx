@@ -2,19 +2,11 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import {
-  Clock,
-  HelpCircle,
-  Loader2,
-  Mail,
-  MessageSquare,
-  Phone,
-  Send,
-} from "lucide-react";
+import { Clock, Loader2, Mail, MessageSquare, Phone, Send } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -68,6 +60,35 @@ type ContactFormValues = z.infer<typeof contactFormSchema>;
 export default function ContactPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [hospitalContact, setHospitalContact] = useState<{
+    phone?: string;
+    email?: string;
+    address?: string;
+    website?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchHospitalContact = async () => {
+      try {
+        const res = await fetch("/api/hospital_doctor/hospital");
+        const data = await res.json();
+        if (res.ok) {
+          setHospitalContact({
+            phone: data.phone,
+            email: data.email,
+            address: data.address,
+            website: data.website,
+          });
+        } else {
+          console.error("Erreur API:", data.message);
+        }
+      } catch (err) {
+        console.error("Erreur réseau:", err);
+      }
+    };
+  
+    fetchHospitalContact();
+  }, []);
 
   // Default values for the form
   const defaultValues: Partial<ContactFormValues> = {
@@ -83,23 +104,53 @@ export default function ContactPage() {
     mode: "onChange",
   });
 
-  function onSubmit(data: ContactFormValues) {
+  // Replace the onSubmit function with this implementation
+  async function onSubmit(data: ContactFormValues) {
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Message envoyé",
-        description:
-          "Votre message a été envoyé avec succès. Nous vous répondrons dans les plus brefs délais.",
-      });
-      form.reset();
-      setAttachments([]);
-    }, 1500);
+    try {
+      console.log("sending email");
+      const formData = new FormData();
+      formData.append("subject", data.subject);
+      formData.append("category", data.category);
+      formData.append("priority", data.priority);
+      formData.append("message", data.message);
 
-    console.log(data);
-    console.log(attachments);
+      attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+
+      const response = await fetch("/api/hospital_doctor/support-email", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      console.log(result);
+
+      if (result.success) {
+        toast({
+          title: "Message envoyé",
+          description: `Votre message a été envoyé avec succès (Ticket #${result.ticketId}). Nous vous répondrons dans les plus brefs délais.`,
+        });
+
+        form.reset();
+        setAttachments([]);
+      } else {
+        throw new Error("Erreur lors de l'envoi.");
+      }
+    } catch (error) {
+      console.error("Error", error);
+      toast({
+        title: "Erreur",
+        description:
+          "Une erreur est survenue lors de l'envoi de votre message. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleAttachmentChange = (
@@ -290,6 +341,7 @@ export default function ContactPage() {
                                 multiple
                                 className="cursor-pointer"
                                 onChange={handleAttachmentChange}
+                                value={undefined}
                               />
                             </div>
 
@@ -353,68 +405,59 @@ export default function ContactPage() {
         </div>
 
         <div className="md:col-span-4 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Autres moyens de contact</CardTitle>
-              <CardDescription>
-                Contactez-nous directement par téléphone ou email
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Phone className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-medium">Téléphone</p>
-                  <p className="text-sm text-muted-foreground">
-                    +33 1 23 45 67 89
-                  </p>
-                </div>
+        {hospitalContact && (
+        <Card className="md:col-span-4">
+          <CardHeader>
+            <CardTitle>Informations de l’hôpital</CardTitle>
+            <CardDescription>Voici comment nous contacter :</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {hospitalContact.phone && (
+              <div className="flex items-center gap-2">
+                <Phone className="w-5 h-5 text-muted-foreground" />
+                <span>{hospitalContact.phone}</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Mail className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">
-                    support@example.com
-                  </p>
-                </div>
+            )}
+            {hospitalContact.email && (
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-muted-foreground" />
+                <span>{hospitalContact.email}</span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <MessageSquare className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-medium">Chat en direct</p>
-                  <p className="text-sm text-muted-foreground">
-                    Disponible pendant les heures d&apos;ouverture
-                  </p>
-                </div>
+            )}
+            {hospitalContact.address && (
+              <div className="flex items-start gap-2">
+                <MessageSquare className="w-5 h-5 text-muted-foreground mt-1" />
+                <span>{hospitalContact.address}</span>
               </div>
-
-              <Separator className="my-2" />
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm font-medium">Heures d&apos;ouverture</p>
-                </div>
-                <div className="space-y-1">
-                  {supportHours.map((item, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{item.day}</span>
-                      <span>{item.hours}</span>
-                    </div>
-                  ))}
-                </div>
+            )}
+            {hospitalContact.website && (
+              <div className="flex items-center gap-2">
+                <Send className="w-5 h-5 text-muted-foreground" />
+                <Link
+                  href={hospitalContact.website}
+                  className="text-blue-600 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {hospitalContact.website}
+                </Link>
               </div>
-            </CardContent>
-          </Card>
+            )}
+            <Separator />
+            <div>
+              <p className="text-sm text-muted-foreground mb-2 font-medium">Heures de support :</p>
+              <ul className="text-sm space-y-1">
+                {supportHours.map((item, index) => (
+                  <li key={index}>
+                    <Clock className="inline w-4 h-4 mr-2 text-muted-foreground" />
+                    {item.day} : {item.hours}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
           <Card>
             <CardHeader>
@@ -424,19 +467,6 @@ export default function ContactPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Link
-                href="/dashboard/patient/support/help-center"
-                className="flex items-center gap-3 p-3 rounded-md hover:bg-muted transition-colors"
-              >
-                <HelpCircle className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">Centre d&apos;aide</p>
-                  <p className="text-sm text-muted-foreground">
-                    Consultez nos guides et tutoriels
-                  </p>
-                </div>
-              </Link>
-
               <Link
                 href="/dashboard/patient/support/faq"
                 className="flex items-center gap-3 p-3 rounded-md hover:bg-muted transition-colors"
