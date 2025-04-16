@@ -1,144 +1,160 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { format } from "date-fns"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 
-interface Payment {
-    id: string
-    amount: string
-    currency: string
-    paymentDate: string
-    paymentMethod: string
-    status: string
+type Hospital = {
+  id: string
+  name: string
+  address: string
+  city: string
+  state: string
+  zipCode: string
+  country: string
+  phone: string
+  email: string
+  website?: string
+  description?: string
+  logoUrl?: string
+  isVerified: boolean
+  status: string
+  createdAt: string
+  updatedAt: string
+  _count: {
+    doctors: number
+    departments: number
+    appointments: number
+    medicalRecords: number
+    reviews: number
+  }
 }
 
-interface Subscription {
-    plan: string
-    status: string
-    startDate: string
-    endDate: string
-    autoRenew: boolean
-    payments: Payment[]
-}
+export default function HospitalInfo() {
+  const [hospital, setHospital] = useState<Hospital | null>(null)
+  const [loading, setLoading] = useState(true)
 
-export default function SubscriptionSection() {
-    const [subscription, setSubscription] = useState<Subscription | null>(null)
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        const fetchSubscription = async () => {
-            const res = await fetch("/api/hospital_admin/subscription")
-            const data = await res.json()
-            setSubscription(data.subscription)
-            setLoading(false)
-        }
-        fetchSubscription()
-    }, [])
-
-    const totalPaid = subscription?.payments.reduce((sum, p) => {
-        return p.status === "COMPLETED" ? sum + parseFloat(p.amount) : sum
-    }, 0) || 0
-
-    const handleRenewal = () => {
-        // Placeholder: Ajoute ici ton appel API
-        alert("Renouvellement lancé...")
+  useEffect(() => {
+    const fetchHospital = async () => {
+      try {
+        const res = await fetch("/api/hospital_admin/hospital")
+        const data = await res.json()
+        setHospital(data.hospital)
+      } catch (error) {
+        console.error("Erreur récupération hôpital:", error)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    if (loading) return <p>Chargement...</p>
-    if (!subscription) return <p>Aucun abonnement trouvé.</p>
+    fetchHospital()
+  }, [])
 
-    return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold text-gray-800">Détails de l’abonnement</h2>
-                <Button onClick={handleRenewal}>Renouveler l’abonnement</Button>
-            </div>
+  if (loading) {
+    return <Skeleton className="w-full h-40 rounded-xl" />
+  }
 
-            <div className="bg-white shadow-md rounded-2xl p-6 grid md:grid-cols-2 gap-4 border border-gray-100">
-                <div>
-                    <p className="text-gray-500 text-sm">Plan</p>
-                    <p className="font-medium text-lg">{subscription.plan}</p>
-                </div>
-                <div>
-                    <p className="text-gray-500 text-sm">Statut</p>
-                    <Badge variant={subscription.status === "ACTIVE" ? "default" : "secondary"}>
-                        {subscription.status}
-                    </Badge>
-                </div>
-                <div>
-                    <p className="text-gray-500 text-sm">Date de début</p>
-                    <p>{format(new Date(subscription.startDate), "dd/MM/yyyy")}</p>
-                </div>
-                <div>
-                    <p className="text-gray-500 text-sm">Date de fin</p>
-                    <p>{format(new Date(subscription.endDate), "dd/MM/yyyy")}</p>
-                </div>
-                <div>
-                    <p className="text-gray-500 text-sm">Renouvellement automatique</p>
-                    <p>{subscription.autoRenew ? "Oui" : "Non"}</p>
-                </div>
-            </div>
+  if (!hospital) {
+    return <p className="text-red-500">Aucun hôpital trouvé.</p>
+  }
 
-            <div className="mt-8">
-                <h3 className="text-xl font-medium text-gray-800 mb-2">Historique des paiements</h3>
-                <div className="bg-white shadow-md rounded-2xl border border-gray-100">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Montant</TableHead>
-                                <TableHead>Devise</TableHead>
-                                <TableHead>Méthode</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Statut</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {subscription.payments.length > 0 ? (
-                                <>
-                                    {subscription.payments.map(payment => (
-                                        <TableRow key={payment.id}>
-                                            <TableCell>{payment.amount}</TableCell>
-                                            <TableCell>{payment.currency}</TableCell>
-                                            <TableCell>{payment.paymentMethod}</TableCell>
-                                            <TableCell>{format(new Date(payment.paymentDate), "dd/MM/yyyy")}</TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant={
-                                                        payment.status === "COMPLETED"
-                                                            ? "default"
-                                                            : payment.status === "FAILED"
-                                                            ? "destructive"
-                                                            : "secondary"
-                                                    }
-                                                >
-                                                    {payment.status}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    <TableRow className="bg-gray-50 font-medium">
-                                        <TableCell colSpan={5} className="text-right pr-6">
-                                            Total payé :{" "}
-                                            <span className="font-bold text-green-600">
-                                                {totalPaid.toFixed(2)} {subscription.payments[0]?.currency ?? "XOF"}
-                                            </span>
-                                        </TableCell>
-                                    </TableRow>
-                                </>
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-gray-500 py-4">
-                                        Aucun paiement enregistré.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+  return (
+    <div className="max-w-6xl mx-auto p-4 space-y-6">
+
+      {/* Informations principales */}
+      <Card className="border shadow-md rounded-2xl">
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {hospital.logoUrl && (
+              <img
+                src={hospital.logoUrl}
+                alt={hospital.name}
+                className="w-16 h-16 object-cover rounded-full border"
+              />
+            )}
+            <div>
+              <CardTitle className="text-xl font-bold">{hospital.name}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {hospital.city}, {hospital.country}
+              </p>
             </div>
-        </div>
-    )
+          </div>
+          <Badge variant={hospital.isVerified ? "default" : "outline"}>
+            {hospital.isVerified ? "Vérifié" : "Non vérifié"}
+          </Badge>
+        </CardHeader>
+      </Card>
+
+      {/* Coordonnées */}
+      <Card className="border shadow-md rounded-2xl">
+        <CardHeader>
+          <CardTitle>Coordonnées</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p><strong>Email :</strong> {hospital.email}</p>
+            <p><strong>Téléphone :</strong> {hospital.phone}</p>
+            {hospital.website && (
+              <p>
+                <strong>Site Web :</strong>{" "}
+                <a href={hospital.website} target="_blank" className="text-blue-600 underline">
+                  {hospital.website}
+                </a>
+              </p>
+            )}
+          </div>
+          <div>
+            <p><strong>Adresse :</strong> {hospital.address}</p>
+            <p><strong>Code postal :</strong> {hospital.zipCode}</p>
+            <p><strong>État :</strong> {hospital.state}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Description */}
+      {hospital.description && (
+        <Card className="border shadow-md rounded-2xl">
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">{hospital.description}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Statistiques */}
+      <Card className="border shadow-md rounded-2xl">
+        <CardHeader>
+          <CardTitle>Statistiques</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 text-center">
+            <div>
+              <p className="text-2xl font-bold">{hospital._count.doctors}</p>
+              <p className="text-sm text-muted-foreground">Médecins</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{hospital._count.departments}</p>
+              <p className="text-sm text-muted-foreground">Départements</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{hospital._count.appointments}</p>
+              <p className="text-sm text-muted-foreground">Rendez-vous</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{hospital._count.medicalRecords}</p>
+              <p className="text-sm text-muted-foreground">Dossiers</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{hospital._count.reviews}</p>
+              <p className="text-sm text-muted-foreground">Avis</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+    </div>
+  )
 }

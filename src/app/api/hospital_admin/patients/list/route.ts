@@ -34,7 +34,10 @@ export async function GET(request: NextRequest) {
                     },
                 },
             },
-            include: {
+            select: {
+                id: true,
+                allergies: true,
+                medicalNotes: true,
                 user: {
                     select: {
                         name: true,
@@ -65,14 +68,14 @@ export async function GET(request: NextRequest) {
             },
         });
 
+
         const patientsFormatted = patientsWithAppointments.map((patient) => {
-            const lastAppointment = patient.appointments[0]; // déjà trié par scheduledAt desc
+            const lastAppointment = patient.appointments[0];
 
             return {
                 id: patient.id,
                 name: patient.user.name,
                 gender: patient.user.profile?.genre || "Non précisé",
-                dateOfBirth: patient.dateOfBirth,
                 numberOfAppointments: patient.appointments.length,
                 lastAppointment: lastAppointment?.scheduledAt || null,
                 medicalRecords: patient.medicalRecords,
@@ -82,6 +85,7 @@ export async function GET(request: NextRequest) {
                 },
             };
         });
+
 
         return NextResponse.json({ patients: patientsFormatted });
     } catch (error) {

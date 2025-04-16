@@ -341,17 +341,7 @@ export const hospitalAdminNavItems = [
         title: "Aperçu",
         url: "/dashboard/hopital_admin/overview",
         icon: ClipboardList,
-      },
-      {
-        title: "Statistiques & Analyse",
-        url: "/dashboard/hopital_admin/statistics",
-        icon: FileText,
-      },
-      {
-        title: "Rapports & Activité",
-        url: "/dashboard/hopital_admin/reports",
-        icon: FileText,
-      },
+      }
     ],
   },
   {
@@ -388,10 +378,6 @@ export const hospitalAdminNavItems = [
         url: "/dashboard/hopital_admin/patients/medical-records",
         icon: FolderHeart,
       },
-      {
-        title: "Demandes Spéciales",
-        url: "/dashboard/hopital_admin/patients/requests",
-      },
     ],
   },
   {
@@ -423,31 +409,35 @@ export const hospitalAdminNavItems = [
         url: "/dashboard/hopital_admin/management/details",
       },
       {
-        title: "Services & Spécialités",
+        title: "Tarification & Abonnements",
+        url: "/dashboard/hopital_admin/management/pricing",
+      },
+      {
+        title: "Departements & Spécialités",
         url: "/dashboard/hopital_admin/management/services",
       },
       {
-        title: "Infrastructure & Équipements",
-        url: "/dashboard/hopital_admin/management/infrastructure",
+        title: "Commentaires & Avis",
+        url: "/dashboard/hopital_admin/management/reviews",
       },
     ],
   },
-  {
-    title: "Paramètres & Sécurité",
-    icon: Settings,
-    url: "/dashboard/hopital_admin/settings",
-    items: [
-      { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
-      {
-        title: "Sécurité & Confidentialité",
-        url: "/dashboard/hopital_admin/settings/security",
-      },
-      {
-        title: "Utilisateurs & Accès",
-        url: "/dashboard/hopital_admin/settings/access",
-      },
-    ],
-  },
+  // {
+  //   title: "Paramètres & Sécurité",
+  //   icon: Settings,
+  //   url: "/dashboard/hopital_admin/settings",
+  //   items: [
+  //     { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
+  //     {
+  //       title: "Sécurité & Confidentialité",
+  //       url: "/dashboard/hopital_admin/settings/security",
+  //     },
+  //     {
+  //       title: "Utilisateurs & Accès",
+  //       url: "/dashboard/hopital_admin/settings/access",
+  //     },
+  //   ],
+  // },
   {
     title: "Assistance & Aide",
     icon: LifeBuoy,
