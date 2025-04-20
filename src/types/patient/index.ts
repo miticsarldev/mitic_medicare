@@ -61,7 +61,9 @@ export type MedicalHistoryWithRelations = MedicalHistory & {
 
 // Doctor types
 export type DoctorWithRelations = Doctor & {
-  user: User;
+  user: User & {
+    profile?: UserProfile | null; // Le profil est optionnel dans user
+  };
   hospital?: Hospital | null;
   reviews: DoctorReview[];
 };

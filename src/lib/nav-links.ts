@@ -254,14 +254,13 @@ export const patientNavItems = [
     url: "/dashboard/patient/doctors",
     items: [
       {
-        title: "Rechercher un Médecin",
+        title: "Médecins",
         url: "/dashboard/patient/doctors/search",
       },
       {
         title: "Centres Médicaux",
         url: "/dashboard/patient/doctors/hospitals",
       },
-      { title: "Mes Médecins", url: "/dashboard/patient/doctors/my-doctors" },
     ],
   },
   {

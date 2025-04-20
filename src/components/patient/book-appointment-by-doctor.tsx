@@ -4,13 +4,7 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Calendar,
-  Clock,
-  ArrowLeft,
-  CalendarCheck,
-  CalendarX,
-} from "lucide-react";
+import { Calendar, ArrowLeft, CalendarCheck, CalendarX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -39,28 +33,18 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  getAppointmentById,
+  bookAppointment,
   getDoctorAvailableTimeSlots,
-  rescheduleAppointment,
 } from "@/app/dashboard/patient/actions";
+import { getDoctorById } from "@/app/actions/patient-actions/provider-actions";
+import { DoctorWithRelations } from "@/types/patient/index";
 
-interface Appointment {
-  doctorId: string;
-  doctorName: string;
-  doctorAvatar?: string | null;
-  specialization: string;
-  hospital: string;
-  scheduledAt: string;
-  reason: string;
-}
-
-export default function RescheduleAppointmentPage({
-  appointmentId,
+export default function BookAppointmentByDoctorIdPage({
+  doctorId,
 }: {
-  appointmentId: string;
+  doctorId: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -68,57 +52,43 @@ export default function RescheduleAppointmentPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [doctor, setDoctor] = useState<DoctorWithRelations | null>(null);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
-  const [originalDate, setOriginalDate] = useState<Date | null>(null);
-  const [originalTime, setOriginalTime] = useState<string | null>(null);
 
-  // Fetch appointment details
+  // Fetch doctor details
   useEffect(() => {
-    const fetchAppointmentDetails = async () => {
+    const fetchdoctorDetails = async () => {
       setIsLoading(true);
-      console.log(appointmentId);
+      console.log(doctorId);
       try {
-        const appointmentDetails = await getAppointmentById(appointmentId);
-        setAppointment({
-          ...appointmentDetails,
-          scheduledAt: appointmentDetails.scheduledAt.toISOString(),
-        });
-
-        // Set original date and time
-        const scheduledDate = new Date(appointmentDetails.scheduledAt);
-        setOriginalDate(scheduledDate);
-        setOriginalTime(format(scheduledDate, "HH:mm"));
-
-        // Pre-fill the form with existing appointment data
-        setDate(scheduledDate);
-        setReason(appointmentDetails.reason);
+        const doctorDetails = await getDoctorById(doctorId);
+        setDoctor(doctorDetails);
       } catch (error) {
-        console.error("Error fetching appointment details:", error);
+        console.error("Error fetching doctor details:", error);
         toast({
           title: "Erreur",
           description: "Impossible de récupérer les détails du rendez-vous.",
           variant: "destructive",
         });
-        router.push("/dashboard/patient/appointments/all");
+        router.push("/dashboard/patient/doctors/all");
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (appointmentId) {
-      fetchAppointmentDetails();
+    if (doctorId) {
+      fetchdoctorDetails();
     }
-  }, [appointmentId, router, toast]);
+  }, [doctorId, router, toast]);
 
   // Fetch time slots when date changes
   useEffect(() => {
     const fetchTimeSlots = async () => {
-      if (!appointment?.doctorId || !date) {
+      if (!doctorId || !date) {
         setTimeSlots([]);
         return;
       }
@@ -129,21 +99,10 @@ export default function RescheduleAppointmentPage({
       try {
         const formattedDate = format(date, "yyyy-MM-dd");
         const timeSlotsData = await getDoctorAvailableTimeSlots(
-          appointment.doctorId,
+          doctorId,
           formattedDate
         );
         setTimeSlots(timeSlotsData);
-
-        // If same date as original, try to select the original time if available
-        if (
-          originalDate &&
-          format(date, "yyyy-MM-dd") === format(originalDate, "yyyy-MM-dd") &&
-          originalTime
-        ) {
-          if (timeSlotsData.includes(originalTime)) {
-            setSelectedTime(originalTime);
-          }
-        }
       } catch (error) {
         console.error("Error fetching time slots:", error);
         setTimeSlots([]);
@@ -153,52 +112,40 @@ export default function RescheduleAppointmentPage({
     };
 
     fetchTimeSlots();
-  }, [appointment?.doctorId, date, originalDate, originalTime]);
+  }, [doctorId, date, setTimeSlots]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!appointment?.doctorId || !date || !selectedTime) {
+    if (doctorId || !date || !selectedTime) {
       return;
     }
 
     setIsSubmitting(true);
 
     const formData = new FormData();
-    formData.append("appointmentId", appointmentId);
-    formData.append("doctorId", appointment.doctorId);
+    formData.append("doctorId", doctorId);
     formData.append("scheduledDate", format(date, "yyyy-MM-dd"));
     formData.append("scheduledTime", selectedTime);
     formData.append("reason", reason);
 
     try {
-      await rescheduleAppointment(formData);
+      await bookAppointment(formData);
       toast({
-        title: "Rendez-vous reprogrammé",
-        description: "Votre rendez-vous a été reprogrammé avec succès.",
+        title: "Rendez-vous programmé",
+        description: "Votre rendez-vous a été programmé avec succès.",
       });
-      router.push("/dashboard/patient/appointments/all");
+      router.push("/dashboard/patient/doctors/all");
     } catch (error) {
-      console.error("Error rescheduling appointment:", error);
+      console.error("Error rescheduling doctor:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de reprogrammer le rendez-vous.",
+        description: "Impossible de programmer le rendez-vous.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Check if date/time has changed
-  const hasChanges = () => {
-    if (!originalDate || !date || !originalTime || !selectedTime) return false;
-
-    const sameDate =
-      format(date, "yyyy-MM-dd") === format(originalDate, "yyyy-MM-dd");
-    const sameTime = selectedTime === originalTime;
-
-    return !(sameDate && sameTime);
   };
 
   return (
@@ -215,10 +162,10 @@ export default function RescheduleAppointmentPage({
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Reprogrammer un Rendez-vous
+            Programmer votre Rendez-vous avec {doctor?.user?.name}
           </h1>
           <p className="text-muted-foreground">
-            Modifiez la date et l&apos;heure de votre rendez-vous existant
+            Séléctionner la date et l&apos;heure de votre rendez-vous
           </p>
         </div>
       </div>
@@ -247,8 +194,8 @@ export default function RescheduleAppointmentPage({
             <CardHeader>
               <CardTitle>Détails du Rendez-vous</CardTitle>
               <CardDescription>
-                Sélectionnez une nouvelle date et heure pour votre rendez-vous
-                avec {appointment?.doctorName}
+                Sélectionnez une date et heure pour votre rendez-vous avec{" "}
+                {doctor?.user?.name}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -257,13 +204,13 @@ export default function RescheduleAppointmentPage({
                   <Avatar className="h-16 w-16 border">
                     <AvatarImage
                       src={
-                        appointment?.doctorAvatar ||
+                        doctor?.user?.profile?.avatarUrl ||
                         `/placeholder.svg?height=64&width=64`
                       }
-                      alt={appointment?.doctorName}
+                      alt={doctor?.user?.name}
                     />
                     <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                      {appointment?.doctorName
+                      {doctor?.user?.name
                         .split(" ")
                         .map((n: string) => n[0])
                         .join("")}
@@ -271,29 +218,14 @@ export default function RescheduleAppointmentPage({
                   </Avatar>
                   <div>
                     <h3 className="text-lg font-medium">
-                      {appointment?.doctorName}
+                      {doctor?.user?.name}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {appointment?.specialization}
+                      {doctor?.specialization}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {appointment?.hospital}
+                      {doctor?.hospital?.name}
                     </p>
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className="bg-amber-50 text-amber-800 border-amber-200"
-                      >
-                        <Clock className="mr-1 h-3 w-3" />
-                        Rendez-vous actuel
-                      </Badge>
-                      <span className="text-sm font-medium">
-                        {originalDate &&
-                          format(originalDate, "PPP", { locale: fr })}{" "}
-                        à {originalTime}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -303,7 +235,7 @@ export default function RescheduleAppointmentPage({
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Nouvelle date
+                        Date du rendez-vous
                       </label>
                       <Popover>
                         <PopoverTrigger asChild>
@@ -340,7 +272,7 @@ export default function RescheduleAppointmentPage({
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Nouvel horaire
+                        Horaire du rendez-vous
                       </label>
                       <Select
                         disabled={
@@ -366,7 +298,6 @@ export default function RescheduleAppointmentPage({
                           {timeSlots.map((time) => (
                             <SelectItem key={time} value={time}>
                               {time}
-                              {originalTime === time && " (horaire actuel)"}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -413,11 +344,7 @@ export default function RescheduleAppointmentPage({
                     type="submit"
                     className="sm:flex-1"
                     disabled={
-                      !date ||
-                      !selectedTime ||
-                      !reason.trim() ||
-                      isSubmitting ||
-                      !hasChanges()
+                      !date || !selectedTime || !reason.trim() || isSubmitting
                     }
                   >
                     {isSubmitting ? (

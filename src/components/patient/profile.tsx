@@ -226,7 +226,6 @@ export default function ProfilePage() {
       setIsLoadingProfile(true);
       try {
         const data = await getPatientProfile();
-        console.log(data);
         setProfileData({
           ...data.profile,
           dateOfBirth: data.profile.dateOfBirth

@@ -103,7 +103,7 @@ export default function AppointmentsPage() {
     appointments: [],
     pagination: { total: 0, pages: 1, page: 1, limit: 5 },
   });
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [activeTab, setActiveTab] = useState<string>("upcoming");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,18 +121,12 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoading(true);
       try {
-        const statuses =
-          activeTab === "upcoming"
-            ? ["PENDING", "CONFIRMED"]
-            : ["COMPLETED", "CANCELED", "NO_SHOW"];
-
-        const statusesToUse = statusFilter ? [statusFilter] : statuses;
-
         const result = await getPatientAppointments({
-          status: statusesToUse as AppointmentStatus | AppointmentStatus[],
+          status: statusFilter as AppointmentStatus | AppointmentStatus[],
           search: searchQuery,
           page: currentPage,
           limit: 5,
+          time: activeTab === "upcoming" ? "upcoming" : "past",
         });
 
         setAppointments(result);
@@ -235,7 +229,7 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Mes Rendez-vous</h2>
@@ -257,9 +251,13 @@ export default function AppointmentsPage() {
         onValueChange={handleTabChange}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="upcoming" className="text-sm md:text-base">
-            Rendez-vous à venir
+        <TabsList className="grid grid-cols-2 w-full mb-6 gap-2">
+          <TabsTrigger
+            value="upcoming"
+            className="text-sm md:text-base text-center justify-center"
+          >
+            <span className="hidden sm:flex">Rendez-vous à venir</span>
+            <span className="flex sm:hidden">RDV à venir</span>
             {!isLoading &&
               activeTab === "upcoming" &&
               appointments.pagination.total > 0 && (
@@ -268,7 +266,10 @@ export default function AppointmentsPage() {
                 </Badge>
               )}
           </TabsTrigger>
-          <TabsTrigger value="past" className="text-sm md:text-base">
+          <TabsTrigger
+            value="past"
+            className="text-sm md:text-base text-center justify-center"
+          >
             Historique
             {!isLoading &&
               activeTab === "past" &&
@@ -282,7 +283,7 @@ export default function AppointmentsPage() {
 
         <TabsContent value="upcoming">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <CardTitle>Prochains Rendez-vous</CardTitle>
@@ -328,7 +329,7 @@ export default function AppointmentsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               {isLoading ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
@@ -338,15 +339,15 @@ export default function AppointmentsPage() {
                     >
                       <Skeleton className="h-12 w-12 rounded-full" />
                       <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-[200px]" />
-                        <Skeleton className="h-3 w-[150px]" />
-                        <Skeleton className="h-3 w-[100px]" />
+                        <Skeleton className="h-4 max-w-[200px]" />
+                        <Skeleton className="h-3 max-w-[150px]" />
+                        <Skeleton className="h-3 max-w-[100px]" />
                       </div>
                       <div className="space-y-2">
-                        <Skeleton className="h-5 w-[80px]" />
+                        <Skeleton className="h-5 max-w-[80px]" />
                         <div className="flex gap-2">
-                          <Skeleton className="h-8 w-[80px]" />
-                          <Skeleton className="h-8 w-[80px]" />
+                          <Skeleton className="h-8 max-w-[80px]" />
+                          <Skeleton className="h-8 max-w-[80px]" />
                         </div>
                       </div>
                     </div>
@@ -573,7 +574,7 @@ export default function AppointmentsPage() {
 
         <TabsContent value="past">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <CardTitle>Historique des Rendez-vous</CardTitle>
@@ -624,23 +625,23 @@ export default function AppointmentsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               {isLoading ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="flex items-start gap-4 rounded-lg border p-4"
+                      className="flex flex-col sm:flex-row items-start gap-4 rounded-lg border p-1 sm:p-4"
                     >
                       <Skeleton className="h-12 w-12 rounded-full" />
                       <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-[200px]" />
-                        <Skeleton className="h-3 w-[150px]" />
-                        <Skeleton className="h-3 w-[100px]" />
+                        <Skeleton className="h-4 max-w-[200px]" />
+                        <Skeleton className="h-3 max-w-[150px]" />
+                        <Skeleton className="h-3 max-w-[100px]" />
                       </div>
                       <div className="space-y-2">
-                        <Skeleton className="h-5 w-[80px]" />
-                        <Skeleton className="h-8 w-[80px]" />
+                        <Skeleton className="h-5 max-w-[80px]" />
+                        <Skeleton className="h-8 max-w-[80px]" />
                       </div>
                     </div>
                   ))}

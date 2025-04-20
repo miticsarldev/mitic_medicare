@@ -292,7 +292,7 @@ export default function MedicalRecordsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-2 p-2 sm:p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
@@ -321,14 +321,14 @@ export default function MedicalRecordsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-2 sm:gap-4 md:grid-cols-4">
         <div className="md:col-span-1">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <CardTitle>Filtres</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="space-y-2 sm:space-y-4 p-4 sm:p-6">
+              <div className="space-y-1 sm:space-y-2">
                 <label htmlFor="search" className="text-sm font-medium">
                   Recherche
                 </label>
@@ -345,7 +345,7 @@ export default function MedicalRecordsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <label htmlFor="type" className="text-sm font-medium">
                   Type de document
                 </label>
@@ -373,7 +373,7 @@ export default function MedicalRecordsPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <label htmlFor="status" className="text-sm font-medium">
                   Statut
                 </label>
@@ -395,7 +395,7 @@ export default function MedicalRecordsPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <label className="text-sm font-medium">Tags</label>
                 <div className="flex flex-wrap gap-2">
                   {allTags.map((tag) => (
@@ -411,7 +411,7 @@ export default function MedicalRecordsPage() {
                 </div>
               </div>
 
-              <div className="pt-4">
+              <div className="pt-2 sm:pt-4">
                 <Button
                   variant="outline"
                   className="w-full"
@@ -428,11 +428,11 @@ export default function MedicalRecordsPage() {
             </CardContent>
           </Card>
 
-          <Card className="mt-4">
-            <CardHeader>
+          <Card className="mt-2 sm:mt-4">
+            <CardHeader className="p-4 sm:p-6">
               <CardTitle>Statistiques</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-2 sm:space-y-4 p-4 sm:p-6 pt-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Total des documents</span>
                 <span className="font-medium">{medicalRecords.length}</span>
@@ -523,7 +523,7 @@ export default function MedicalRecordsPage() {
 
         <div className="md:col-span-3">
           <Card>
-            <CardHeader className="flex flex-row items-center">
+            <CardHeader className="flex flex-row items-center p-4 sm:p-6">
               <div className="flex-1">
                 <CardTitle>Documents médicaux</CardTitle>
                 <CardDescription>
@@ -551,7 +551,7 @@ export default function MedicalRecordsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               {sortedRecords.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <FileText className="h-12 w-12 text-muted-foreground/50" />

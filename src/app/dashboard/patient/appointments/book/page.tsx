@@ -152,8 +152,8 @@ export default function BookAppointmentPage() {
     : null;
 
   return (
-    <div className="container p-6">
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
+    <div className="container p-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Rechercher un Médecin</CardTitle>

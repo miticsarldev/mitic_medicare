@@ -2,11 +2,22 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { AppointmentStatus, BloodType, UserGenre } from "@prisma/client";
+import {
+  AppointmentStatus,
+  BloodType,
+  HospitalStatus,
+  Prisma,
+  ReviewStatus,
+  ReviewTargetType,
+  UserGenre,
+} from "@prisma/client";
 import { PatientOverviewData } from "./types";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { compare, hash } from "bcryptjs";
+import { formatTime, generateTimeSlots, parseTime } from "@/utils/function";
+import { format, isValid } from "date-fns";
+import { fr } from "date-fns/locale";
 
 export async function getPatientOverview(): Promise<PatientOverviewData> {
   try {
@@ -271,6 +282,7 @@ export async function getAvailableDoctors(searchQuery?: string) {
           OR: [
             {
               user: {
+                // Ensure this is the only 'user' property in the object
                 name: {
                   contains: searchQuery,
                   mode: "insensitive" as const,
@@ -330,6 +342,45 @@ export async function getAvailableDoctors(searchQuery?: string) {
     }));
   } catch (error) {
     console.error("Error fetching available doctors:", error);
+    return [];
+  }
+}
+
+export async function getAvailableHospitals(searchQuery?: string) {
+  try {
+    const where = searchQuery
+      ? {
+          OR: [
+            { name: { contains: searchQuery, mode: "insensitive" as const } },
+            { city: { contains: searchQuery, mode: "insensitive" as const } },
+            {
+              country: { contains: searchQuery, mode: "insensitive" as const },
+            },
+          ],
+          status: "ACTIVE" as HospitalStatus,
+          isVerified: true,
+        }
+      : {
+          status: "ACTIVE" as HospitalStatus,
+          isVerified: true,
+        };
+
+    const hospitals = await prisma.hospital.findMany({
+      where,
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return hospitals.map((h) => ({
+      id: h.id,
+      name: h.name,
+      type: "hospital" as const,
+      hospital: h.name,
+      consultationFee: undefined,
+    }));
+  } catch (error) {
+    console.error("Error fetching hospitals:", error);
     return [];
   }
 }
@@ -431,19 +482,63 @@ export async function getDoctorAvailableTimeSlots(
   }
 }
 
+export async function getHospitalAvailableTimeSlots(
+  hospitalId: string,
+  date: string
+): Promise<string[]> {
+  try {
+    const dayOfWeek = new Date(date).getDay();
+
+    const doctors = await prisma.doctor.findMany({
+      where: {
+        hospitalId,
+        isVerified: true,
+        availableForChat: true,
+      },
+      include: {
+        availabilities: {
+          where: {
+            dayOfWeek,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    const timeSlotSet = new Set<string>();
+
+    for (const doctor of doctors) {
+      for (const slot of doctor.availabilities) {
+        const start = parseTime(slot.startTime);
+        const end = parseTime(slot.endTime);
+
+        for (let t = start; t < end; t += 30) {
+          timeSlotSet.add(formatTime(t));
+        }
+      }
+    }
+
+    return Array.from(timeSlotSet).sort();
+  } catch (err) {
+    console.error("Error fetching hospital time slots:", err);
+    return [];
+  }
+}
+
 export async function getPatientAppointments({
   status,
   search,
   page = 1,
   limit = 10,
+  time,
 }: {
   status?: AppointmentStatus | AppointmentStatus[];
   search?: string;
   page?: number;
   limit?: number;
+  time?: "upcoming" | "past";
 } = {}) {
   try {
-    // For demo purposes, if no patientId is provided, we'll use a mock ID
     const session = await getServerSession(authOptions);
     const userId = session?.user.id;
 
@@ -492,14 +587,18 @@ export async function getPatientAppointments({
       ];
     }
 
+    const now = new Date();
+    if (time === "upcoming") {
+      where.scheduledAt = { gte: now };
+    } else if (time === "past") {
+      where.scheduledAt = { lt: now };
+    }
+
     // Calculate pagination
     const skip = (page - 1) * limit;
 
-    console.log(where);
-
     // Get total count for pagination
     const totalCount = await prisma.appointment.count({ where });
-    console.log(totalCount);
 
     // Get appointments with related data
     const appointments = await prisma.appointment.findMany({
@@ -1529,7 +1628,7 @@ export async function getRecentEstablishments() {
         patientId: patient.id,
         status: "COMPLETED",
         hospitalId: {
-          not: null,
+          not: undefined,
         },
       },
       include: {
@@ -1820,4 +1919,1307 @@ export async function deleteReview(reviewId: string) {
     console.error("Error deleting review:", error);
     throw new Error("Failed to delete review");
   }
+}
+// Doctor-related actions
+export async function getMyDoctors() {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get patient data
+    const patient = await prisma.patient.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    // Get doctors from appointments
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        patientId: patient.id,
+      },
+      include: {
+        doctor: {
+          include: {
+            user: {
+              include: {
+                profile: true,
+              },
+            },
+            hospital: true,
+            department: true,
+            doctorReviews: {
+              where: {
+                patientId: patient.id,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        scheduledAt: "desc",
+      },
+    });
+
+    // Get favorite doctors (this would need to be implemented in your schema)
+    // For now, we'll simulate it
+    const favoriteIds: string[] = [];
+
+    // Extract unique doctors from appointments
+    const doctorMap = new Map();
+    appointments.forEach((appointment) => {
+      if (!doctorMap.has(appointment.doctorId)) {
+        doctorMap.set(appointment.doctorId, {
+          id: appointment.doctorId,
+          name: appointment.doctor.user.name,
+          specialty: appointment.doctor.specialization,
+          hospital: appointment.doctor.hospital?.name || "Cabinet privé",
+          address:
+            appointment.doctor.hospital?.address || "Adresse non spécifiée",
+          image:
+            appointment.doctor.user.profile?.avatarUrl ||
+            "/placeholder.svg?height=300&width=300",
+          rating: 4.5, // This would come from an aggregation of reviews
+          reviewCount: appointment.doctor.doctorReviews.length,
+          lastVisit: appointment.scheduledAt,
+          isFavorite: favoriteIds.includes(appointment.doctorId),
+          hasReview: appointment.doctor.doctorReviews.length > 0,
+          nextAppointment: null,
+        });
+      }
+    });
+
+    // Get upcoming appointments for these doctors
+    const upcomingAppointments = await prisma.appointment.findMany({
+      where: {
+        patientId: patient.id,
+        doctorId: {
+          in: Array.from(doctorMap.keys()),
+        },
+        scheduledAt: {
+          gt: new Date(),
+        },
+        status: {
+          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+        },
+      },
+      orderBy: {
+        scheduledAt: "asc",
+      },
+    });
+
+    // Update doctors with next appointment
+    upcomingAppointments.forEach((appointment) => {
+      const doctor = doctorMap.get(appointment.doctorId);
+      if (
+        doctor &&
+        (!doctor.nextAppointment ||
+          new Date(appointment.scheduledAt) < new Date(doctor.nextAppointment))
+      ) {
+        doctor.nextAppointment = appointment.scheduledAt;
+      }
+    });
+
+    return Array.from(doctorMap.values());
+  } catch (error) {
+    console.error("Error fetching my doctors:", error);
+    return [];
+  }
+}
+
+export async function toggleFavoriteDoctor() {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get patient data
+    const patient = await prisma.patient.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    // This would need to be implemented in your schema
+    // For now, we'll just return a simulated response
+    return { isFavorite: true };
+  } catch (error) {
+    console.error("Error toggling favorite doctor:", error);
+    throw new Error("Failed to update favorite status");
+  }
+}
+
+export async function getDoctorDetails(doctorId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get patient data
+    const patient = await prisma.patient.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    // Get doctor details
+    const doctor = await prisma.doctor.findUnique({
+      where: {
+        id: doctorId,
+      },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
+        },
+        hospital: true,
+        department: true,
+        doctorReviews: {
+          include: {
+            patient: {
+              include: {
+                user: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 5,
+        },
+      },
+    });
+
+    if (!doctor) {
+      throw new Error("Doctor not found");
+    }
+
+    // Check if doctor is a favorite (would need to be implemented in your schema)
+    const isFavorite = false;
+
+    // Get past appointments with this doctor
+    const pastAppointments = await prisma.appointment.findMany({
+      where: {
+        patientId: patient.id,
+        doctorId: doctorId,
+        status: AppointmentStatus.COMPLETED,
+      },
+      orderBy: {
+        scheduledAt: "desc",
+      },
+      take: 5,
+    });
+
+    // Get upcoming appointments with this doctor
+    const upcomingAppointments = await prisma.appointment.findMany({
+      where: {
+        patientId: patient.id,
+        doctorId: doctorId,
+        scheduledAt: {
+          gt: new Date(),
+        },
+        status: {
+          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+        },
+      },
+      orderBy: {
+        scheduledAt: "asc",
+      },
+      take: 3,
+    });
+
+    // Get prescriptions from this doctor
+    const prescriptions = await prisma.prescription.findMany({
+      where: {
+        doctorId: doctorId,
+        patientId: patient.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 5,
+    });
+
+    // Format doctor details
+    return {
+      id: doctor.id,
+      name: doctor.user.name,
+      specialty: doctor.specialization,
+      subspecialty: "",
+      hospital: doctor.hospital?.name || "Cabinet privé",
+      department: doctor.department?.name || "",
+      address: doctor.hospital?.address || "Adresse non spécifiée",
+      phone: doctor.user.phone || "",
+      email: doctor.user.email,
+      image:
+        doctor.user.profile?.avatarUrl ||
+        "/placeholder.svg?height=300&width=300",
+      rating: 4.5, // This would come from an aggregation of reviews
+      reviewCount: doctor.doctorReviews.length,
+      experience: doctor.experience || "",
+      bio: doctor.education || "Aucune biographie disponible",
+      education: doctor.education ? [doctor.education] : [],
+      languages: ["Français"],
+      availability: {
+        monday: "9h00 - 17h00",
+        tuesday: "9h00 - 17h00",
+        wednesday: "9h00 - 17h00",
+        thursday: "9h00 - 17h00",
+        friday: "9h00 - 17h00",
+        saturday: "Fermé",
+        sunday: "Fermé",
+      },
+      isFavorite: isFavorite,
+      consultations: pastAppointments.map((appointment) => ({
+        id: appointment.id,
+        date: appointment.scheduledAt,
+        type: appointment.type || "Consultation",
+        reason: appointment.reason || "Consultation générale",
+        notes: appointment.notes || "",
+      })),
+      prescriptions: prescriptions.map((prescription) => ({
+        id: prescription.id,
+        date: prescription.createdAt,
+        medications: [prescription.medicationName],
+        duration: prescription.duration || "1 mois",
+      })),
+      nextAppointment: upcomingAppointments[0]?.scheduledAt || null,
+      reviews: doctor.doctorReviews.map((review) => ({
+        id: review.id,
+        author: review.isAnonymous
+          ? "Patient anonyme"
+          : review.patient.user.name,
+        date: review.createdAt,
+        rating: review.rating,
+        comment: review.comment || "",
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching doctor details:", error);
+    throw new Error("Failed to fetch doctor details");
+  }
+}
+
+export async function submitDoctorReview(data: {
+  doctorId: string;
+  rating: number;
+  comment: string;
+  isAnonymous: boolean;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get patient data
+    const patient = await prisma.patient.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    // Check if patient has already reviewed this doctor
+    const existingReview = await prisma.doctorReview.findFirst({
+      where: {
+        patientId: patient.id,
+        doctorId: data.doctorId,
+      },
+    });
+
+    if (existingReview) {
+      // Update existing review
+      await prisma.doctorReview.update({
+        where: {
+          id: existingReview.id,
+        },
+        data: {
+          rating: data.rating,
+          comment: data.comment,
+          isAnonymous: data.isAnonymous,
+          isApproved: false, // Reset approval status
+        },
+      });
+    } else {
+      // Create new review
+      await prisma.doctorReview.create({
+        data: {
+          doctorId: data.doctorId,
+          patientId: patient.id,
+          rating: data.rating,
+          comment: data.comment,
+          isAnonymous: data.isAnonymous,
+          isApproved: false,
+        },
+      });
+    }
+
+    revalidatePath("/dashboard/patient/my-doctors");
+    return { success: true };
+  } catch (error) {
+    console.error("Error submitting doctor review:", error);
+    throw new Error("Failed to submit review");
+  }
+}
+
+export async function getHospitals(params: {
+  query?: string;
+  specialties?: string[];
+  minRating?: number;
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+  favoritesOnly?: boolean;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+    if (!userId) throw new Error("User not authenticated");
+
+    const patient = await prisma.patient.findFirst({
+      where: { userId },
+    });
+    if (!patient) throw new Error("Patient not found");
+
+    const {
+      query,
+      sortBy,
+      page = 1,
+      limit = 9,
+      favoritesOnly,
+      specialties,
+    } = params;
+
+    const skip = (page - 1) * limit;
+
+    // Get list of favorite hospital IDs if filtering by favorites
+    let favoriteHospitalIds: string[] = [];
+    if (favoritesOnly) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          favoriteHospitals: true,
+        },
+      });
+      favoriteHospitalIds = user?.favoriteHospitals.map((h) => h.id) || [];
+    }
+
+    // Build where filter
+    const where: Prisma.HospitalWhereInput = {
+      ...(query && {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { city: { contains: query, mode: "insensitive" } },
+          { country: { contains: query, mode: "insensitive" } },
+        ],
+      }),
+      ...(specialties &&
+        specialties.length > 0 && {
+          doctors: {
+            some: {
+              OR: specialties.map((spec) => ({
+                specialization: {
+                  equals: spec,
+                  mode: "insensitive" as const,
+                },
+              })),
+            },
+          },
+        }),
+      ...(favoritesOnly && {
+        id: {
+          in: favoriteHospitalIds,
+        },
+      }),
+    };
+
+    const [hospitals, total] = await Promise.all([
+      prisma.hospital.findMany({
+        where,
+        include: {
+          departments: true,
+          doctors: true,
+          reviews: {
+            include: {
+              author: {
+                select: {
+                  name: true,
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: sortBy === "name" ? { name: "asc" } : { createdAt: "desc" },
+      }),
+      prisma.hospital.count({ where }),
+    ]);
+
+    if (sortBy === "rating") {
+      hospitals.sort((a, b) => {
+        const avgA =
+          a.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          (a.reviews.length || 1);
+        const avgB =
+          b.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          (b.reviews.length || 1);
+        return avgB - avgA;
+      });
+    }
+
+    const result = hospitals.map((hospital) => {
+      const specialties = new Set<string>();
+      hospital.departments.forEach((d) => d.name && specialties.add(d.name));
+      hospital.doctors.forEach(
+        (d) => d.specialization && specialties.add(d.specialization)
+      );
+
+      const ratings = hospital.reviews.map((r) => r.rating);
+      const totalReviews = ratings.length || 1;
+      const avgRating = ratings.reduce((sum, r) => sum + r, 0) / totalReviews;
+
+      const ratingDistribution = [5, 4, 3, 2, 1].map((star) => {
+        const count = ratings.filter((r) => r === star).length;
+        const percentage = Math.round((count / totalReviews) * 100);
+        return {
+          star,
+          count,
+          percentage,
+        };
+      });
+
+      return {
+        id: hospital.id,
+        name: hospital.name,
+        status: hospital.status,
+        address: hospital.address,
+        phone: hospital.phone,
+        email: hospital.email,
+        website: hospital.website,
+        image: hospital.logoUrl || "/placeholder.svg?height=300&width=300",
+        description: hospital.description || "Aucune description disponible",
+        specialties: Array.from(specialties),
+        rating: parseFloat(avgRating.toFixed(1)),
+        reviewCount: hospital.reviews.length,
+        doctors: hospital.doctors.length,
+        isFavorite: favoriteHospitalIds.includes(hospital.id),
+        ratingDistribution,
+        reviews: hospital.reviews.map((review) => ({
+          id: review.id,
+          author: review.isAnonymous
+            ? "Patient anonyme"
+            : review.author
+              ? review.author.name
+              : "Inconnu",
+          date: review.createdAt,
+          rating: review.rating,
+          comment: review.content || "",
+        })),
+      };
+    });
+
+    return {
+      data: result,
+      total,
+    };
+  } catch (error) {
+    console.error("Error fetching hospitals:", error);
+    return { data: [], total: 0 };
+  }
+}
+
+export async function getHospitalDetails(hospitalId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get patient data
+    const patient = await prisma.patient.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    // Get hospital details
+    const hospital = await prisma.hospital.findUnique({
+      where: {
+        id: hospitalId,
+      },
+      include: {
+        departments: true,
+        doctors: {
+          include: {
+            user: {
+              include: {
+                profile: true,
+              },
+            },
+            doctorReviews: true,
+          },
+          take: 5,
+        },
+        reviews: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 5,
+        },
+      },
+    });
+
+    if (!hospital) {
+      throw new Error("Hospital not found");
+    }
+
+    // Check if hospital is a favorite (would need to be implemented in your schema)
+    const isFavorite = false;
+
+    // Calculate specialties from departments and doctors
+    const specialties = new Set<string>();
+    hospital.departments.forEach((dept) => {
+      if (dept.name) specialties.add(dept.name);
+    });
+    hospital.doctors.forEach((doctor) => {
+      if (doctor.specialization) specialties.add(doctor.specialization);
+    });
+
+    // Format hospital details
+    return {
+      id: hospital.id,
+      name: hospital.name,
+      status: hospital.status,
+      address: hospital.address || "Adresse non spécifiée",
+      phone: hospital.phone || "",
+      email: hospital.email || "",
+      website: hospital.website || "",
+      image: hospital.logoUrl || "/placeholder.svg",
+      description: hospital.description || "Aucune description disponible",
+      specialties: Array.from(specialties),
+      rating:
+        hospital.reviews.length > 0
+          ? hospital.reviews.reduce((sum, r) => sum + r.rating, 0) /
+            hospital.reviews.length
+          : 0, // This would come from an aggregation of reviews
+      reviewCount: hospital.reviews.length,
+      doctors: hospital.doctors.length,
+      isFavorite: isFavorite,
+      reviews: hospital.reviews.map((review) => ({
+        id: review.id,
+        author: review.isAnonymous
+          ? "Patient anonyme"
+          : review.author.name || "Utilisateur",
+        date: review.createdAt,
+        rating: review.rating,
+        comment: review.content || "",
+      })),
+      topDoctors: hospital.doctors.slice(0, 5).map((doctor) => ({
+        id: doctor.id,
+        name: doctor.user.name,
+        specialty: doctor.specialization,
+        image: doctor.user.profile?.avatarUrl || "/placeholder.svg",
+        rating:
+          doctor.doctorReviews.length > 0
+            ? doctor.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
+              doctor.doctorReviews.length
+            : 0, // This would come from an aggregation of reviews
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching hospital details:", error);
+    throw new Error("Failed to fetch hospital details");
+  }
+}
+
+export async function submitHospitalReview(data: {
+  hospitalId: string;
+  title: string;
+  content: string;
+  rating: number;
+  isAnonymous: boolean;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Check if user has already reviewed this hospital
+    const existingReview = await prisma.review.findFirst({
+      where: {
+        authorId: userId,
+        hospitalId: data.hospitalId,
+        targetType: ReviewTargetType.HOSPITAL,
+      },
+    });
+
+    if (existingReview) {
+      // Update existing review
+      await prisma.review.update({
+        where: {
+          id: existingReview.id,
+        },
+        data: {
+          title: data.title,
+          content: data.content,
+          rating: data.rating,
+          isAnonymous: data.isAnonymous,
+          status: ReviewStatus.PENDING, // Reset approval status
+        },
+      });
+    } else {
+      // Create new review
+      await prisma.review.create({
+        data: {
+          title: data.title,
+          content: data.content,
+          rating: data.rating,
+          authorId: userId,
+          hospitalId: data.hospitalId,
+          targetType: ReviewTargetType.HOSPITAL,
+          status: ReviewStatus.PENDING,
+          isAnonymous: data.isAnonymous,
+        },
+      });
+    }
+
+    revalidatePath("/dashboard/patient/hospitals");
+    return { success: true };
+  } catch (error) {
+    console.error("Error submitting hospital review:", error);
+    throw new Error("Failed to submit review");
+  }
+}
+
+export async function getSpecializationOptions(): Promise<
+  { label: string; value: string }[]
+> {
+  const specializations = await prisma.doctor.findMany({
+    distinct: ["specialization"],
+    select: {
+      specialization: true,
+    },
+    where: {
+      specialization: {
+        not: "",
+      },
+    },
+    orderBy: {
+      specialization: "asc",
+    },
+  });
+
+  return specializations.map((s) => ({
+    label: s.specialization,
+    value: s.specialization.toLowerCase().replace(/\s+/g, "-"),
+  }));
+}
+
+export async function getFavoritesSpecializationOptions(): Promise<
+  { label: string; value: string }[]
+> {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  const specializations = await prisma.doctor.findMany({
+    where: {
+      favoritedBy: {
+        some: { id: userId },
+      },
+      specialization: {
+        not: "",
+      },
+    },
+    distinct: ["specialization"],
+    select: {
+      specialization: true,
+    },
+    orderBy: {
+      specialization: "asc",
+    },
+  });
+
+  return specializations.map((s) => ({
+    label: s.specialization,
+    value: s.specialization.toLowerCase().replace(/\s+/g, "-"),
+  }));
+}
+
+export async function getHospitalDoctorSpecializationOptions(params?: {
+  favoritesOnly?: boolean;
+}): Promise<{ label: string; value: string }[]> {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  let favoriteHospitalIds: string[] = [];
+
+  if (params?.favoritesOnly) {
+    const userWithFavorites = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        favoriteHospitals: {
+          select: { id: true },
+        },
+      },
+    });
+
+    favoriteHospitalIds =
+      userWithFavorites?.favoriteHospitals.map((h) => h.id) || [];
+
+    if (favoriteHospitalIds.length === 0) {
+      return [];
+    }
+  }
+
+  const specializations = await prisma.doctor.findMany({
+    where: {
+      hospitalId: {
+        not: null,
+        ...(params?.favoritesOnly ? { in: favoriteHospitalIds } : {}),
+      },
+      specialization: {
+        not: "",
+      },
+    },
+    distinct: ["specialization"],
+    select: {
+      specialization: true,
+    },
+    orderBy: {
+      specialization: "asc",
+    },
+  });
+
+  return specializations.map((s) => ({
+    label: s.specialization,
+    value: s.specialization.toLowerCase().replace(/\s+/g, "-"),
+  }));
+}
+
+export async function searchDoctors(params: {
+  query?: string;
+  specialty?: string;
+  gender?: string;
+  minRating?: number;
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+    if (!userId) throw new Error("User not authenticated");
+
+    // Construct Prisma where clause
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: any = { AND: [] };
+
+    if (params.query) {
+      query.AND.push({
+        OR: [
+          { user: { name: { contains: params.query, mode: "insensitive" } } },
+          { specialization: { contains: params.query, mode: "insensitive" } },
+          {
+            hospital: { name: { contains: params.query, mode: "insensitive" } },
+          },
+        ],
+      });
+    }
+
+    if (params.specialty && params.specialty !== "all") {
+      query.AND.push({
+        specialization: {
+          equals: params.specialty,
+          mode: "insensitive",
+        },
+      });
+    }
+
+    if (params.gender && params.gender !== "") {
+      query.AND.push({
+        user: {
+          profile: {
+            genre: params.gender === "MALE" ? UserGenre.MALE : UserGenre.FEMALE,
+          },
+        },
+      });
+    }
+
+    const page = params.page || 1;
+    const limit = params.limit || 9;
+    const skip = (page - 1) * limit;
+
+    // Fetch doctors from DB
+    const [doctors, total] = await Promise.all([
+      prisma.doctor.findMany({
+        where: query,
+        include: {
+          user: { include: { profile: true } },
+          hospital: true,
+          department: true,
+          doctorReviews: {
+            take: 3,
+            orderBy: { createdAt: "desc" },
+          },
+          availabilities: true,
+        },
+        orderBy: getOrderBy(params.sortBy),
+        skip,
+        take: limit,
+      }),
+      prisma.doctor.count({ where: query }),
+    ]);
+
+    // Sort manually by rating if needed
+    if (params.sortBy === "rating") {
+      doctors.sort((a, b) => {
+        const avgA =
+          a.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
+          (a.doctorReviews.length || 1);
+        const avgB =
+          b.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
+          (b.doctorReviews.length || 1);
+        return avgB - avgA;
+      });
+    }
+
+    // Format and return
+    const formattedDoctors = doctors.map((doctor) => {
+      const today = new Date();
+      const daysToGenerate = 7;
+
+      const groupedSlots: Record<string, string[]> = {};
+
+      for (let i = 0; i < daysToGenerate; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const isoDate = format(date, "yyyy-MM-dd");
+        const dayOfWeek = date.getDay(); // 0 (Sunday) to 6 (Saturday)
+
+        const slotsForDay = doctor.availabilities
+          .filter((a) => a.dayOfWeek === dayOfWeek && a.isActive)
+          .flatMap((a) => generateTimeSlots(a.startTime, a.endTime));
+
+        if (slotsForDay.length) {
+          groupedSlots[isoDate] = slotsForDay;
+        }
+      }
+
+      const slots = Object.entries(groupedSlots).map(([date, times]) => ({
+        date,
+        times,
+      }));
+
+      const nextAvailable = slots[0]?.times?.[0]
+        ? `${slots[0].date}T${slots[0].times[0]}:00`
+        : null;
+
+      return {
+        id: doctor.id,
+        name: doctor.user.name,
+        specialty: doctor.specialization,
+        gender: doctor.user.profile?.genre || UserGenre.MALE,
+        hospital:
+          doctor.hospital?.name || "Cabinet privé | Médécin Indépendant",
+        address: doctor.hospital?.address || "Adresse non spécifiée",
+        avatar: doctor.user.profile?.avatarUrl || "/placeholder.svg",
+        isIndependant: doctor.isIndependent,
+        rating:
+          doctor.doctorReviews.length > 0
+            ? doctor.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
+              doctor.doctorReviews.length
+            : 0,
+        reviewCount: doctor.doctorReviews.length,
+        experience: doctor.experience || 0,
+        consultationFee: doctor.consultationFee?.toNumber() || 0,
+        isFavorite: false,
+        availability: {
+          nextAvailable,
+          slots,
+        },
+        reviews: doctor.doctorReviews.map((review) => ({
+          id: review.id,
+          author: review.isAnonymous ? "Patient anonyme" : "Utilisateur",
+          date: isValid(review.createdAt)
+            ? format(review.createdAt, "d MMMM yyyy", { locale: fr })
+            : "Date invalide",
+          rating: review.rating,
+          comment: review.comment || "",
+        })),
+      };
+    });
+
+    return {
+      data: formattedDoctors,
+      total,
+    };
+  } catch (error) {
+    console.error("Error searching doctors:", error);
+    return [];
+  }
+}
+
+// Helper function to get order by clause for doctor search
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getOrderBy(sortBy?: string): Record<string, any> {
+  switch (sortBy) {
+    case "experience":
+      return { experience: "desc" };
+    case "price_low":
+      return { consultationFee: "asc" };
+    case "price_high":
+      return { consultationFee: "desc" };
+    case "availability":
+      return { user: { name: "asc" } }; // fallback
+    default:
+      return { user: { name: "asc" } };
+  }
+}
+
+export async function addDoctorToFavoritesDoctors({
+  doctorId,
+}: {
+  doctorId: string;
+}) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      favoriteDoctors: {
+        connect: { id: doctorId },
+      },
+    },
+  });
+}
+
+export async function removeDoctorToFavoritesDoctors({
+  doctorId,
+}: {
+  doctorId: string;
+}) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      favoriteDoctors: {
+        disconnect: { id: doctorId },
+      },
+    },
+  });
+}
+
+export async function getFavoriteDoctorIds() {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) return [];
+
+  const favorites = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      favoriteDoctors: {
+        select: { id: true },
+      },
+    },
+  });
+
+  return favorites?.favoriteDoctors.map((d) => d.id) ?? [];
+}
+
+export async function getFavoritesDoctors(params: {
+  query?: string;
+  specialty?: string;
+  gender?: string;
+  minRating?: number;
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+}) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+    if (!userId) throw new Error("User not authenticated");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: any = {
+      AND: [
+        {
+          favoritedBy: {
+            some: { id: userId },
+          },
+        },
+      ],
+    };
+
+    if (params.query) {
+      query.AND.push({
+        OR: [
+          { user: { name: { contains: params.query, mode: "insensitive" } } },
+          { specialization: { contains: params.query, mode: "insensitive" } },
+          {
+            hospital: {
+              name: { contains: params.query, mode: "insensitive" },
+            },
+          },
+        ],
+      });
+    }
+
+    if (params.specialty && params.specialty !== "all") {
+      query.AND.push({
+        specialization: {
+          equals: params.specialty,
+          mode: "insensitive",
+        },
+      });
+    }
+
+    if (params.gender && params.gender !== "") {
+      query.AND.push({
+        user: {
+          profile: {
+            genre: params.gender === "MALE" ? UserGenre.MALE : UserGenre.FEMALE,
+          },
+        },
+      });
+    }
+
+    const page = params.page || 1;
+    const limit = params.limit || 9;
+    const skip = (page - 1) * limit;
+
+    const [doctors, total] = await Promise.all([
+      prisma.doctor.findMany({
+        where: query,
+        include: {
+          user: { include: { profile: true } },
+          hospital: true,
+          department: true,
+          doctorReviews: {
+            take: 3,
+            orderBy: { createdAt: "desc" },
+          },
+          availabilities: true,
+          favoritedBy: true, // Just to ensure relation exists
+        },
+        orderBy: getOrderBy(params.sortBy),
+        skip,
+        take: limit,
+      }),
+      prisma.doctor.count({ where: query }),
+    ]);
+
+    // Sort manually by rating if needed
+    if (params.sortBy === "rating") {
+      doctors.sort((a, b) => {
+        const avgA =
+          a.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
+          (a.doctorReviews.length || 1);
+        const avgB =
+          b.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
+          (b.doctorReviews.length || 1);
+        return avgB - avgA;
+      });
+    }
+
+    const formattedDoctors = doctors.map((doctor) => {
+      const today = new Date();
+      const daysToGenerate = 7;
+      const groupedSlots: Record<string, string[]> = {};
+
+      for (let i = 0; i < daysToGenerate; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const isoDate = format(date, "yyyy-MM-dd");
+        const dayOfWeek = date.getDay();
+
+        const slotsForDay = doctor.availabilities
+          .filter((a) => a.dayOfWeek === dayOfWeek && a.isActive)
+          .flatMap((a) => generateTimeSlots(a.startTime, a.endTime));
+
+        if (slotsForDay.length) {
+          groupedSlots[isoDate] = slotsForDay;
+        }
+      }
+
+      const slots = Object.entries(groupedSlots).map(([date, times]) => ({
+        date,
+        times,
+      }));
+
+      const nextAvailable = slots[0]?.times?.[0]
+        ? `${slots[0].date}T${slots[0].times[0]}:00`
+        : null;
+
+      return {
+        id: doctor.id,
+        name: doctor.user.name,
+        specialty: doctor.specialization,
+        gender: doctor.user.profile?.genre || UserGenre.MALE,
+        hospital:
+          doctor.hospital?.name || "Cabinet privé | Médecin Indépendant",
+        address: doctor.hospital?.address || "Adresse non spécifiée",
+        avatar: doctor.user.profile?.avatarUrl || "/placeholder.svg",
+        isIndependant: doctor.isIndependent,
+        rating:
+          doctor.doctorReviews.length > 0
+            ? doctor.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
+              doctor.doctorReviews.length
+            : 0,
+        reviewCount: doctor.doctorReviews.length,
+        experience: doctor.experience || 0,
+        consultationFee: doctor.consultationFee?.toNumber() || 0,
+        isFavorite: true, // All are favorites here
+        availability: {
+          nextAvailable,
+          slots,
+        },
+        reviews: doctor.doctorReviews.map((review) => ({
+          id: review.id,
+          author: review.isAnonymous ? "Patient anonyme" : "Utilisateur",
+          date: isValid(review.createdAt)
+            ? format(review.createdAt, "d MMMM yyyy", { locale: fr })
+            : "Date invalide",
+          rating: review.rating,
+          comment: review.comment || "",
+        })),
+      };
+    });
+
+    return {
+      data: formattedDoctors,
+      total,
+    };
+  } catch (error) {
+    console.error("Error fetching favorite doctors:", error);
+    return [];
+  }
+}
+
+export async function checkDoctorInFavorites({
+  doctorId,
+}: {
+  doctorId: string;
+}) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      favoriteDoctors: {
+        where: { id: doctorId },
+      },
+    },
+  });
+
+  const isFavorite = (user?.favoriteDoctors ?? []).length > 0;
+
+  return isFavorite;
+}
+
+export async function addHospitalToFavoritesDoctors({
+  hospitalId,
+}: {
+  hospitalId: string;
+}) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      favoriteHospitals: {
+        connect: { id: hospitalId },
+      },
+    },
+  });
+}
+
+export async function removeHospitalToFavoritesHospitals({
+  hospitalId,
+}: {
+  hospitalId: string;
+}) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      favoriteHospitals: {
+        disconnect: { id: hospitalId },
+      },
+    },
+  });
+}
+
+export async function getFavoriteHospitalIds() {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+  if (!userId) return [];
+
+  const favorites = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      favoriteHospitals: {
+        select: { id: true },
+      },
+    },
+  });
+
+  return favorites?.favoriteHospitals.map((d) => d.id) ?? [];
 }

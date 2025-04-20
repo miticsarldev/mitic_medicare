@@ -68,7 +68,11 @@ export async function getDoctorById(
       id,
     },
     include: {
-      user: true,
+      user: {
+        include: {
+          profile: true,
+        },
+      },
       hospital: true,
       doctorReviews: true,
       department: true,

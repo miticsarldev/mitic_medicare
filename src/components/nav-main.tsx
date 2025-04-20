@@ -16,6 +16,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { getNavItems } from "@/lib/nav-links";
@@ -26,6 +27,7 @@ import { UserRole } from "@prisma/client";
 export function NavMain() {
   const session = useSession();
   const user = session.data?.user;
+  const { setOpenMobile, isMobile } = useSidebar();
 
   const navItems = getNavItems(user?.role ?? UserRole.PATIENT).map((item) => ({
     ...item,
@@ -72,7 +74,12 @@ export function NavMain() {
                       return (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild isActive={isSubActive}>
-                            <Link href={subItem.url}>
+                            <Link
+                              href={subItem.url}
+                              onClick={() => {
+                                if (isMobile) setOpenMobile(false);
+                              }}
+                            >
                               <span>{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>

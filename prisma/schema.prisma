@@ -109,20 +109,22 @@ model User {
     updatedAt     DateTime  @updatedAt
 
     // Relations
-    profile          UserProfile?
-    accounts         Account[]
-    sessions         Session[]
-    hospital         Hospital?
-    doctor           Doctor?
-    patient          Patient?
-    medicalHistories MedicalHistory[]
-    notifications    Notification[]
-    sentMessages     Message[]        @relation("MessageSender")
-    receivedMessages Message[]        @relation("MessageReceiver")
-    blogPosts        BlogPost[]
-    faqs             FAQ[]
-    reviews          Review[]         @relation("ReviewAuthor")
-    reviewResponses  ReviewResponse[]
+    profile           UserProfile?
+    accounts          Account[]
+    sessions          Session[]
+    hospital          Hospital?
+    doctor            Doctor?
+    patient           Patient?
+    medicalHistories  MedicalHistory[]
+    notifications     Notification[]
+    sentMessages      Message[]        @relation("MessageSender")
+    receivedMessages  Message[]        @relation("MessageReceiver")
+    blogPosts         BlogPost[]
+    faqs              FAQ[]
+    reviews           Review[]         @relation("ReviewAuthor")
+    reviewResponses   ReviewResponse[]
+    favoriteDoctors   Doctor[]         @relation("UserFavorites")
+    favoriteHospitals Hospital[]       @relation("UserFavoriteHospitals") // 👈 Nouveau
 }
 
 model UserProfile {
@@ -205,6 +207,7 @@ model Doctor {
     subscription   Subscription?
     doctorReviews  DoctorReview[]
     reviews        Review[]             @relation("DoctorReviews")
+    favoritedBy    User[]               @relation("UserFavorites")
 
     @@index([specialization])
     @@index([hospitalId])
@@ -254,6 +257,7 @@ model Hospital {
     medicalRecords MedicalRecord[]
     subscription   Subscription?
     reviews        Review[]        @relation("HospitalReviews")
+    favoritedBy    User[]          @relation("UserFavoriteHospitals") // 👈 Nouveau
 
     @@index([name])
     @@index([city, country])
@@ -290,12 +294,13 @@ model Patient {
     updatedAt         DateTime   @updatedAt
 
     // Relations
-    appointments     Appointment[]
-    medicalHistories MedicalHistory[]
-    medicalRecords   MedicalRecord[]
-    prescriptions    Prescription[]
-    vitalSigns       VitalSign[]
-    reviews          DoctorReview[]
+    appointments        Appointment[]
+    medicalHistories    MedicalHistory[]
+    medicalRecords      MedicalRecord[]
+    prescriptions       Prescription[]
+    vitalSigns          VitalSign[]
+    reviews             DoctorReview[]
+    InsuranceEnrollment InsuranceEnrollment[]
 
     @@index([userId])
 }
@@ -664,4 +669,48 @@ model DoctorReview {
     @@index([doctorId])
     @@index([rating])
     @@index([isApproved])
+}
+
+model InsuranceProvider {
+    id          String   @id @default(cuid())
+    name        String   @unique
+    code        String   @unique @db.VarChar(20) // Code court ou identifiant officiel
+    phone       String?  @db.VarChar(20)
+    email       String?  @db.VarChar(255)
+    address     String?  @db.VarChar(255)
+    country     String?
+    logoUrl     String?
+    website     String?
+    description String?  @db.Text
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    patients InsuranceEnrollment[]
+
+    @@index([name])
+    @@index([code])
+}
+
+model InsuranceEnrollment {
+    id                  String    @id @default(cuid())
+    patientId           String
+    insuranceProviderId String
+    insuranceNumber     String    @db.VarChar(50)
+    startDate           DateTime
+    endDate             DateTime?
+    isActive            Boolean   @default(true)
+    coverageDetails     String?   @db.Text
+    createdAt           DateTime  @default(now())
+    updatedAt           DateTime  @updatedAt
+
+    // Relations
+    patient           Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    insuranceProvider InsuranceProvider @relation(fields: [insuranceProviderId], references: [id], onDelete: Cascade)
+
+    @@unique([insuranceProviderId, insuranceNumber])
+    @@index([patientId])
+    @@index([insuranceProviderId])
+    @@index([isActive])
 }
