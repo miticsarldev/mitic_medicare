@@ -128,7 +128,7 @@ export default function FAQPage() {
       <div className="text-center mt-8">
         <p className="text-muted-foreground">Vous ne trouvez pas la réponse ?</p>
         <Button asChild className="mt-2">
-          <Link href="/contact">Contactez-nous</Link>
+          <Link href="contact">Contactez-nous</Link>
         </Button>
       </div>
     </div>

@@ -1,7 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,69 +50,13 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Appointment } from "@/types";
+import Image from "next/image";
 
-const appointmentHistory = [
-  {
-    id: "1",
-    patientName: "Hassane Diallo",
-    date: new Date(2024, 11, 15, 10, 30),
-    motif: "Contrôle de routine",
-    status: "CONFIRMED",
-    notes: "Tension artérielle normale. Continuer le traitement actuel.",
-    prescription: true,
-    followUp: "Dans 3 mois",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "2",
-    patientName: "Fatima Coulibaly",
-    date: new Date(2024, 10, 5, 14, 0),
-    motif: "Consultation pour douleurs",
-    status: "CONFIRMED",
-    notes:
-      "Éruption cutanée en voie de guérison. Continuer la crème prescrite.",
-    prescription: true,
-    followUp: "Si nécessaire",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "3",
-    patientName: "Sanata Diarra",
-    date: new Date(2024, 9, 20, 9, 15),
-    motif: "Suivi post-opératoire",
-    status: "CONFIRMED",
-    notes: "Vision stable. Pas de changement de prescription nécessaire.",
-    prescription: false,
-    followUp: "Dans 1 an",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "4",
-    patientName: "Moussa Traoré",
-    date: new Date(2024, 8, 10, 11, 0),
-    motif: "Problèmes respiratoires",
-    status: "CANCELED",
-    notes: "Annulé par le patient",
-    prescription: false,
-    followUp: null,
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "5",
-    patientName: "Awa Keita",
-    date: new Date(2024, 7, 25, 15, 30),
-    motif: "Allergies saisonnières",
-    status: "CONFIRMED",
-    notes: "Niveaux de thyroïde normaux. Continuer le traitement actuel.",
-    prescription: true,
-    followUp: "Dans 6 mois",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-];
 
-const getStatusBadge = (status) => {
+const getStatusBadge = (status: string) => {
   switch (status) {
     case "CONFIRMED":
+    case "COMPLETED":
       return <Badge className="bg-green-500 hover:bg-green-600">Terminé</Badge>;
     case "PENDING":
       return (
@@ -129,18 +72,40 @@ const getStatusBadge = (status) => {
 };
 
 export default function DoctorAppointmentHistoryPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  // Filtrer les rendez-vous
-  const filteredAppointments = appointmentHistory.filter((appointment) => {
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/hospital_doctor/history');
+        
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setAppointments(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Une erreur inconnue est survenue');
+        console.error("Erreur de récupération des rendez-vous:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
+
+  const filteredAppointments = appointments.filter((appointment) => {
     const matchesSearch =
-      appointment.patientName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
+      appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.motif.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
@@ -149,6 +114,9 @@ export default function DoctorAppointmentHistoryPage() {
 
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>Erreur: {error}</div>;
 
   return (
     <div className="space-y-6 p-4">
@@ -219,13 +187,7 @@ export default function DoctorAppointmentHistoryPage() {
                       <TableRow key={appointment.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full overflow-hidden">
-                              <img
-                                src={appointment.avatar || "/placeholder.svg"}
-                                alt={appointment.patientName}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
+                            
                             <span>{appointment.patientName}</span>
                           </div>
                         </TableCell>
@@ -311,7 +273,7 @@ export default function DoctorAppointmentHistoryPage() {
                   <CardHeader className="flex flex-row items-start justify-between pb-2">
                     <div className="flex items-center space-x-4">
                       <div className="relative h-10 w-10 rounded-full overflow-hidden">
-                        <img
+                        <Image
                           src={appointment.avatar || "/placeholder.svg"}
                           alt={appointment.patientName}
                           className="h-full w-full object-cover"
@@ -380,7 +342,7 @@ export default function DoctorAppointmentHistoryPage() {
             <div className="grid gap-4 py-4">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full overflow-hidden">
-                  <img
+                  <Image
                     src={selectedAppointment.avatar || "/placeholder.svg"}
                     alt={selectedAppointment.patientName}
                     className="h-full w-full object-cover"
