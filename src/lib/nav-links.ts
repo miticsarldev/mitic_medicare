@@ -14,7 +14,6 @@ import {
   MessageSquare,
   UserCheck,
   Heart,
-  UserPlus,
   Stethoscope,
 } from "lucide-react";
 
@@ -268,13 +267,14 @@ export const patientNavItems = [
     url: "/dashboard/patient/doctors",
     items: [
       {
-        title: "Médecins",
+        title: "Rechercher un Médecin",
         url: "/dashboard/patient/doctors/search",
       },
       {
         title: "Centres Médicaux",
         url: "/dashboard/patient/doctors/hospitals",
       },
+      { title: "Mes Médecins", url: "/dashboard/patient/doctors/my-doctors" },
     ],
   },
   {
@@ -353,11 +353,6 @@ export const hospitalAdminNavItems = [
         url: "/dashboard/hopital_admin/doctors/list",
       },
       {
-        title: "Ajouter un Docteur",
-        url: "/dashboard/hopital_admin/doctors/add",
-        icon: UserPlus,
-      },
-      {
         title: "Planning des Docteurs",
         url: "/dashboard/hopital_admin/doctors/schedule",
       },
@@ -421,22 +416,18 @@ export const hospitalAdminNavItems = [
       },
     ],
   },
-  // {
-  //   title: "Paramètres & Sécurité",
-  //   icon: Settings,
-  //   url: "/dashboard/hopital_admin/settings",
-  //   items: [
-  //     { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
-  //     {
-  //       title: "Sécurité & Confidentialité",
-  //       url: "/dashboard/hopital_admin/settings/security",
-  //     },
-  //     {
-  //       title: "Utilisateurs & Accès",
-  //       url: "/dashboard/hopital_admin/settings/access",
-  //     },
-  //   ],
-  // },
+  {
+    title: "Paramètres & Sécurité",
+    icon: Settings,
+    url: "/dashboard/hopital_admin/settings",
+    items: [
+      { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
+      {
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/hopital_admin/settings/security",
+      },
+    ],
+  },
   {
     title: "Assistance & Aide",
     icon: LifeBuoy,

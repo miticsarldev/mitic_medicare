@@ -1,22 +1,41 @@
-"use client"
+'use client'
 
 import React, { useEffect, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { format } from "date-fns"
-import { fr } from "date-fns/locale"
+import {
+  CalendarDays,
+  ClipboardList,
+  Stethoscope,
+  User,
+  AlertCircle,
+} from "lucide-react"
 
 type Appointment = {
   id: string
   scheduledAt: string
   status: string
-  type: string
   reason: string
+  type: string
   doctor: {
     id: string
     name: string
@@ -25,163 +44,166 @@ type Appointment = {
   patient: {
     id: string
     name: string
-    gender: string
   }
 }
+
+const ITEMS_PER_PAGE = 6
 
 export default function PendingAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filtered, setFiltered] = useState<Appointment[]>([])
+  const [typeFilter, setTypeFilter] = useState<string>("all")
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [actionType, setActionType] = useState<"CONFIRM" | "CANCEL" | null>(null)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
 
-  // Filters
-  const [search, setSearch] = useState("")
-  const [typeFilter, setTypeFilter] = useState("")
-  const [specializationFilter, setSpecializationFilter] = useState("")
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 6
-
   useEffect(() => {
-    const fetchAppointments = async () => {
+    const fetchData = async () => {
+      setLoading(true)
       try {
-        const res = await fetch("/api/appointments/pending")
+        const res = await fetch("/api/hospital_admin/appointment/list")
         const data = await res.json()
-        setAppointments(data.appointments || [])
-        setFiltered(data.appointments || [])
+        const pending = (data.appointments || []).filter(
+          (a: Appointment) => a.status === "PENDING"
+        )
+        setAppointments(pending)
+        setFiltered(pending)
       } catch (err) {
-        console.error("Erreur de chargement :", err)
+        console.error("Erreur chargement rendez-vous en attente", err)
       } finally {
         setLoading(false)
       }
     }
-
-    fetchAppointments()
+    fetchData()
   }, [])
 
   useEffect(() => {
-    let filteredData = [...appointments]
-
-    if (search.trim()) {
-      filteredData = filteredData.filter((apt) =>
-        apt.patient.name.toLowerCase().includes(search.toLowerCase())
-      )
+    let result = appointments
+    if (typeFilter && typeFilter !== "all") {
+      result = result.filter((a) => a.type === typeFilter)
     }
+    setFiltered(result)
+    setPage(1)
+  }, [typeFilter, appointments])
 
-    if (typeFilter) {
-      filteredData = filteredData.filter((apt) => apt.type === typeFilter)
-    }
-
-    if (specializationFilter) {
-      filteredData = filteredData.filter(
-        (apt) => apt.doctor.specialization === specializationFilter
-      )
-    }
-
-    setFiltered(filteredData)
-    setCurrentPage(1)
-  }, [search, typeFilter, specializationFilter, appointments])
-
-  const totalPages = Math.ceil(filtered.length / itemsPerPage)
-  const paginated = filtered.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const currentItems = filtered.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
   )
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4">
-        {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-40 w-full rounded-xl" />
-        ))}
-      </div>
-    )
+  const handleConfirm = async () => {
+    if (!selectedAppointment || !actionType) return
+    try {
+      await fetch(
+        `/api/hospital_admin/appointment/${selectedAppointment.id}/${actionType.toLowerCase()}`,
+        { method: "POST" }
+      )
+      setAppointments((prev) =>
+        prev.filter((a) => a.id !== selectedAppointment.id)
+      )
+      setSelectedAppointment(null)
+      setActionType(null)
+    } catch (err) {
+      console.error("Erreur lors de l'action", err)
+    }
   }
 
   return (
-    <ScrollArea className="space-y-6">
-      <h2 className="text-2xl font-bold mb-6">Rendez-vous en attente</h2>
+    <div className="p-10 space-y-6">
+      <h1 className="text-2xl font-bold">Rendez-vous en attente</h1>
 
       {/* Filtres */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <Input
-          placeholder="Rechercher par patient"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="md:w-1/3"
-        />
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtres</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-4">
+          {/* Skeleton pour le sélecteur */}
+          {loading ? (
+            <div className="h-10 w-[180px] bg-gray-200 rounded animate-pulse" />
+          ) : (
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrer par type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="CONSULTATION">Consultation</SelectItem>
+                <SelectItem value="SUIVI">Suivi</SelectItem>
+                <SelectItem value="EXAMEN">Examen</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </CardContent>
+      </Card>
 
-        <Select onValueChange={setTypeFilter} value={typeFilter}>
-          <SelectTrigger className="md:w-1/4">
-            <SelectValue placeholder="Type de rendez-vous" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Tous</SelectItem>
-            <SelectItem value="consultation">Consultation</SelectItem>
-            <SelectItem value="suivi">Suivi</SelectItem>
-            <SelectItem value="urgence">Urgence</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select onValueChange={setSpecializationFilter} value={specializationFilter}>
-          <SelectTrigger className="md:w-1/4">
-            <SelectValue placeholder="Spécialité du médecin" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Toutes</SelectItem>
-            <SelectItem value="généraliste">Généraliste</SelectItem>
-            <SelectItem value="cardiologue">Cardiologue</SelectItem>
-            <SelectItem value="dermatologue">Dermatologue</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Résultats */}
-      {paginated.length === 0 ? (
-        <div className="text-center text-muted-foreground mt-10">
-          Aucun rendez-vous ne correspond aux filtres.
+      {/* Liste ou Skeleton */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+            <div
+              key={idx}
+              className="border rounded-lg p-4 animate-pulse space-y-2"
+            >
+              <div className="h-6 bg-gray-200 rounded w-1/3" />
+              <div className="h-4 bg-gray-200 rounded w-1/2" />
+              <div className="h-3 bg-gray-200 rounded w-full" />
+              <div className="h-4 bg-gray-200 rounded w-2/3" />
+            </div>
+          ))}
         </div>
+      ) : filtered.length === 0 ? (
+        <p className="col-span-full text-center text-muted-foreground">
+          Aucun rendez-vous en attente.
+        </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          {paginated.map((apt) => (
-            <Card key={apt.id} className="rounded-2xl shadow-sm hover:shadow-md transition">
-              <CardContent className="p-5 space-y-3">
-                <div className="flex justify-between items-center">
-                  <Badge variant="secondary">{apt.type}</Badge>
-                  <Badge variant="outline" className="text-yellow-600 border-yellow-500">
-                    {apt.status}
-                  </Badge>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {currentItems.map((appt) => (
+            <Card key={appt.id} className="hover:shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" /> {appt.patient.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground space-y-1">
+                <div className="flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4" /> {appt.doctor.name}{' '}
+                  ({appt.doctor.specialization})
                 </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Date prévue</p>
-                  <p className="text-lg font-semibold">
-                    {format(new Date(apt.scheduledAt), "PPPp", { locale: fr })}
-                  </p>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />{' '}
+                  {new Date(appt.scheduledAt).toLocaleString()}
                 </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Patient</p>
-                  <p className="font-medium">
-                    {apt.patient.name} ({apt.patient.gender})
-                  </p>
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4" /> {appt.reason}
                 </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Médecin</p>
-                  <p className="font-medium">
-                    {apt.doctor.name} -{" "}
-                    <span className="italic text-sm">{apt.doctor.specialization}</span>
-                  </p>
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" /> {appt.type}
                 </div>
-
-                {apt.reason && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Motif</p>
-                    <p className="text-sm">{apt.reason}</p>
-                  </div>
-                )}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAppointment(appt)
+                      setActionType("CONFIRM")
+                    }}
+                  >
+                    Valider
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAppointment(appt)
+                      setActionType("CANCEL")
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -189,27 +211,68 @@ export default function PendingAppointments() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            disabled={currentPage === 1}
-          >
-            Précédent
-          </Button>
+      {!loading && filtered.length > 0 && (
+        <div className="flex items-center justify-between mt-4">
           <span className="text-sm text-muted-foreground">
-            Page {currentPage} sur {totalPages}
+            Page {page} sur {totalPages}
           </span>
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-            disabled={currentPage === totalPages}
-          >
-            Suivant
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Précédent
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Suivant
+            </Button>
+          </div>
         </div>
       )}
-    </ScrollArea>
+
+      {/* Modal */}
+      <Dialog
+        open={!!selectedAppointment}
+        onOpenChange={() => setSelectedAppointment(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {actionType === "CONFIRM"
+                ? "Confirmer ce rendez-vous ?"
+                : "Annuler ce rendez-vous ?"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            Êtes-vous sûr de vouloir{' '}
+            {actionType === "CONFIRM" ? "confirmer" : "annuler"} ce
+            rendez-vous avec {selectedAppointment?.patient.name} ?
+          </p>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setSelectedAppointment(null)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant={
+                actionType === "CONFIRM" ? "default" : "destructive"
+              }
+              onClick={handleConfirm}
+            >
+              Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
