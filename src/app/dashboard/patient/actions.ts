@@ -11,7 +11,7 @@ import {
   ReviewTargetType,
   UserGenre,
 } from "@prisma/client";
-import { PatientOverviewData } from "./types";
+import { GetPatientMedicalRecordsResult, PatientOverviewData } from "./types";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { compare, hash } from "bcryptjs";
@@ -77,7 +77,7 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       orderBy: {
         scheduledAt: "desc",
       },
-      take: 5,
+      take: 3,
     });
 
     // Get latest medical record
@@ -116,6 +116,7 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       orderBy: {
         startDate: "desc",
       },
+      take: 3,
     });
 
     // Get vital signs
@@ -853,7 +854,7 @@ export async function getAppointmentById(appointmentId: string) {
   }
 }
 
-export async function getPatientMedicalRecords() {
+export async function getPatientMedicalRecords(): Promise<GetPatientMedicalRecordsResult> {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user.id;
@@ -896,7 +897,7 @@ export async function getPatientMedicalRecords() {
     });
 
     // Transform the data to a more usable format
-    return medicalRecords.map((record) => ({
+    const transformed = medicalRecords.map((record) => ({
       id: record.id,
       title: record.diagnosis,
       date: record.createdAt.toISOString(),
@@ -928,9 +929,23 @@ export async function getPatientMedicalRecords() {
         uploadedAt: attachment.uploadedAt.toISOString(),
       })),
     }));
+
+    const allTypes = Array.from(new Set(transformed.map((r) => r.type)));
+    const allStatuses = Array.from(new Set(transformed.map((r) => r.status)));
+    const allTags = Array.from(new Set(transformed.flatMap((r) => r.tags)));
+
+    return {
+      success: true,
+      records: transformed,
+      filters: {
+        types: allTypes,
+        statuses: allStatuses,
+        tags: allTags,
+      },
+    };
   } catch (error) {
     console.error("Error fetching patient medical records:", error);
-    return [];
+    return { success: false, error: "Une erreur s'est produite" };
   }
 }
 

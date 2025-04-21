@@ -7,14 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  MapPin,
-  Printer,
-  Share,
-} from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { notFound } from "next/navigation";
@@ -140,14 +133,6 @@ export default async function AppointmentDetailPage({
               >
                 <Button className="flex-1">Reprogrammer</Button>
               </Link>
-              <Button variant="outline" className="flex-1">
-                <Printer className="mr-2 h-4 w-4" />
-                Imprimer
-              </Button>
-              <Button variant="outline" className="flex-1">
-                <Share className="mr-2 h-4 w-4" />
-                Partager
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -175,12 +160,9 @@ export default async function AppointmentDetailPage({
                 <p className="text-muted-foreground">{doctor.specialization}</p>
                 <div className="mt-2 flex gap-2">
                   <Button size="sm" variant="outline" asChild>
-                    <Link href={`/dashboard/doctors/${doctor.id}`}>
+                    <Link href={`/dashboard/patient/doctors/${doctor.id}`}>
                       Voir le profil
                     </Link>
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    Message
                   </Button>
                 </div>
               </div>

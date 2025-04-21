@@ -37,6 +37,8 @@ import {
   getAvailableDoctors,
   getDoctorAvailableTimeSlots,
 } from "../../actions";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export type SimpleDoctor = {
   id: string;
@@ -45,9 +47,13 @@ export type SimpleDoctor = {
   hospital?: string;
   department?: string;
   consultationFee?: number;
+  isIndependant?: boolean;
 };
 
 export default function BookAppointmentPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -57,6 +63,7 @@ export default function BookAppointmentPage() {
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch doctors on initial load
   useEffect(() => {
@@ -134,6 +141,7 @@ export default function BookAppointmentPage() {
       return;
     }
 
+    setIsSubmitting(true);
     const formData = new FormData();
     formData.append("doctorId", selectedDoctor);
     formData.append("scheduledDate", format(date, "yyyy-MM-dd"));
@@ -142,8 +150,17 @@ export default function BookAppointmentPage() {
 
     try {
       await bookAppointment(formData);
+
+      toast({
+        title: "Rendez-vous confirmé",
+        description: "Votre rendez-vous a bien été enregistré.",
+      });
+
+      router.push("/dashboard/patient/appointments/all");
     } catch (error) {
       console.error("Error booking appointment:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -206,7 +223,7 @@ export default function BookAppointmentPage() {
                       <Stethoscope className="h-5 w-5 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium">Dr. {doctor.name}</h4>
+                      <h4 className="font-medium">{doctor.name}</h4>
                       <p className="text-sm text-muted-foreground">
                         {doctor.specialization}
                       </p>
@@ -215,9 +232,13 @@ export default function BookAppointmentPage() {
                           {doctor.hospital}
                           {doctor.department && ` • ${doctor.department}`}
                         </p>
-                        {doctor.consultationFee && (
+                        {doctor.isIndependant && doctor.consultationFee && (
                           <span className="text-xs font-medium text-primary">
-                            {doctor.consultationFee.toString()} XOF
+                            {new Intl.NumberFormat("fr-ML", {
+                              style: "currency",
+                              currency: "XOF",
+                              minimumFractionDigits: 0,
+                            }).format(doctor.consultationFee)}
                           </span>
                         )}
                       </div>
@@ -251,7 +272,7 @@ export default function BookAppointmentPage() {
               {selectedDoctorData && (
                 <div className="rounded-lg border p-3 bg-muted/50">
                   <h4 className="font-medium">Médecin sélectionné</h4>
-                  <p className="text-sm">Dr. {selectedDoctorData.name}</p>
+                  <p className="text-sm">{selectedDoctorData.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {selectedDoctorData.specialization} •{" "}
                     {selectedDoctorData.hospital}
@@ -359,10 +380,14 @@ export default function BookAppointmentPage() {
                 type="submit"
                 className="w-full"
                 disabled={
-                  !selectedDoctor || !date || !selectedTime || !reason.trim()
+                  isSubmitting ||
+                  !selectedDoctor ||
+                  !date ||
+                  !selectedTime ||
+                  !reason.trim()
                 }
               >
-                Confirmer le Rendez-vous
+                {isSubmitting ? "Chargement..." : "Confirmer le Rendez-vous"}
               </Button>
             </CardFooter>
           </form>
