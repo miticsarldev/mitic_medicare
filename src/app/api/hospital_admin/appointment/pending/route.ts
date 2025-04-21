@@ -25,7 +25,7 @@ export async function GET() {
         const pendingAppointments = await prisma.appointment.findMany({
             where: {
                 hospitalId: hospital.id,
-                status: "PENDING", // 🎯 Filtre pour les rendez-vous en attente
+                status: "PENDING", //  Filtre pour les rendez-vous en attente
             },
             orderBy: {
                 scheduledAt: "desc",
