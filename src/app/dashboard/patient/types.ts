@@ -64,3 +64,87 @@ export type PatientOverviewData = {
   vitalSigns: VitalSign[];
   medicalHistory: MedicalHistory[];
 };
+
+export type DoctorProfileWithDetails = Prisma.DoctorGetPayload<{
+  include: {
+    user: {
+      include: {
+        profile: true;
+      };
+    };
+    hospital: true;
+    department: true;
+    doctorReviews: {
+      orderBy: {
+        createdAt: "desc";
+      };
+    };
+    favoritedBy: {
+      select: {
+        id: true;
+      };
+    };
+    availabilities: true;
+  };
+}> & {
+  isFavorite: boolean;
+  consultationFee: number;
+};
+
+export type DoctorProfileComplete = Omit<
+  DoctorProfileWithDetails,
+  "consultationFee"
+> & {
+  consultationFee: number | null;
+  isFavorite: boolean;
+};
+
+// types.ts (or in actions.ts)
+
+export type PatientMedicalRecord = {
+  id: string;
+  title: string;
+  date: string;
+  doctor: string;
+  specialty: string;
+  facility: string;
+  summary: string;
+  recommendations: string | null;
+  notes: string | null;
+  followUpNeeded: boolean;
+  followUpDate?: string;
+  status: string;
+  type: string;
+  tags: string[];
+  medications: {
+    id: string;
+    name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    isActive: boolean;
+  }[];
+  documents: {
+    id: string;
+    name: string;
+    type: string;
+    url: string;
+    size: string;
+    uploadedAt: string;
+  }[];
+};
+
+export type GetPatientMedicalRecordsResult =
+  | {
+      success: true;
+      records: PatientMedicalRecord[];
+      filters: {
+        types: string[];
+        statuses: string[];
+        tags: string[];
+      };
+    }
+  | {
+      success: false;
+      error: string;
+    };

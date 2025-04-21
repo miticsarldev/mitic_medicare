@@ -100,7 +100,7 @@ interface Doctor {
   reviews: {
     id: string;
     author: string;
-    date: Date;
+    date: string;
     rating: number;
     comment: string;
   }[];
@@ -235,7 +235,7 @@ export default function DoctorSearchPage() {
                     : doctor.experience,
                 reviews: doctor.reviews.map((review) => ({
                   ...review,
-                  date: new Date(review.date),
+                  date: review.date,
                 })),
               }));
 
@@ -276,7 +276,7 @@ export default function DoctorSearchPage() {
                 isFavorite: favSet.has(doctor.id),
                 reviews: doctor.reviews.map((review) => ({
                   ...review,
-                  date: new Date(review.date),
+                  date: review.date,
                 })),
               }));
 
@@ -328,14 +328,14 @@ export default function DoctorSearchPage() {
   };
 
   // Format date string
-  const formatDate = (dateString: string) => {
-    const date = parseISO(dateString);
+  const formatDate = (date: string | Date) => {
+    const parsedDate = typeof date === "string" ? parseISO(date) : date;
 
-    if (!isValid(date)) {
+    if (!isValid(parsedDate)) {
       return "Date invalide";
     }
 
-    return format(date, "d MMMM yyyy", { locale: fr });
+    return format(parsedDate, "d MMMM yyyy", { locale: fr });
   };
 
   const makeDoctorFavorite = async (doctor: Doctor) => {
@@ -864,7 +864,7 @@ export default function DoctorSearchPage() {
 
       {/* Doctor Detail Dialog */}
       <Dialog open={isDoctorDetailOpen} onOpenChange={setIsDoctorDetailOpen}>
-        <DialogContent className="max-w-4xl  max-h-[90vh] p-0">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[90vh] p-0">
           <ScrollArea className="h-[90vh] p-6">
             {selectedDoctor && (
               <>
@@ -896,6 +896,13 @@ export default function DoctorSearchPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link
+                          href={`/dashboard/patient/doctors/${selectedDoctor?.id}`}
+                        >
+                          Voir le profil
+                        </Link>
+                      </Button>
                       <Button
                         variant="outline"
                         size="icon"
@@ -1225,7 +1232,7 @@ export default function DoctorSearchPage() {
                               (review: {
                                 id: string;
                                 author: string;
-                                date: Date;
+                                date: string;
                                 rating: number;
                                 comment: string;
                               }) => (
@@ -1238,7 +1245,7 @@ export default function DoctorSearchPage() {
                                       {review.author}
                                     </div>
                                     <div className="text-sm text-muted-foreground">
-                                      {formatDate(review.date.toISOString())}
+                                      {formatDate(review.date)}
                                     </div>
                                   </div>
                                   <div className="mt-1">

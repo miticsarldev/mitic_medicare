@@ -13,7 +13,6 @@ import {
   Layers,
   Pill,
   Search,
-  Share2,
   Stethoscope,
   File,
   FileIcon as FilePdf,
@@ -39,12 +38,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -55,21 +48,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPatientMedicalRecords } from "@/app/dashboard/patient/actions";
 import Link from "next/link";
-
-// Types
-type RecordType =
-  | "all"
-  | "consultation"
-  | "laboratory"
-  | "imaging"
-  | "prescription"
-  | "vaccination"
-  | "surgery"
-  | "allergy"
-  | "dental"
-  | "ophthalmology";
-
-type RecordStatus = "all" | "completed" | "active" | "pending";
+import { ScrollArea } from "../ui/scroll-area";
 
 type Medication = {
   id: string;
@@ -115,8 +94,8 @@ type MedicalRecord = {
 
 export default function MedicalRecordsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState<RecordType>("all");
-  const [selectedStatus, setSelectedStatus] = useState<RecordStatus>("all");
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(
     null
   );
@@ -131,14 +110,16 @@ export default function MedicalRecordsPage() {
     const fetchMedicalRecords = async () => {
       setIsLoading(true);
       try {
-        const records = await getPatientMedicalRecords();
-        setMedicalRecords(
-          records.map((record) => ({
-            ...record,
-            recommendations: record.recommendations ?? undefined,
-            notes: record.notes ?? undefined,
-          }))
-        );
+        const response = await getPatientMedicalRecords();
+        if (response.success) {
+          setMedicalRecords(
+            response?.records?.map((record) => ({
+              ...record,
+              recommendations: record.recommendations ?? undefined,
+              notes: record.notes ?? undefined,
+            }))
+          );
+        }
       } catch (error) {
         console.error("Error fetching medical records:", error);
       } finally {
@@ -277,6 +258,23 @@ export default function MedicalRecordsPage() {
     }
   };
 
+  function capitalizeFirstLetter(str: string) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function translateStatus(status: string) {
+    switch (status) {
+      case "completed":
+        return "Terminé";
+      case "active":
+        return "En cours";
+      case "pending":
+        return "En attente";
+      default:
+        return status;
+    }
+  }
+
   // Count records by type
   const countRecordsByType = (type: string) => {
     return medicalRecords.filter((r) => r.type === type).length;
@@ -301,23 +299,6 @@ export default function MedicalRecordsPage() {
           <p className="text-muted-foreground">
             Consultez et gérez l&apos;ensemble de vos documents médicaux
           </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" /> Exporter
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Download className="mr-2 h-4 w-4" /> Exporter tout en PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Share2 className="mr-2 h-4 w-4" /> Partager avec un médecin
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
@@ -351,24 +332,20 @@ export default function MedicalRecordsPage() {
                 </label>
                 <Select
                   value={selectedType}
-                  onValueChange={(value) =>
-                    setSelectedType(value as RecordType)
-                  }
+                  onValueChange={(value) => setSelectedType(value)}
                 >
                   <SelectTrigger id="type">
                     <SelectValue placeholder="Tous les types" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les types</SelectItem>
-                    <SelectItem value="consultation">Consultations</SelectItem>
-                    <SelectItem value="laboratory">Analyses</SelectItem>
-                    <SelectItem value="imaging">Imagerie</SelectItem>
-                    <SelectItem value="prescription">Ordonnances</SelectItem>
-                    <SelectItem value="vaccination">Vaccinations</SelectItem>
-                    <SelectItem value="surgery">Chirurgies</SelectItem>
-                    <SelectItem value="allergy">Allergies</SelectItem>
-                    <SelectItem value="dental">Dentaire</SelectItem>
-                    <SelectItem value="ophthalmology">Ophtalmologie</SelectItem>
+                    {Array.from(new Set(medicalRecords.map((r) => r.type))).map(
+                      (type) => (
+                        <SelectItem key={type} value={type}>
+                          {capitalizeFirstLetter(type)}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -379,18 +356,20 @@ export default function MedicalRecordsPage() {
                 </label>
                 <Select
                   value={selectedStatus}
-                  onValueChange={(value) =>
-                    setSelectedStatus(value as RecordStatus)
-                  }
+                  onValueChange={(value) => setSelectedStatus(value)}
                 >
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Tous les statuts" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
-                    <SelectItem value="completed">Terminé</SelectItem>
-                    <SelectItem value="active">En cours</SelectItem>
-                    <SelectItem value="pending">En attente</SelectItem>
+                    {Array.from(
+                      new Set(medicalRecords.map((r) => r.status))
+                    ).map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {translateStatus(status)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -523,7 +502,7 @@ export default function MedicalRecordsPage() {
 
         <div className="md:col-span-3">
           <Card>
-            <CardHeader className="flex flex-row items-center p-4 sm:p-6">
+            <CardHeader className="flex flex-row items-center p-4 sm:p-6 !pb-0">
               <div className="flex-1">
                 <CardTitle>Documents médicaux</CardTitle>
                 <CardDescription>
@@ -551,7 +530,7 @@ export default function MedicalRecordsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
+            <CardContent className="p-4 sm:p-6">
               {sortedRecords.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <FileText className="h-12 w-12 text-muted-foreground/50" />
@@ -703,203 +682,196 @@ export default function MedicalRecordsPage() {
 
       {/* Record Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl">
-          {selectedRecord && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full ${getRecordTypeColor(
-                        selectedRecord.type
-                      )}`}
+        <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-h-[90vh]">
+          <ScrollArea className="h-[calc(90vh-4rem)] mr-2">
+            {selectedRecord && (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full ${getRecordTypeColor(
+                          selectedRecord.type
+                        )}`}
+                      >
+                        {getRecordTypeIcon(selectedRecord.type)}
+                      </div>
+                      <div className="ml-3">
+                        <DialogTitle>{selectedRecord.title}</DialogTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {format(
+                            parseISO(selectedRecord.date),
+                            "d MMMM yyyy à HH:mm",
+                            { locale: fr }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={getStatusBadgeVariant(selectedRecord.status)}
                     >
-                      {getRecordTypeIcon(selectedRecord.type)}
-                    </div>
-                    <div className="ml-3">
-                      <DialogTitle>{selectedRecord.title}</DialogTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {format(
-                          parseISO(selectedRecord.date),
-                          "d MMMM yyyy à HH:mm",
-                          { locale: fr }
-                        )}
-                      </p>
-                    </div>
+                      {selectedRecord.status === "completed"
+                        ? "Terminé"
+                        : selectedRecord.status === "active"
+                          ? "En cours"
+                          : "En attente"}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={getStatusBadgeVariant(selectedRecord.status)}
-                  >
-                    {selectedRecord.status === "completed"
-                      ? "Terminé"
-                      : selectedRecord.status === "active"
-                        ? "En cours"
-                        : "En attente"}
-                  </Badge>
-                </div>
-              </DialogHeader>
-              <div className="grid gap-4 py-4 md:grid-cols-3">
-                <div className="md:col-span-2 space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Résumé</h4>
-                    <p className="text-sm">{selectedRecord.summary}</p>
-                  </div>
-
-                  {selectedRecord.recommendations && (
+                </DialogHeader>
+                <div className="grid gap-4 py-4 md:grid-cols-3">
+                  <div className="md:col-span-2 space-y-4">
                     <div>
-                      <h4 className="text-sm font-medium mb-1">
-                        Recommandations
-                      </h4>
-                      <p className="text-sm">
-                        {selectedRecord.recommendations}
-                      </p>
+                      <h4 className="text-sm font-medium mb-1">Résumé</h4>
+                      <p className="text-sm">{selectedRecord.summary}</p>
                     </div>
-                  )}
 
-                  {selectedRecord.medications &&
-                    selectedRecord.medications.length > 0 && (
+                    {selectedRecord.recommendations && (
                       <div>
                         <h4 className="text-sm font-medium mb-1">
-                          Médicaments prescrits
+                          Recommandations
                         </h4>
-                        <div className="space-y-2">
-                          {selectedRecord.medications.map((med, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center rounded-md border p-2"
-                            >
-                              <Pill className="h-4 w-4 text-emerald-500 mr-2" />
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {med.name} - {med.dosage}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {med.frequency} • Durée: {med.duration}
-                                </p>
+                        <p className="text-sm">
+                          {selectedRecord.recommendations}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedRecord.medications &&
+                      selectedRecord.medications.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-1">
+                            Médicaments prescrits
+                          </h4>
+                          <div className="space-y-2">
+                            {selectedRecord.medications.map((med, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center rounded-md border p-2"
+                              >
+                                <Pill className="h-4 w-4 text-emerald-500 mr-2" />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {med.name} - {med.dosage}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {med.frequency} • Durée: {med.duration}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {selectedRecord.vaccine && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-1">Vaccin</h4>
+                        <div className="rounded-md border p-3">
+                          <p className="text-sm font-medium">
+                            {selectedRecord.vaccine.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Lot: {selectedRecord.vaccine.lot} • Expiration:{" "}
+                            {selectedRecord.vaccine.expiration}
+                          </p>
                         </div>
                       </div>
                     )}
 
-                  {selectedRecord.vaccine && (
                     <div>
-                      <h4 className="text-sm font-medium mb-1">Vaccin</h4>
-                      <div className="rounded-md border p-3">
-                        <p className="text-sm font-medium">
-                          {selectedRecord.vaccine.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Lot: {selectedRecord.vaccine.lot} • Expiration:{" "}
-                          {selectedRecord.vaccine.expiration}
-                        </p>
+                      <h4 className="text-sm font-medium mb-1">
+                        Documents associés
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedRecord.documents.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between rounded-md border p-2"
+                          >
+                            <div className="flex items-center">
+                              {getDocumentTypeIcon(doc.type)}
+                              <span className="ml-2 text-sm">{doc.name}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-xs text-muted-foreground mr-2">
+                                {doc.size}
+                              </span>
+                              <Link
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">
-                      Documents associés
-                    </h4>
-                    <div className="space-y-2">
-                      {selectedRecord.documents.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="flex items-center justify-between rounded-md border p-2"
-                        >
-                          <div className="flex items-center">
-                            {getDocumentTypeIcon(doc.type)}
-                            <span className="ml-2 text-sm">{doc.name}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="text-xs text-muted-foreground mr-2">
-                              {doc.size}
-                            </span>
-                            <Link
-                              href={doc.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Link>
+                  <div className="space-y-4">
+                    <div className="rounded-lg border p-4">
+                      <h4 className="text-sm font-medium mb-3">Informations</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center">
+                          <Stethoscope className="h-4 w-4 text-muted-foreground mr-2" />
+                          <div>
+                            <p className="text-sm font-medium">
+                              {selectedRecord.doctor}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {selectedRecord.specialty}
+                            </p>
                           </div>
                         </div>
-                      ))}
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                          <div>
+                            <p className="text-sm">
+                              {format(
+                                parseISO(selectedRecord.date),
+                                "EEEE d MMMM yyyy",
+                                { locale: fr }
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(parseISO(selectedRecord.date), "HH:mm", {
+                                locale: fr,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start">
+                          <FileText className="h-4 w-4 text-muted-foreground mr-2 mt-0.5" />
+                          <div>
+                            <p className="text-sm">{selectedRecord.facility}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Établissement
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Tags</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedRecord.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="rounded-lg border p-4">
-                    <h4 className="text-sm font-medium mb-3">Informations</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center">
-                        <Stethoscope className="h-4 w-4 text-muted-foreground mr-2" />
-                        <div>
-                          <p className="text-sm font-medium">
-                            {selectedRecord.doctor}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {selectedRecord.specialty}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
-                        <div>
-                          <p className="text-sm">
-                            {format(
-                              parseISO(selectedRecord.date),
-                              "EEEE d MMMM yyyy",
-                              { locale: fr }
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(parseISO(selectedRecord.date), "HH:mm", {
-                              locale: fr,
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <FileText className="h-4 w-4 text-muted-foreground mr-2 mt-0.5" />
-                        <div>
-                          <p className="text-sm">{selectedRecord.facility}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Établissement
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Tags</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedRecord.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Button className="w-full">
-                      <Download className="mr-2 h-4 w-4" /> Télécharger tout
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      <Share2 className="mr-2 h-4 w-4" /> Partager
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
@@ -909,7 +881,7 @@ export default function MedicalRecordsPage() {
 // Loading state component
 function LoadingState() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 p-2 sm:p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <Skeleton className="h-8 w-48" />

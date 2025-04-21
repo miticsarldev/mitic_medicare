@@ -9,8 +9,6 @@ import {
   Clock,
   Plus,
   FileText,
-  Video,
-  MessageSquare,
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -438,24 +436,6 @@ export default function AppointmentsPage() {
                                     Voir les détails
                                   </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    href={`/dashboard/patient/messages?doctorId=${appointment.doctorId}`}
-                                  >
-                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                    Contacter le médecin
-                                  </Link>
-                                </DropdownMenuItem>
-                                {appointment.status === "CONFIRMED" && (
-                                  <DropdownMenuItem asChild>
-                                    <Link
-                                      href={`/dashboard/patient/teleconsultation/${appointment.id}`}
-                                    >
-                                      <Video className="mr-2 h-4 w-4" />
-                                      Démarrer téléconsultation
-                                    </Link>
-                                  </DropdownMenuItem>
-                                )}
                                 <DropdownMenuItem asChild>
                                   <Link
                                     href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}

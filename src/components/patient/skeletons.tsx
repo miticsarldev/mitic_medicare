@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export function PatientOverviewSkeleton() {
   return (
-    <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3 p-4">
+    <div className="grid gap-2 sm:gap-2 md:grid-cols-2 lg:grid-cols-3 p-4">
       {Array.from({ length: 6 }).map((_, i) => (
         <Card key={i}>
           <CardHeader className="pb-2">

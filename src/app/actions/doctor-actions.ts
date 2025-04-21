@@ -78,6 +78,46 @@ export async function createDoctor(formData: FormData) {
   }
 }
 
+export async function getDoctorById(id: string) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+
+  const doctor = await prisma.doctor.findUnique({
+    where: { id },
+    include: {
+      user: {
+        include: {
+          profile: true,
+        },
+      },
+      hospital: true,
+      department: true,
+      doctorReviews: {
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      favoritedBy: {
+        select: {
+          id: true,
+        },
+      },
+      availabilities: true,
+    },
+  });
+
+  if (!doctor) return null;
+
+  const isFavorite =
+    !!userId && doctor.favoritedBy.some((u) => u.id === userId);
+
+  return {
+    ...doctor,
+    isFavorite,
+    consultationFee: doctor.consultationFee?.toNumber() ?? 0,
+  };
+}
+
 export async function updateDoctorStatus(doctorId: string, status: string) {
   try {
     const session = await getServerSession(authOptions);

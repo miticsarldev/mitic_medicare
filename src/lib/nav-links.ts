@@ -220,25 +220,16 @@ export const patientNavItems = [
         url: "/dashboard/patient/overview",
         icon: UserCheck,
       },
-      {
-        title: "Statistiques & Suivi",
-        url: "/dashboard/patient/statistics",
-        icon: FileText,
-      },
     ],
   },
   {
-    title: "Mes Rendez-vous",
+    title: "Rendez-vous",
     icon: Calendar,
     url: "/dashboard/patient/appointments",
     items: [
       {
-        title: "Prochains Rendez-vous",
-        url: "/dashboard/patient/appointments/upcoming",
-      },
-      {
-        title: "Historique des Rendez-vous",
-        url: "/dashboard/patient/appointments/history",
+        title: "Mes Rendez-vous",
+        url: "/dashboard/patient/appointments/all",
       },
       {
         title: "Prendre un Rendez-vous",
@@ -254,10 +245,6 @@ export const patientNavItems = [
       {
         title: "Voir Mon Dossier",
         url: "/dashboard/patient/medical-records/view",
-      },
-      {
-        title: "Mises à jour",
-        url: "/dashboard/patient/medical-records/updates",
       },
     ],
   },
@@ -290,21 +277,6 @@ export const patientNavItems = [
     ],
   },
   {
-    title: "Abonnement & Services",
-    icon: Heart,
-    url: "/dashboard/patient/subscriptions",
-    items: [
-      {
-        title: "Mon Abonnement",
-        url: "/dashboard/patient/subscriptions/details",
-      },
-      {
-        title: "Mettre à Niveau",
-        url: "/dashboard/patient/subscriptions/upgrade",
-      },
-    ],
-  },
-  {
     title: "Paramètres & Sécurité",
     icon: Settings,
     url: "/dashboard/patient/settings",
@@ -321,7 +293,6 @@ export const patientNavItems = [
     icon: LifeBuoy,
     url: "/dashboard/patient/support",
     items: [
-      { title: "Centre d'Aide", url: "/dashboard/patient/support/help-center" },
       { title: "FAQs", url: "/dashboard/patient/support/faq" },
       { title: "Support Client", url: "/dashboard/patient/support/contact" },
     ],
@@ -340,7 +311,7 @@ export const hospitalAdminNavItems = [
         title: "Aperçu",
         url: "/dashboard/hopital_admin/overview",
         icon: ClipboardList,
-      }
+      },
     ],
   },
   {
