@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import {  NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -44,16 +44,29 @@ export async function GET() {
                             },
                         },
                         specialization: true,
+                        department: {
+                            select: {
+                                name: true,
+                            },
+                        }
                     },
                 },
                 patient: {
                     select: {
                         id: true,
+                        bloodType: true,
+                        allergies: true,
+                        medicalNotes: true,
                         user: {
                             select: {
                                 name: true,
+                                email: true,
+                                phone: true,
                                 profile: {
-                                    select: { genre: true },
+                                    select: {
+                                        genre: true,
+
+                                    },
                                 },
                             },
                         },
@@ -72,11 +85,17 @@ export async function GET() {
                 id: apt.doctor.id,
                 name: apt.doctor.user.name,
                 specialization: apt.doctor.specialization,
+                department: apt.doctor.department?.name || "Non précisé",
             },
             patient: {
                 id: apt.patient.id,
                 name: apt.patient.user.name,
                 gender: apt.patient.user.profile?.genre || "Non précisé",
+                email: apt.patient.user.email,
+                phone: apt.patient.user.phone,
+                bloodType: apt.patient.bloodType || "Non précisé",
+                allergies: apt.patient.allergies || "Non précisé",
+                medicalNotes: apt.patient.medicalNotes || "Non précisé",
             },
         }));
 

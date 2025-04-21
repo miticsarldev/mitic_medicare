@@ -1,149 +1,215 @@
-"use client"
+'use client'
 
 import React, { useEffect, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import {
+    Card, CardContent, CardHeader, CardTitle,
+} from "@/components/ui/card"
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
+import {
+    Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import FullCalendar from "@fullcalendar/react"
+import dayGridPlugin from "@fullcalendar/daygrid"
+import timeGridPlugin from "@fullcalendar/timegrid"
+import interactionPlugin from "@fullcalendar/interaction"
+import frLocale from "@fullcalendar/core/locales/fr"
+import { format, isWithinInterval, parseISO } from "date-fns"
+import { CalendarDays, ClipboardList, User } from "lucide-react"
+import { DateRange } from "react-day-picker"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 
-type Appointment = {
+interface Doctor {
+    id: string
+    name: string
+    specialization: string
+    department: string
+}
+
+interface Patient {
+    id: string
+    name: string
+    gender: string
+    email: string
+    phone: string
+    bloodType: string
+    allergies: string
+    medicalNotes: string
+}
+
+interface Appointment {
     id: string
     scheduledAt: string
     status: string
-    type: string
     reason: string
-    doctor: {
-        id: string
-        name: string
-        specialization: string
-    }
-    patient: {
-        id: string
-        name: string
-        gender: string
-    }
+    type: string
+    doctor: Doctor
+    patient: Patient
 }
 
-const ITEMS_PER_PAGE = 10
-
-export default function AppointmentHistory() {
+export default function AppointmentCalendarView() {
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [filtered, setFiltered] = useState<Appointment[]>([])
-    const [loading, setLoading] = useState(true)
-
-    const [search, setSearch] = useState("")
-    const [statusFilter, setStatusFilter] = useState("")
-
-    const [page, setPage] = useState(1)
+    const [selectedDoctor, setSelectedDoctor] = useState<string>("all")
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+    const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
     useEffect(() => {
         const fetchAppointments = async () => {
-            try {
-                const res = await fetch("/api/hospital_admin/appointment/history")
-                const data = await res.json()
-                setAppointments(data.appointments || [])
-                setFiltered(data.appointments || [])
-            } catch (error) {
-                console.error("Erreur récupération historique :", error)
-            } finally {
-                setLoading(false)
-            }
+            const res = await fetch("/api/hospital_admin/appointment/list")
+            const data = await res.json()
+            setAppointments(data.appointments || [])
+            setFiltered(data.appointments || [])
         }
-
         fetchAppointments()
     }, [])
 
-    // Filtrage
     useEffect(() => {
-        const filteredData = appointments.filter((apt) => {
-            const matchName = apt.patient.name.toLowerCase().includes(search.toLowerCase())
-            const matchStatus = statusFilter ? apt.status === statusFilter : true
-            return matchName && matchStatus
-        })
+        let result = [...appointments]
 
-        setFiltered(filteredData)
-        setPage(1) // reset to first page on filter
-    }, [search, statusFilter, appointments])
+        if (selectedDoctor !== "all") {
+            result = result.filter((a) => a.doctor.id === selectedDoctor)
+        }
 
-    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
-    const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+        if (dateRange?.from && dateRange?.to) {
+            result = result.filter((a) =>
+                isWithinInterval(parseISO(a.scheduledAt), {
+                    start: dateRange.from!,
+                    end: dateRange.to!,
+                })
+            )
+        }
 
-    if (loading) {
-        return <Skeleton className="w-full h-40 rounded-xl" />
+        setFiltered(result)
+    }, [selectedDoctor, dateRange, appointments])
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case "CONFIRMED":
+                return "bg-green-200 text-green-900 dark:bg-green-800/30 dark:text-green-300"
+            case "PENDING":
+                return "bg-yellow-200 text-yellow-900 dark:bg-yellow-800/30 dark:text-yellow-300"
+            case "CANCELLED":
+                return "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300"
+            case "COMPLETED":
+                return "bg-blue-200 text-blue-900 dark:bg-blue-800/30 dark:text-blue-300"
+            default:
+                return "bg-gray-200 text-gray-900 dark:bg-gray-700/40 dark:text-gray-300"
+        }
     }
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Historique des rendez-vous</h2>
+        <div className="p-4 space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-xl font-bold">Agenda des rendez-vous</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex flex-wrap gap-4">
+                        <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                            <SelectTrigger className="w-[250px]">
+                                <SelectValue placeholder="Filtrer par médecin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tous les médecins</SelectItem>
+                                {Array.from(new Set(appointments.map((a) => a.doctor.id))).map((id) => {
+                                    const doctor = appointments.find((a) => a.doctor.id === id)?.doctor
+                                    return (
+                                        <SelectItem key={id} value={id}>
+                                            {doctor?.name}
+                                        </SelectItem>
+                                    )
+                                })}
+                            </SelectContent>
+                        </Select>
 
-            {/* Zone de filtre */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Input
-                    placeholder="Rechercher un patient..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-[250px] justify-start text-left font-normal">
+                                    <CalendarDays className="mr-2 h-4 w-4" />
+                                    {dateRange?.from && dateRange?.to
+                                        ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
+                                        : "Filtrer par date"}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="range"
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
 
-                <Select onValueChange={(value) => setStatusFilter(value)} value={statusFilter}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Filtrer par statut" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ALL">Tous les statuts</SelectItem>
-                        <SelectItem value="COMPLETED">Terminé</SelectItem>
-                        <SelectItem value="CANCELLED">Annulé</SelectItem>
-                        <SelectItem value="NO_SHOW">Non venu</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+                    <div className="rounded-lg border shadow-sm p-2 bg-background dark:bg-muted">
+                        <FullCalendar
+                            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                            initialView="timeGridWeek"
+                            locale={frLocale}
+                            events={filtered.map((appt) => ({
+                                id: appt.id,
+                                title: `${appt.patient.name} (${appt.type})`,
+                                start: appt.scheduledAt,
+                                extendedProps: { appointment: appt },
+                            }))}
+                            eventClick={(info) => {
+                                const appt = info.event.extendedProps.appointment as Appointment
+                                setSelectedAppointment(appt)
+                            }}
+                            height="auto"
+                            slotMinTime="07:00:00"
+                            slotMaxTime="20:00:00"
+                            headerToolbar={{
+                                start: 'prev,next today',
+                                center: 'title',
+                                end: 'dayGridMonth,timeGridWeek,timeGridDay',
+                            }}
+                            eventClassNames="text-sm font-medium text-gray-800 dark:text-gray-100"
+                            dayHeaderClassNames="bg-muted text-muted-foreground text-sm"
+                            dayCellClassNames="bg-muted/50 dark:bg-muted/30"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
 
-            {/* Liste des rendez-vous */}
-            {paginated.length === 0 ? (
-                <p className="text-muted-foreground">Aucun rendez-vous trouvé.</p>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {paginated.map((apt) => (
-                        <Card key={apt.id} className="shadow-md rounded-xl">
-                            <CardContent className="p-4 space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="font-semibold">{apt.patient.name}</h3>
-                                    <Badge>{apt.status}</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                    <span className="font-medium">Date:</span>{" "}
-                                    {new Date(apt.scheduledAt).toLocaleString("fr-FR")}
-                                </p>
-                                <p className="text-sm">
-                                    <span className="font-medium">Médecin:</span> {apt.doctor.name} ({apt.doctor.specialization})
-                                </p>
-                                <p className="text-sm">
-                                    <span className="font-medium">Motif:</span> {apt.reason}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    <span className="font-medium">Genre:</span> {apt.patient.gender}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 mt-4">
-                    <Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>
-                        Précédent
-                    </Button>
-                    <span className="text-sm">
-                        Page {page} sur {totalPages}
-                    </span>
-                    <Button variant="outline" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
-                        Suivant
-                    </Button>
-                </div>
-            )}
+            <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Détails du rendez-vous</DialogTitle>
+                    </DialogHeader>
+                    {selectedAppointment && (
+                        <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4" /> {selectedAppointment.patient.name}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4" /> {selectedAppointment.reason}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <CalendarDays className="w-4 h-4" /> {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                Statut : <Badge className={getStatusColor(selectedAppointment.status)}>{selectedAppointment.status}</Badge>
+                            </div>
+                            <div className="text-muted-foreground mt-2">
+                                <strong>Médecin :</strong> {selectedAppointment.doctor.name} ({selectedAppointment.doctor.specialization})
+                            </div>
+                            <div className="text-muted-foreground">
+                                <strong>Email :</strong> {selectedAppointment.patient.email}
+                            </div>
+                            <div className="text-muted-foreground">
+                                <strong>Téléphone :</strong> {selectedAppointment.patient.phone}
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

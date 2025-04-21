@@ -1,17 +1,29 @@
 "use client"
 
+import React, { useEffect, useState } from "react"
 import {
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-} from "@/components/ui/table"
-import { useEffect, useState } from "react"
-import { Select } from "@/components/ui/select"
-import { SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "@/components/ui/tabs"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CalendarDays, User, Stethoscope, ClipboardList, Mail, Phone, Droplets, AlertCircle, Building2 } from "lucide-react"
+
 
 type Appointment = {
     id: string
@@ -20,18 +32,24 @@ type Appointment = {
     reason: string
     type: string
     doctor: {
-        user: {
-            name: string
-        }
+        id: string
+        name: string
+        specialization: string
+        department: string
     }
     patient: {
-        user: {
-            name: string
-        }
+        id: string
+        name: string
+        gender: string
+        email: string
+        phone: string
+        bloodType: string
+        allergies: string
+        medicalNotes: string
     }
 }
 
-const ITEMS_PER_PAGE = 10
+const ITEMS_PER_PAGE = 9
 
 export default function AppointmentsTable() {
     const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -41,6 +59,7 @@ export default function AppointmentsTable() {
     const [statusFilter, setStatusFilter] = useState<string>("")
     const [typeFilter, setTypeFilter] = useState<string>("")
     const [page, setPage] = useState(1)
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -63,30 +82,42 @@ export default function AppointmentsTable() {
     }, [])
 
     useEffect(() => {
-        let filtered = appointments;
-      
+        let filtered = appointments
+
         if (statusFilter && statusFilter !== "all") {
-          filtered = filtered.filter((a) => a.status === statusFilter);
+            filtered = filtered.filter((a) => a.status === statusFilter)
         }
-      
+
         if (typeFilter && typeFilter !== "all") {
-          filtered = filtered.filter((a) => a.type === typeFilter);
+            filtered = filtered.filter((a) => a.type === typeFilter)
         }
-      
-        setFiltered(filtered);
-        setPage(1); // reset to first page on filter change
-      }, [statusFilter, typeFilter, appointments]);
-      
+
+        setFiltered(filtered)
+        setPage(1)
+    }, [statusFilter, typeFilter, appointments])
 
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
     const currentItems = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
 
+    const getStatusBadgeColor = (status: string) => {
+        switch (status) {
+            case "CONFIRMED": return "bg-green-100 text-green-700"
+            case "PENDING": return "bg-yellow-100 text-yellow-700"
+            case "CANCELLED": return "bg-red-100 text-red-700"
+            case "COMPLETED": return "bg-blue-100 text-blue-700"
+            default: return "bg-gray-100 text-gray-700"
+        }
+    }
+
     return (
-        <div className="space-y-6 p-4">
-            <h1 className="text-2xl font-bold mb-4">Liste des rendez-vous</h1>
-            {/* Filtres */}
-            <div className="flex flex-wrap gap-4">
-                <div className="w-48">
+        <div className="p-4 space-y-6">
+            <h1 className="text-2xl font-bold">Liste des rendez-vous</h1>
+
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle>Filtres</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-4">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Filtrer par statut" />
@@ -99,11 +130,8 @@ export default function AppointmentsTable() {
                         </SelectContent>
                     </Select>
 
-                </div>
-
-                <div className="w-48">
-                    <Select onValueChange={setTypeFilter}>
-                        <SelectTrigger>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Filtrer par type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -113,56 +141,43 @@ export default function AppointmentsTable() {
                             <SelectItem value="EXAMEN">Examen</SelectItem>
                         </SelectContent>
                     </Select>
-                </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {loading ? (
+                    <p className="col-span-full text-center text-muted-foreground">Chargement des rendez-vous...</p>
+                ) : error ? (
+                    <p className="col-span-full text-center text-red-500">{error}</p>
+                ) : currentItems.length === 0 ? (
+                    <p className="col-span-full text-center text-muted-foreground">Aucun rendez-vous trouvé.</p>
+                ) : (
+                    currentItems.map((appt) => (
+                        <Card key={appt.id} className="cursor-pointer hover:shadow-md transition-all" onClick={() => setSelectedAppointment(appt)}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <User className="w-5 h-5" /> {appt.patient.name}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="text-sm text-muted-foreground space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <Stethoscope className="w-4 h-4" /> {appt.doctor.name} ({appt.doctor.specialization})
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <CalendarDays className="w-4 h-4" /> {new Date(appt.scheduledAt).toLocaleString()}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <ClipboardList className="w-4 h-4" /> {appt.reason}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Badge className={getStatusBadgeColor(appt.status)}>{appt.status}</Badge> - {appt.type}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
 
-            {/* Tableau */}
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Médecin</TableHead>
-                        <TableHead>Patient</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead>Date / Heure</TableHead>
-                        <TableHead>Motif</TableHead>
-                        <TableHead>Type</TableHead>
-                    </TableRow>
-                </TableHeader>
-
-                <TableBody>
-                    {loading ? (
-                        <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                Chargement des rendez-vous...
-                            </TableCell>
-                        </TableRow>
-                    ) : error ? (
-                        <TableRow>
-                            <TableCell colSpan={6} className="text-center text-red-500">{error}</TableCell>
-                        </TableRow>
-                    ) : currentItems.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                Aucun rendez-vous trouvé.
-                            </TableCell>
-                        </TableRow>
-                    ) : (
-                        currentItems.map((appt) => (
-                            <TableRow key={appt.id}>
-                                <TableCell>{appt.doctor.user.name}</TableCell>
-                                <TableCell>{appt.patient.user.name}</TableCell>
-                                <TableCell>{appt.status}</TableCell>
-                                <TableCell>{new Date(appt.scheduledAt).toLocaleString()}</TableCell>
-                                <TableCell>{appt.reason}</TableCell>
-                                <TableCell>{appt.type}</TableCell>
-                            </TableRow>
-                        ))
-                    )}
-                </TableBody>
-
-            </Table>
-
-            {/* Pagination */}
             {filtered.length > 0 && (
                 <div className="flex items-center justify-between mt-4">
                     <span className="text-sm text-muted-foreground">
@@ -188,6 +203,35 @@ export default function AppointmentsTable() {
                     </div>
                 </div>
             )}
+
+            <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Détails du rendez-vous</DialogTitle>
+                    </DialogHeader>
+                    {selectedAppointment && (
+                        <Tabs defaultValue="doctor" className="mt-4">
+                            <TabsList className="w-full grid grid-cols-2 mb-4">
+                                <TabsTrigger value="doctor">Médecin</TabsTrigger>
+                                <TabsTrigger value="patient">Patient</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="doctor" className="grid grid-cols-1 gap-2">
+                                <div className="flex items-center gap-2"><User className="w-4 h-4" /> {selectedAppointment.doctor.name}</div>
+                                <div className="flex items-center gap-2"><Stethoscope className="w-4 h-4" /> {selectedAppointment.doctor.specialization}</div>
+                                <div className="flex items-center gap-2"><Building2 className="w-4 h-4" /> {selectedAppointment.doctor.department}</div>
+                            </TabsContent>
+                            <TabsContent value="patient" className="grid grid-cols-1 gap-2">
+                                <div className="flex items-center gap-2"><User className="w-4 h-4" /> {selectedAppointment.patient.name}</div>
+                                <div className="flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedAppointment.patient.email}</div>
+                                <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedAppointment.patient.phone}</div>
+                                <div className="flex items-center gap-2"><Droplets className="w-4 h-4" /> Groupe sanguin : {selectedAppointment.patient.bloodType}</div>
+                                <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Allergies : {selectedAppointment.patient.allergies}</div>
+                                <div className="flex items-center gap-2"><ClipboardList className="w-4 h-4" /> Notes médicales : {selectedAppointment.patient.medicalNotes}</div>
+                            </TabsContent>
+                        </Tabs>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

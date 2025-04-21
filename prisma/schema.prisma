@@ -102,6 +102,7 @@ model User {
     password      String    @db.Text
     role          UserRole
     emailVerified DateTime?
+    dateOfBirth   DateTime?
     isApproved    Boolean   @default(false)
     isActive      Boolean   @default(true)
     createdAt     DateTime  @default(now())
@@ -277,11 +278,11 @@ model Patient {
     id                String     @id @default(cuid())
     userId            String     @unique
     user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-    dateOfBirth       DateTime
     bloodType         BloodType?
     allergies         String?
     emergencyContact  String?
     emergencyPhone    String?
+    emergencyRelation String?
     insuranceProvider String?
     insuranceNumber   String?
     medicalNotes      String?
@@ -297,7 +298,6 @@ model Patient {
     reviews          DoctorReview[]
 
     @@index([userId])
-    @@index([dateOfBirth])
 }
 
 model Appointment {

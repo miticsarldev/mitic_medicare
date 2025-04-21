@@ -1,175 +1,243 @@
-'use client'
+"use client"
+
 import React, { useEffect, useState } from "react"
 import {
-    TableCaption,
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell
-} from "@/components/ui/table"
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import { Pagination } from "@/components/ui/pagination"
+import {
+  User,
+  Stethoscope,
+  CalendarDays,
+  AlertCircle,
+  FileText,
+  ClipboardList,
+} from "lucide-react"
 
-const MedicalRecordsTable = () => {
-    const [medicalRecords, setMedicalRecords] = useState<any[]>([])
-    const [loading, setLoading] = useState<boolean>(true)
-    const [error, setError] = useState<string | null>(null)
-    const [filters, setFilters] = useState({
-        patient: "",
-        doctor: ""
-    })
-
-    const [currentPage, setCurrentPage] = useState(1)
-    const recordsPerPage = 5
-
-    // Récupération des données depuis l'API
-    const fetchMedicalRecords = async () => {
-        setLoading(true)
-        try {
-            const res = await fetch("/api/hospital_admin/medical-records")
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || "Erreur lors du chargement")
-            setMedicalRecords(data.records || [])
-        } catch (err) {
-            setError("Une erreur est survenue lors de la récupération des dossiers médicaux.")
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    useEffect(() => {
-        fetchMedicalRecords()
-    }, [])
-
-    // Filtres appliqués aux données
-    const filteredRecords = medicalRecords.filter(record =>
-        record.patient.name.toLowerCase().includes(filters.patient.toLowerCase()) &&
-        record.doctor.name.toLowerCase().includes(filters.doctor.toLowerCase())
-    )
-
-    // Pagination
-    const totalPages = Math.ceil(filteredRecords.length / recordsPerPage)
-    const indexOfLastRecord = currentPage * recordsPerPage
-    const indexOfFirstRecord = indexOfLastRecord - recordsPerPage
-    const currentRecords = filteredRecords.slice(indexOfFirstRecord, indexOfLastRecord)
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFilters({ ...filters, [e.target.name]: e.target.value })
-        setCurrentPage(1)
-    }
-
-    const handlePrevious = () => {
-        if (currentPage > 1) setCurrentPage(currentPage - 1)
-    }
-
-    const handleNext = () => {
-        if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-    }
-
-    if (loading) return <div>Chargement...</div>
-    if (error) return <div>{error}</div>
-
-    return (
-        <div className="space-y-4">
-            <h1 className="text-2xl font-bold mb-4">Liste des Dossier Medicaux</h1>
-
-            {/* Filtres */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-gray-50 p-6 rounded-xl shadow">
-                {/* patients */}
-                <div className="flex flex-col space-y-1">
-                    <label htmlFor="patient" className="text-sm font-medium text-gray-700">
-                        patient
-                    </label>
-                    <input
-                        id="patient"
-                        type="text"
-                        placeholder="filtrer par patient"
-                        value={filters.patient}
-                        onChange={handleChange}
-                        className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                </div>
-
-                {/* Docteurs */}
-                <div className="flex flex-col space-y-1">
-                    <label htmlFor="doctor" className="text-sm font-medium text-gray-700">
-                        Docteurs
-                    </label>
-                    <input
-                        id="doctor"
-                        type="text"
-                        placeholder="filtrer par docteur"
-                        value={filters.doctor}
-                        onChange={handleChange}
-                        className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                </div>
-
-            </div>
-
-            {/* Tableau */}
-            <Table>
-                <TableCaption>Dossiers médicaux</TableCaption>
-                <TableHeader>
-                    <tr>
-                        <TableHead>Patient</TableHead>
-                        <TableHead>Médecin</TableHead>
-                        <TableHead>Diagnostic</TableHead>
-                        <TableHead>Traitement</TableHead>
-                        <TableHead>Prescriptions</TableHead>
-                    </tr>
-                </TableHeader>
-                <TableBody>
-                    {currentRecords.length > 0 ? (
-                        currentRecords.map((record) => (
-                            <TableRow key={record.id}>
-                                <TableCell>{record.patient.name}</TableCell>
-                                <TableCell>{record.doctor.name}</TableCell>
-                                <TableCell>{record.diagnosis}</TableCell>
-                                <TableCell>{record.treatment}</TableCell>
-                                <TableCell>
-                                    <ul>
-                                        {record.prescriptions.map((prescription: any) => (
-                                            <li key={prescription.id}>
-                                                {prescription.medicationName} ({prescription.dosage})
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    ) : (
-                        <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted">
-                                Aucun dossier médical trouvé.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex justify-between items-center">
-                    <button
-                        onClick={handlePrevious}
-                        disabled={currentPage === 1}
-                        className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
-                    >
-                        Précédent
-                    </button>
-                    <span>Page {currentPage} sur {totalPages}</span>
-                    <button
-                        onClick={handleNext}
-                        disabled={currentPage === totalPages}
-                        className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
-                    >
-                        Suivant
-                    </button>
-                </div>
-            )}
-        </div>
-    )
+interface Attachment {
+  id: string
+  fileName: string
+  fileUrl: string
 }
 
-export default MedicalRecordsTable
+interface Prescription {
+  id: string
+  medicationName: string
+  dosage: string
+  frequency: string
+  duration: string
+  startDate: string
+  endDate: string
+}
+
+interface MedicalRecord {
+  id: string
+  diagnosis: string
+  treatment: string
+  createdAt: string
+  patient: { id: string; name: string }
+  doctor: { id: string; name: string; specialization: string }
+  attachments: Attachment[]
+  prescriptions: Prescription[]
+}
+
+export default function MedicalRecordsGrid() {
+  const [records, setRecords] = useState<MedicalRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState({ patient: "", doctor: "" })
+  const [page, setPage] = useState(1)
+  const perPage = 6
+  const [selected, setSelected] = useState<MedicalRecord | null>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/hospital_admin/medical-records")
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Erreur")
+        setRecords(data.records || [])
+      } catch {
+        setError("Impossible de charger les dossiers médicaux.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const filtered = records.filter(r =>
+    r.patient.name.toLowerCase().includes(filters.patient.toLowerCase()) &&
+    r.doctor.name.toLowerCase().includes(filters.doctor.toLowerCase())
+  )
+
+  const total = Math.ceil(filtered.length / perPage)
+  const pageItems = filtered.slice((page - 1) * perPage, page * perPage)
+
+  return (
+    <div className="p-4 space-y-6">
+      <h1 className="text-2xl font-bold flex items-center gap-2">
+        <AlertCircle className="w-6 h-6" /> Dossiers Médicaux
+      </h1>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="flex flex-col">
+          <label className="text-sm font-medium flex items-center gap-1">
+            <User className="w-4 h-4" /> Patient
+          </label>
+          <Input
+            placeholder="Filtrer par patient"
+            value={filters.patient}
+            onChange={e => { setFilters(f => ({ ...f, patient: e.target.value })); setPage(1) }}
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-sm font-medium flex items-center gap-1">
+            <Stethoscope className="w-4 h-4" /> Docteur
+          </label>
+          <Input
+            placeholder="Filtrer par docteur"
+            value={filters.doctor}
+            onChange={e => { setFilters(f => ({ ...f, doctor: e.target.value })); setPage(1) }}
+          />
+        </div>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="text-center py-10">Chargement...</div>
+      ) : error ? (
+        <div className="text-center text-red-600 py-10">{error}</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pageItems.map(record => (
+              <Card key={record.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" /> {record.patient.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Stethoscope className="w-4 h-4" /> {record.doctor.name}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" /> {record.diagnosis}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4" /> {new Date(record.createdAt).toLocaleDateString()}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 flex items-center gap-1"
+                    onClick={() => setSelected(record)}
+                  >
+                    <FileText className="w-4 h-4" /> Voir détails
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {total > 1 && (
+            <div className="flex justify-center mt-4">
+              <Pagination
+                currentPage={page}
+                totalPages={total}
+                onPageChange={setPage}
+                showPageNumbers={true}
+                showNextPrevButtons={true}
+              />
+            </div>
+          )}
+
+          {/* Details Modal */}
+          <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5" /> Détails du dossier
+                </DialogTitle>
+              </DialogHeader>
+              {selected && (
+                <Tabs defaultValue="diagnosis" className="mt-4">
+                  <TabsList className="grid grid-cols-4 gap-2">
+                    <TabsTrigger value="diagnosis">
+                      <AlertCircle className="w-4 h-4 mr-1" /> Diagnostic
+                    </TabsTrigger>
+                    <TabsTrigger value="treatment">
+                      <Stethoscope className="w-4 h-4 mr-1" /> Traitement
+                    </TabsTrigger>
+                    <TabsTrigger value="attachments">
+                      <FileText className="w-4 h-4 mr-1" /> Pièces jointes
+                    </TabsTrigger>
+                    <TabsTrigger value="prescriptions">
+                      <ClipboardList className="w-4 h-4 mr-1" /> Prescriptions
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="diagnosis" className="mt-4">
+                    <p>{selected.diagnosis}</p>
+                  </TabsContent>
+                  <TabsContent value="treatment" className="mt-4">
+                    <p>{selected.treatment}</p>
+                  </TabsContent>
+                  <TabsContent value="attachments" className="mt-4">
+                    <ul className="space-y-2">
+                      {selected.attachments.map(att => (
+                        <li key={att.id} className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          <a href={att.fileUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                            {att.fileName}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </TabsContent>
+                  <TabsContent value="prescriptions" className="mt-4 space-y-4">
+                    {selected.prescriptions.map(p => (
+                      <div key={p.id} className="border p-3 rounded flex items-start gap-3">
+                        <ClipboardList className="w-5 h-5 text-primary" />
+                        <div className="text-sm">
+                          <p><strong>{p.medicationName}</strong> - {p.dosage}</p>
+                          <p>Fréquence: {p.frequency}</p>
+                          <p>Durée: {p.duration}</p>
+                          <p className="text-xs text-muted-foreground">Du {new Date(p.startDate).toLocaleDateString()} au {new Date(p.endDate).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </TabsContent>
+                </Tabs>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelected(null)}>Fermer</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+    </div>
+  )
+}
