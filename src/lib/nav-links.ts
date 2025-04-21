@@ -13,7 +13,6 @@ import {
   FolderHeart,
   MessageSquare,
   UserCheck,
-  Heart,
   Stethoscope,
 } from "lucide-react";
 
