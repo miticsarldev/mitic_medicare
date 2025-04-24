@@ -7,11 +7,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogClose,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Toggle } from "@/components/ui/toggle"
-import { LayoutGrid, List, Filter, Search, Plus } from "lucide-react"
+import { LayoutGrid, List, Filter, Search, Plus, X } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { DoctorCard } from "./DoctorCard"
@@ -19,6 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import DoctorForm from "../add/page"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "@/hooks/use-toast";
 
 // Type définissant un médecin
 
@@ -32,10 +36,20 @@ type Doctor = {
   patientsCount: number
   phone: string
   address?: string
-  department?: string
+  department?: {
+    id: string
+    name: string
+  }
   education?: string
   experience?: string
   consultationFee?: string
+  schedule?: { day: string; slots: string[] }[]
+}
+
+type Department = {
+  id: string
+  name: string
+  description: string
 }
 
 const ITEMS_PER_PAGE = 6
@@ -51,15 +65,24 @@ export default function DoctorTable() {
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [openAdd, setOpenAdd] = useState(false)
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [showDeptModal, setShowDeptModal] = useState(false)
+  const [currentDoctor, setCurrentDoctor] = useState<Doctor | null>(null)
+  const [selectedDept, setSelectedDept] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   // Récupération des médecins
   useEffect(() => {
     const fetchDoctors = async () => {
       setIsLoading(true)
       try {
-        const res = await fetch("/api/hospital_admin/doctors")
-        const data = await res.json()
-        setDoctors(data.doctors)
+        //recuperr les medecins et departements
+        const resDoctors = await fetch("/api/hospital_admin/doctors")
+        const dataDoctors = await resDoctors.json()
+        setDoctors(dataDoctors.doctors)
+        const resDepartments = await fetch("/api/hospital_admin/department")
+        const dataDepartments = await resDepartments.json()
+        setDepartments(dataDepartments.departments)
       } catch (err) {
         console.error("Erreur lors de la récupération des médecins", err)
       } finally {
@@ -68,6 +91,47 @@ export default function DoctorTable() {
     }
     fetchDoctors()
   }, [])
+
+  function onChangeDepartmentRequest(doctor: Doctor) {
+    setCurrentDoctor(doctor)
+    setSelectedDept(doctor.department?.id ?? "")
+    setShowDeptModal(true)
+  }
+
+  //  Enregistrer le nouveau département
+  async function saveDepartment() {
+    if (!currentDoctor) return
+    setLoading(true)
+    try {
+      await fetch("/api/hospital_admin/doctors/updateDepartement", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          doctorId: currentDoctor.id,
+          departmentId: selectedDept || null,
+        }),
+      })
+      //recharger la page apres la mise à jour
+      const resDoctors = await fetch("/api/hospital_admin/doctors")
+      const dataDoctors = await resDoctors.json()
+      setDoctors(dataDoctors.doctors)
+      toast({
+        title: "Département mis à jour",
+        description: `Le département de ${currentDoctor.name} a été mis à jour avec succès.`,
+      })
+      setSelectedDept(null)
+      setCurrentDoctor(null)
+      setShowDeptModal(false)
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la mise à jour du département.",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   // Gestion des filtres
   const toggleSpecialty = (specialty: string) => {
@@ -158,7 +222,7 @@ export default function DoctorTable() {
   )
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
+    <div className="flex flex-col lg:flex-row gap-6 p-10">
       {/* Filtres Desktop */}
       <aside className="hidden lg:block w-64">{renderFilters()}</aside>
 
@@ -201,7 +265,7 @@ export default function DoctorTable() {
                 <DialogHeader>
                   <DialogTitle>Nouveau Médecin</DialogTitle>
                 </DialogHeader>
-                <DoctorForm onSuccess={() => setOpenAdd(false)} />
+                <DoctorForm />
               </DialogContent>
             </Dialog>
           </div>
@@ -246,19 +310,19 @@ export default function DoctorTable() {
         ) : filteredDoctors.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center text-gray-500 p-10">
             <p className="text-lg font-medium mb-2">Aucun médecin ne correspond à vos filtres.</p>
-            <p className="text-sm mb-4">Essayez d'ajuster votre recherche ou réinitialisez les filtres.</p>
+            <p className="text-sm mb-4">Essayez d&#39;ajuster votre recherche ou réinitialisez les filtres.</p>
             <Button variant="outline" onClick={resetFilters}>Réinitialiser les filtres</Button>
           </div>
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginatedDoctors.map((doc) => (
-              <DoctorCard key={doc.id} doctor={doc} />
+              <DoctorCard key={doc.id} doctor={doc} onChangeDepartment={() => onChangeDepartmentRequest(doc)} />
             ))}
           </div>
         ) : (
           <div className="flex flex-col gap-4 overflow-y-auto max-h-[70vh] pr-2">
             {paginatedDoctors.map((doc) => (
-              <DoctorCard key={doc.id} doctor={doc} />
+              <DoctorCard key={doc.id} doctor={doc} onChangeDepartment={() => onChangeDepartmentRequest(doc)} />
             ))}
           </div>
         )}
@@ -288,6 +352,46 @@ export default function DoctorTable() {
           </div>
         )}
       </div>
+      {/* Modal pour changer le département */}
+      <Dialog open={showDeptModal} onOpenChange={setShowDeptModal}>
+        <DialogContent className="max-w-sm p-6 rounded-2xl shadow-lg">
+          <DialogHeader>
+            <DialogTitle>Changer le département</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Pour {currentDoctor?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-4">
+            <Select onValueChange={(v) => setSelectedDept(v)} value={selectedDept || ""}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Choisir un département" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((dep) => (
+                  <SelectItem key={dep.id} value={dep.id}>
+                    {dep.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="NULL">Aucun</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDeptModal(false)} disabled={loading}>
+                Annuler
+              </Button>
+              <Button onClick={saveDepartment} disabled={loading || selectedDept === currentDoctor?.department?.id}>
+                {loading ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+            </div>
+          </div>
+
+          <DialogClose className="absolute top-3 right-3 text-muted-foreground hover:text-primary">
+            <X className="w-5 h-5" />
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

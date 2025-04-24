@@ -6,7 +6,24 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
-interface DoctorFilters extends Prisma.DoctorWhereInput { }
+interface DoctorFilters extends Prisma.DoctorWhereInput {}
+
+const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function formatAvailabilities(availabilities: any[]) {
+    const groupedByDay = availabilities.reduce((acc, curr) => {
+        if (!curr.isActive) return acc;
+        const day = dayNames[curr.dayOfWeek];
+        if (!acc[day]) acc[day] = [];
+        acc[day].push(`${curr.startTime} - ${curr.endTime}`);
+        return acc;
+    }, {} as Record<string, string[]>);
+
+    return Object.entries(groupedByDay).map(([day, slots]) => ({
+        day,
+        slots,
+    }));
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -83,14 +100,12 @@ export async function GET(request: NextRequest) {
                 },
                 department: {
                     select: {
+                        id: true,
                         name: true,
                     },
                 },
                 appointments: {
                     select: { id: true },
-                },
-                doctorReviews: {
-                    select: { rating: true },
                 },
                 reviews: {
                     select: { rating: true },
@@ -98,15 +113,35 @@ export async function GET(request: NextRequest) {
             },
         });
 
-        const totalDoctors = await prisma.doctor.count({
-            where: filters,
+        const doctorIds = doctors.map((d) => d.id);
+
+        const allAvailabilities = await prisma.doctorAvailability.findMany({
+            where: {
+                doctorId: { in: doctorIds },
+                isActive: true,
+            },
+            select: {
+                doctorId: true,
+                dayOfWeek: true,
+                startTime: true,
+                endTime: true,
+                isActive: true,
+            },
         });
+
+        const totalDoctors = await prisma.doctor.count({ where: filters });
 
         const doctorsWithDetails = doctors.map((doctor) => {
             const totalRatings = doctor.reviews.reduce((sum, r) => sum + r.rating, 0);
             const averageRating = doctor.reviews.length
                 ? totalRatings / doctor.reviews.length
                 : 0;
+
+            const doctorAvailabilities = allAvailabilities.filter(
+                (a) => a.doctorId === doctor.id
+            );
+
+            const formattedSchedule = formatAvailabilities(doctorAvailabilities);
 
             return {
                 id: doctor.id,
@@ -128,10 +163,11 @@ export async function GET(request: NextRequest) {
                 city: doctor.user.profile?.city,
                 state: doctor.user.profile?.state,
                 country: doctor.user.profile?.country,
-                department: doctor.department?.name,
+                department: doctor.department,
                 patientsCount: doctor.appointments.length,
                 averageRating,
                 reviewsCount: doctor.reviews.length,
+                schedule: formattedSchedule,
             };
         });
 

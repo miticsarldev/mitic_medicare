@@ -1,3 +1,4 @@
+import { Decimal } from '@prisma/client/runtime/library';
 export type Doctor = {
   id: string;
   userId?: string;
@@ -208,4 +209,87 @@ export type Doctor = {
   };
 
   avgRating?: number;
+};
+
+
+type DoctorProfile = {
+  bio: string | null;
+  avatarUrl: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+};
+
+type PatientProfile = {
+  avatarUrl: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  bio: string | null;
+};
+
+type Appointment = {
+  id: string;
+  scheduledAt: Date;
+  status: string;
+  reason: string | null;
+  notes: string | null;
+  startTime: Date | null;
+  endTime: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  patient: {
+    id: string;
+    user: {
+      name: string;
+      email: string;
+      phone: string;
+      profile: PatientProfile | null;
+    };
+  };
+};
+
+type Department = {
+  id: string;
+  name: string;
+};
+
+type Review = {
+  rating: number;
+};
+
+type DoctorAvailability = {
+  day: string;  
+  slots: unknown;  
+  isActive?: boolean; 
+};
+
+
+type DoctorType = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  specialization: string;
+  licenseNumber: string;
+  education: string | null;
+  experience: string | null;
+  consultationFee: Decimal | null;
+  isVerified: boolean;
+  isIndependent: boolean;
+  availableForChat: boolean;
+  createdAt: Date;
+  avatarUrl: string | null | undefined;
+  bio: string | null | undefined;
+  address: string | null | undefined;
+  city: string | null | undefined;
+  state: string | null | undefined;
+  country: string | null | undefined ;
+  department: Department | null;
+  averageRating: number;
+  reviewsCount: number;
+  schedule: DoctorAvailability[];
+  appointments: Appointment[];
 };
