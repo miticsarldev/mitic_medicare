@@ -125,8 +125,6 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                         >
                             {doctor.isActive ? 'Désactiver' : 'Activer'}
                         </button>
-
-
                         {doctor.isVerified && (
                             <div className="flex items-center gap-1 text-green-600 text-xs ml-2">
                                 <CheckCircle className="w-4 h-4" />
