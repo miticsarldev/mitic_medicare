@@ -139,11 +139,11 @@ export default function ProfilePage() {
                             </div>
                             <div>
                                 <Label><Mail className="inline w-4 h-4 mr-1" /> Email</Label>
-                                <Input value={form.email} onChange={e => handleChange('email', e.target.value)} />
+                                <Input value={form.email} onChange={e => handleChange('email', e.target.value)} disabled/>
                             </div>
                             <div>
                                 <Label><Phone className="inline w-4 h-4 mr-1" /> Téléphone</Label>
-                                <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} />
+                                <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} disabled/>
                             </div>
                             <div>
                                 <Label>Genre</Label>

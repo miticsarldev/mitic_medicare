@@ -18,9 +18,14 @@ import {
   Star,
   Notebook,
   Timer,
+  CheckCircle2,
+  Building2,
+  Award,
+  Briefcase,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DoctorType } from "@/types/doctor";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -44,32 +49,121 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
     );
   };
 
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase();
+  };
+
   if (!doctor) return <div className="p-4 text-center">Chargement...</div>;
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Photo + nom */}
-      <Card className="w-full shadow-sm">
-        <CardHeader className="flex flex-col sm:flex-row items-center gap-4">
-          <img
-            src={doctor.avatarUrl || "/avatar-placeholder.png"}
-            alt={doctor.name}
-            className="w-24 h-24 rounded-full object-cover"
-          />
-          <div className="text-center sm:text-left">
-            <CardTitle className="text-2xl font-semibold">Dr. {doctor.name}</CardTitle>
-            <div className="flex flex-wrap gap-2 justify-center sm:justify-start items-center mt-2 text-sm text-muted-foreground">
-              <Stethoscope className="w-4 h-4" /> {doctor.specialization}
-              {doctor.isVerified && <BadgeCheck className="w-4 h-4 text-green-500 ml-2" />}
+      {/* header zone*/}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-2 sm:p-4 mb-4">
+        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+          <div className="flex flex-col items-center space-y-4">
+            <Avatar className="h-28 w-28 md:h-40 md:w-40 border-4 border-white dark:border-gray-800 shadow-lg">
+              <AvatarImage
+                src={
+                  doctor.avatarUrl ||
+                  "/placeholder.svg?height=160&width=160"
+                }
+                alt={doctor.name}
+              />
+              <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
+                {getInitials(doctor.name)}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex items-center space-x-1">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`h-5 w-5 ${i < Math.floor(doctor.averageRating)
+                    ? "text-yellow-400 fill-yellow-400"
+                    : i < Math.ceil(doctor.averageRating)
+                      ? "text-yellow-400 fill-yellow-400 opacity-50"
+                      : "text-gray-300 dark:text-gray-600"
+                    }`}
+                />
+              ))}
+              <span className="ml-2 text-sm font-medium">
+                {doctor.averageRating.toFixed(1)} ({doctor.reviewsCount || 0}{" "}
+                avis)
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 text-center md:text-left">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-50">
+                  {doctor.name}
+                </h1>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
+                  <Badge variant="secondary" className="text-primary">
+                    {doctor.specialization}
+                  </Badge>
+                  {doctor.isVerified && (
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                    >
+                      <CheckCircle2 className="mr-1 h-3 w-3" /> Vérifié
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    {doctor.department?.name || ""}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">
+                    {doctor.experience} 
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Pratique médicale
+                  </p>
+                </div>
+              </div>
+
               {doctor.isIndependent && (
-                <Badge variant="secondary" className="ml-2">
-                  Médecin indépendant
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">
+                      {new Intl.NumberFormat("fr-ML", {
+                        style: "currency",
+                        currency: "XOF",
+                        minimumFractionDigits: 0,
+                      }).format(doctor.consultationFee?.toNumber() || 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Tarif consultation
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        </CardHeader>
-      </Card>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
         {/* Tabs */}
@@ -131,7 +225,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                                 <div className="font-medium">{appt.patient.user.name}</div>
                                 <div className="text-xs text-muted-foreground">{appt.patient.user.email}</div>
                                 <div className="text-xs text-muted-foreground mt-1">
-                                   {new Date(appt.scheduledAt).toLocaleDateString()} - {new Date(appt.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                  {new Date(appt.scheduledAt).toLocaleDateString()} - {new Date(appt.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   Motif : {appt.reason || "Aucun motif fourni."}
