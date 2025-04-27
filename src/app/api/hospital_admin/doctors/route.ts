@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
                         name: true,
                         email: true,
                         phone: true,
+                        isActive: true,
                         profile: {
                             select: {
                                 bio: true,
@@ -155,6 +156,7 @@ export async function GET(request: NextRequest) {
                 experience: doctor.experience,
                 consultationFee: doctor.consultationFee,
                 isVerified: doctor.isVerified,
+                isActive: doctor.user.isActive,
                 isIndependent: doctor.isIndependent,
                 availableForChat: doctor.availableForChat,
                 createdAt: doctor.createdAt,

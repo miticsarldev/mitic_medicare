@@ -93,62 +93,13 @@ export default function ProfilePage() {
                 description: "Impossible de mettre à jour le profil.",
                 variant: "destructive",
             })
-            console.error("Erreur lors de la mise à jour du profil", err)
+            console.error("Erreur lors de la mise à jour du profil :", err)
         } finally {
             setLoading(false)
         }
     }
 
-    if (!admin) {
-        return (
-            <div className="p-10 max-w-6xl mx-auto space-y-6 animate-pulse">
-                <div>
-                    <div className="h-8 bg-muted rounded w-1/3 mb-2"></div>
-                    <div className="h-4 bg-muted rounded w-1/2"></div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Colonne gauche skeleton */}
-                    <Card className="col-span-1">
-                        <CardContent className="flex flex-col items-center text-center py-8 space-y-4">
-                            <div className="w-24 h-24 rounded-full bg-muted" />
-                            <div className="h-4 bg-muted rounded w-1/2" />
-                            <div className="h-3 bg-muted rounded w-2/3" />
-                            <div className="space-y-2 mt-4 w-full">
-                                <div className="h-3 bg-muted rounded w-3/4 mx-auto" />
-                                <div className="h-3 bg-muted rounded w-2/3 mx-auto" />
-                                <div className="h-3 bg-muted rounded w-1/2 mx-auto" />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Colonne droite skeleton */}
-                    <div className="col-span-1 md:col-span-2 space-y-6">
-                        {[...Array(3)].map((_, i) => (
-                            <Card key={i}>
-                                <CardHeader>
-                                    <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-                                </CardHeader>
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {[...Array(4)].map((_, j) => (
-                                        <div key={j}>
-                                            <div className="h-3 bg-muted rounded w-1/3 mb-2"></div>
-                                            <div className="h-10 bg-muted rounded"></div>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        ))}
-
-                        <div className="flex justify-end">
-                            <div className="h-10 w-32 bg-muted rounded"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
+    if (!admin) return <div className="p-6 text-center">Chargement...</div>
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -189,11 +140,11 @@ export default function ProfilePage() {
                             </div>
                             <div>
                                 <Label><Mail className="inline w-4 h-4 mr-1" /> Email</Label>
-                                <Input value={form.email} onChange={e => handleChange('email', e.target.value)} />
+                                <Input value={form.email} onChange={e => handleChange('email', e.target.value)} disabled/>
                             </div>
                             <div>
                                 <Label><Phone className="inline w-4 h-4 mr-1" /> Téléphone</Label>
-                                <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} />
+                                <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} disabled/>
                             </div>
                             <div>
                                 <Label>Genre</Label>

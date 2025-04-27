@@ -31,6 +31,7 @@ type Doctor = {
   name: string
   specialization: string
   isVerified: boolean
+  isActive: boolean
   availableForChat: boolean
   averageRating: number
   patientsCount: number
@@ -147,6 +148,34 @@ export default function DoctorTable() {
     setSpecialtyFilter([])
     setMinRating(0)
     setCurrentPage(1)
+  }
+
+  //methode pour activer/desactiver un médecin
+  const toggleActive = async (doctorId: string, isActive: boolean) => {
+    setLoading(true)
+    try {
+      await fetch("/api/hospital_admin/doctors/toggle-active", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doctorId, isActive }),
+      })
+      //recharger la page apres la mise à jour
+      const resDoctors = await fetch("/api/hospital_admin/doctors")
+      const dataDoctors = await resDoctors.json()
+      setDoctors(dataDoctors.doctors)
+      toast({
+        title: "État du médecin mis à jour",
+        description: `Le médecin a été ${isActive ? "activé" : "désactivé"} avec succès.`,
+      })
+    } catch (err) {
+      console.error("Erreur lors de la mise à jour de l'état du médecin", err)
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la mise à jour de l'état du médecin.",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Filtrage et pagination
@@ -316,13 +345,13 @@ export default function DoctorTable() {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginatedDoctors.map((doc) => (
-              <DoctorCard key={doc.id} doctor={doc} onChangeDepartment={() => onChangeDepartmentRequest(doc)} />
+              <DoctorCard key={doc.id} doctor={doc} onChangeDepartment={() => onChangeDepartmentRequest(doc)} onChangeStatus={toggleActive}/>
             ))}
           </div>
         ) : (
           <div className="flex flex-col gap-4 overflow-y-auto max-h-[70vh] pr-2">
             {paginatedDoctors.map((doc) => (
-              <DoctorCard key={doc.id} doctor={doc} onChangeDepartment={() => onChangeDepartmentRequest(doc)} />
+              <DoctorCard key={doc.id} doctor={doc} onChangeDepartment={() => onChangeDepartmentRequest(doc)} onChangeStatus={toggleActive}/>
             ))}
           </div>
         )}

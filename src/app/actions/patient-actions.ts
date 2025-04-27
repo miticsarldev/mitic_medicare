@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { BloodType, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { Patient } from "@/types/patient";
 
 type GetPatientsOptions = {
   search?: string;
@@ -401,3 +402,210 @@ export async function bulkExportPatients(patientIds: string[]) {
     return { error: "Failed to export patients" };
   }
 }
+
+export const getPatientById = async (id: string): Promise<Patient> => {
+  const data = await prisma.patient.findUnique({
+    where: { id },
+    include: {
+      user: {
+        include: {
+          profile: true,
+        },
+      },
+      appointments: {
+        include: {
+          doctor: {
+            include: {
+              user: true,
+            },
+          },
+          hospital: true,
+        },
+      },
+      medicalHistories: true,
+      medicalRecords: {
+        include: {
+          hospital: true,
+          doctor: {
+            include: {
+              user: true,
+            },
+          },
+          attachments: true,
+        },
+      },
+      prescriptions: {
+        include: {
+          doctor: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      },
+      vitalSigns: true,
+      reviews: true,
+    },
+  });
+
+  if (!data) {
+    throw new Error(`Patient not found`);
+  }
+
+  const mapped: Patient = {
+    dateOfBirth: data.user.dateOfBirth ?? new Date(0),
+    id: data.id,
+    userId: data.userId,
+    bloodType: data.bloodType ?? undefined,
+    allergies: typeof data.allergies === "string"
+      ? data.allergies.split(",").map((s) => s.trim())
+      : data.allergies ?? undefined,
+    emergencyContact: data.emergencyContact ?? undefined,
+    emergencyPhone: data.emergencyPhone ?? undefined,
+    insuranceProvider: data.insuranceProvider ?? undefined,
+    insuranceNumber: data.insuranceNumber ?? undefined,
+    medicalNotes: data.medicalNotes ?? undefined,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+
+    user: {
+      ...data.user,
+      profile: data.user.profile
+        ? {
+            address: data.user.profile.address ?? undefined,
+            city: data.user.profile.city ?? undefined,
+            state: data.user.profile.state ?? undefined,
+            zipCode: data.user.profile.zipCode ?? undefined,
+            country: data.user.profile.country ?? undefined,
+            bio: data.user.profile.bio ?? undefined,
+            avatarUrl: data.user.profile.avatarUrl ?? undefined,
+            genre: data.user.profile.genre ?? undefined,
+            createdAt: data.user.profile.createdAt ?? undefined,
+            updatedAt: data.user.profile.updatedAt ?? undefined,
+          }
+        : undefined,
+    },
+
+    appointments: data.appointments?.map((a) => ({
+      id: a.id,
+      scheduledAt: a.scheduledAt,
+      endTime: a.endTime ?? new Date(0),
+      status: a.status,
+      type: a.type ?? undefined,
+      reason: a.reason ?? undefined,
+      notes: a.notes ?? undefined,
+      cancellationReason: a.cancellationReason ?? undefined,
+      createdAt: a.createdAt,
+      updatedAt: a.updatedAt,
+      doctor: {
+        id: a.doctor.id,
+        specialization: a.doctor.specialization,
+        user: {
+          id: a.doctor.user.id,
+          name: a.doctor.user.name,
+          email: a.doctor.user.email,
+        },
+      },
+      hospital: a.hospital
+        ? {
+          id: a.hospital.id,
+          name: a.hospital.name,
+          city: a.hospital.city,
+        }
+        : undefined,
+    })),
+
+    medicalHistories: data.medicalHistories?.map((h) => ({
+      id: h.id,
+      title: h.title,
+      condition: h.condition,
+      diagnosedDate: h.diagnosedDate ?? undefined,
+      status: h.status,
+      details: h.details ?? undefined,
+      createdBy: h.createdBy,
+      createdAt: h.createdAt,
+      updatedAt: h.updatedAt,
+    })),
+
+    medicalRecords: data.medicalRecords?.map((m) => ({
+      id: m.id,
+      diagnosis: m.diagnosis,
+      treatment: m.treatment ?? undefined,
+      notes: m.notes ?? undefined,
+      followUpNeeded: m.followUpNeeded,
+      followUpDate: m.followUpDate ?? undefined,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+      hospital: m.hospital
+        ? {
+          id: m.hospital.id,
+          name: m.hospital.name,
+        }
+        : undefined,
+      doctor: {
+        id: m.doctor.id,
+        user: {
+          id: m.doctor.user.id,
+          name: m.doctor.user.name,
+        },
+      },
+      attachments: m.attachments.map((att) => ({
+        id: att.id,
+        fileName: att.fileName,
+        fileType: att.fileType,
+        fileUrl: att.fileUrl,
+        fileSize: att.fileSize,
+        uploadedAt: att.uploadedAt,
+      })),
+    })),
+
+    prescriptions: data.prescriptions?.map((p) => ({
+      id: p.id,
+      medicationName: p.medicationName,
+      dosage: p.dosage,
+      frequency: p.frequency,
+      duration: p.duration ?? undefined,
+      instructions: p.instructions ?? undefined,
+      isActive: p.isActive,
+      startDate: p.startDate,
+      endDate: p.endDate ?? undefined,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      doctor: {
+        id: p.doctor.id,
+        user: {
+          id: p.doctor.user.id,
+          name: p.doctor.user.name,
+        },
+      },
+    })),
+
+    vitalSigns: data.vitalSigns?.map((v) => ({
+      id: v.id,
+      temperature: v.temperature ? Number(v.temperature) : undefined,
+      heartRate: v.heartRate ?? undefined,
+      bloodPressureSystolic: v.bloodPressureSystolic ?? undefined,
+      bloodPressureDiastolic: v.bloodPressureDiastolic ?? undefined,
+      respiratoryRate: v.respiratoryRate ?? undefined,
+      oxygenSaturation: v.oxygenSaturation ?? undefined,
+      weight: v.weight ? Number(v.weight) : undefined,
+      height: v.height ? Number(v.height) : undefined,
+      notes: v.notes ?? undefined,
+      recordedAt: v.recordedAt,
+      createdAt: v.createdAt,
+    })),
+
+    reviews: data.reviews?.map((r) => ({
+      id: r.id,
+      doctorId: r.doctorId,
+      rating: r.rating,
+      comment: r.comment ?? undefined,
+      isAnonymous: r.isAnonymous,
+      isApproved: r.isApproved,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    })),
+  };
+
+  return mapped;
+};

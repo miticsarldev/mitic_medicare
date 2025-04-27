@@ -14,6 +14,7 @@ import {
     StickyNote,
     FileText,
     Stethoscope,
+    User2,
 } from "lucide-react"
 import {
     Dialog,
@@ -31,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { FC } from "react"
+import Link from "next/link"
 
 interface Doctor {
     name: string
@@ -101,7 +103,7 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
                         {patient.lastAppointment && (
                             <Badge variant="outline" className="text-xs w-fit flex items-center gap-1 col-span-2">
                                 <Calendar className="h-3 w-3" />
-                                Prochain RDV: {format(new Date(patient.lastAppointment), "dd/MM/yyyy")}
+                                Dernier RDV: {format(new Date(patient.lastAppointment), "dd/MM/yyyy")}
                             </Badge>
                         )}
                         <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
@@ -120,10 +122,12 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
                                     <Info className="w-4 h-4 mr-1" /> Détails
                                 </Button>
                             </DialogTrigger>
+
                             <DialogContent className="max-w-3xl">
                                 <DialogHeader>
                                     <DialogTitle className="text-lg">Dossier de {patient.name}</DialogTitle>
                                 </DialogHeader>
+
                                 <Tabs defaultValue="allergies" className="mt-4">
                                     <TabsList className="grid grid-cols-3 gap-2">
                                         <TabsTrigger value="allergies">
@@ -188,8 +192,18 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
                                         </ul>
                                     </TabsContent>
                                 </Tabs>
+
+                                {/* Bouton "Voir profil" */}
+                                <div className="flex justify-end mt-6">
+                                    <Link href={`/dashboard/hopital_admin/patients/${patient.id}`}>
+                                        <Button variant="default">
+                                            <User2 className="w-4 h-4 mr-1" /> Voir le profil complet
+                                        </Button>
+                                    </Link>
+                                </div>
                             </DialogContent>
                         </Dialog>
+
                     </div>
                 </div>
             </CardContent>

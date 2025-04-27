@@ -4,24 +4,13 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import {
-  AlertTriangle,
-  Check,
-  Eye,
-  EyeOff,
-  Key,
-  Loader2,
-  LogOut,
-  Shield,
-  User,
-} from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Key, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -35,11 +24,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +36,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { changePassword, deleteAccount } from "@/app/dashboard/patient/actions";
 
 const passwordFormSchema = z
   .object({
@@ -71,15 +59,13 @@ const passwordFormSchema = z
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export default function SecurityPage() {
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
-  const [emailNotificationsEnabled, setEmailNotificationsEnabled] =
-    useState(true);
-  const [smsNotificationsEnabled, setSmsNotificationsEnabled] = useState(false);
   const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // Default values for the form
   const defaultValues: Partial<PasswordFormValues> = {
@@ -94,101 +80,62 @@ export default function SecurityPage() {
     mode: "onChange",
   });
 
-  function onSubmit(data: PasswordFormValues) {
+  async function onSubmit(data: PasswordFormValues) {
     setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await changePassword(data.currentPassword, data.newPassword);
       toast({
         title: "Mot de passe mis à jour",
         description: "Votre mot de passe a été modifié avec succès.",
       });
       form.reset();
-    }, 1000);
-
-    console.log(data);
+    } catch (error) {
+      console.error("Error changing password:", error);
+      toast({
+        title: "Erreur",
+        description:
+          "Impossible de modifier votre mot de passe. Vérifiez que votre mot de passe actuel est correct.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  const handleTwoFactorToggle = (checked: boolean) => {
-    setTwoFactorEnabled(checked);
-    toast({
-      title: checked
-        ? "Authentification à deux facteurs activée"
-        : "Authentification à deux facteurs désactivée",
-      description: checked
-        ? "Votre compte est maintenant plus sécurisé."
-        : "Votre compte est maintenant moins sécurisé.",
-      variant: checked ? "default" : "destructive",
-    });
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "SUPPRIMER") {
+      toast({
+        title: "Erreur",
+        description:
+          "Veuillez saisir SUPPRIMER pour confirmer la suppression de votre compte.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await deleteAccount();
+      toast({
+        title: "Compte supprimé",
+        description:
+          "Votre compte a été supprimé avec succès. Vous allez être redirigé vers la page d'accueil.",
+        variant: "destructive",
+      });
+      setDeleteAccountDialogOpen(false);
+
+      // Redirect to home page
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer votre compte.",
+        variant: "destructive",
+      });
+    }
   };
-
-  const handleEmailNotificationsToggle = (checked: boolean) => {
-    setEmailNotificationsEnabled(checked);
-    toast({
-      title: checked
-        ? "Notifications par email activées"
-        : "Notifications par email désactivées",
-      description: "Vos préférences de notification ont été mises à jour.",
-    });
-  };
-
-  const handleSmsNotificationsToggle = (checked: boolean) => {
-    setSmsNotificationsEnabled(checked);
-    toast({
-      title: checked
-        ? "Notifications par SMS activées"
-        : "Notifications par SMS désactivées",
-      description: "Vos préférences de notification ont été mises à jour.",
-    });
-  };
-
-  const handleDeleteAccount = () => {
-    // Delete account logic would go here
-    toast({
-      title: "Compte supprimé",
-      description:
-        "Votre compte a été supprimé avec succès. Vous allez être redirigé vers la page d'accueil.",
-      variant: "destructive",
-    });
-    setDeleteAccountDialogOpen(false);
-
-    // Redirect to home page
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 2000);
-  };
-
-  // Recent activities
-  const recentActivities = [
-    {
-      id: "1",
-      type: "login",
-      device: "iPhone 13",
-      location: "Paris, France",
-      ip: "192.168.1.1",
-      date: "Aujourd'hui, 10:45",
-      current: true,
-    },
-    {
-      id: "2",
-      type: "password_change",
-      device: "MacBook Pro",
-      location: "Paris, France",
-      ip: "192.168.1.1",
-      date: "Hier, 18:30",
-      current: false,
-    },
-    {
-      id: "3",
-      type: "login",
-      device: "Chrome sur Windows",
-      location: "Lyon, France",
-      ip: "192.168.1.2",
-      date: "15 mars 2025, 14:20",
-      current: false,
-    },
-  ];
 
   return (
     <div className="container mx-auto p-4">
@@ -203,7 +150,7 @@ export default function SecurityPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-12">
-        <div className="md:col-span-8 lg:col-span-9 space-y-6">
+        <div className="md:col-span-6 lg:col-span-8 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -356,151 +303,9 @@ export default function SecurityPage() {
               </Form>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Authentification à deux facteurs
-              </CardTitle>
-              <CardDescription>
-                Ajoutez une couche de sécurité supplémentaire à votre compte.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="font-medium">
-                    Authentification à deux facteurs
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Recevez un code de vérification par SMS lors de la
-                    connexion.
-                  </div>
-                </div>
-                <Switch
-                  checked={twoFactorEnabled}
-                  onCheckedChange={handleTwoFactorToggle}
-                />
-              </div>
-
-              {twoFactorEnabled && (
-                <Alert>
-                  <Check className="h-4 w-4" />
-                  <AlertTitle>
-                    Authentification à deux facteurs activée
-                  </AlertTitle>
-                  <AlertDescription>
-                    Votre compte est protégé par une authentification à deux
-                    facteurs. Un code de vérification sera envoyé à votre
-                    téléphone lors de la connexion.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Activité récente
-              </CardTitle>
-              <CardDescription>
-                Consultez les activités récentes sur votre compte.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {activity.type === "login"
-                            ? "Connexion"
-                            : "Changement de mot de passe"}
-                        </span>
-                        {activity.current && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-green-50 text-green-700 border-green-200"
-                          >
-                            Session actuelle
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {activity.device} • {activity.location}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        IP: {activity.ip} • {activity.date}
-                      </div>
-                    </div>
-                    {!activity.current && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                      >
-                        Déconnecter
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full">
-                Voir toutes les activités
-              </Button>
-            </CardFooter>
-          </Card>
         </div>
 
-        <div className="md:col-span-4 lg:col-span-3 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                Gérez vos préférences de notification.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">
-                    Notifications par email
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Recevez des notifications par email.
-                  </div>
-                </div>
-                <Switch
-                  checked={emailNotificationsEnabled}
-                  onCheckedChange={handleEmailNotificationsToggle}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">
-                    Notifications par SMS
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Recevez des notifications par SMS.
-                  </div>
-                </div>
-                <Switch
-                  checked={smsNotificationsEnabled}
-                  onCheckedChange={handleSmsNotificationsToggle}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
+        <div className="md:col-span-6 lg:col-span-4 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-destructive">Zone de danger</CardTitle>
@@ -509,20 +314,6 @@ export default function SecurityPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">
-                  Déconnexion de toutes les sessions
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Déconnectez-vous de toutes les sessions actives sur tous vos
-                  appareils.
-                </p>
-                <Button variant="outline" className="w-full" size="sm">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Déconnecter toutes les sessions
-                </Button>
-              </div>
-
               <Separator />
 
               <div className="space-y-2">
@@ -559,8 +350,8 @@ export default function SecurityPage() {
                         <AlertTitle>Attention</AlertTitle>
                         <AlertDescription>
                           La suppression de votre compte entraînera la perte de
-                          toutes vos données, y compris votre historique
-                          médical, vos rendez-vous et vos abonnements.
+                          toutes vos données, y compris votre historique médical
+                          et vos rendez-vous.
                         </AlertDescription>
                       </Alert>
                       <p className="text-sm">
@@ -568,7 +359,11 @@ export default function SecurityPage() {
                         <span className="font-bold">SUPPRIMER</span> pour
                         confirmer.
                       </p>
-                      <Input placeholder="SUPPRIMER" />
+                      <Input
+                        placeholder="SUPPRIMER"
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      />
                     </div>
                     <DialogFooter>
                       <Button

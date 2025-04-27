@@ -29,6 +29,7 @@ export interface Doctor {
     availableForChat?: boolean
     address?: string
     isVerified?: boolean
+    isActive?: boolean
     department?: {
         id: string
         name: string
@@ -45,9 +46,10 @@ export interface Doctor {
 interface DoctorCardProps {
     doctor: Doctor
     onChangeDepartment?: () => void // prop pour appeler le modal parent
+    onChangeStatus?: (doctorId: string, isActive: boolean) => void // prop pour appeler le modal parent
 }
 
-export function DoctorCard({ doctor, onChangeDepartment }: DoctorCardProps) {
+export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: DoctorCardProps) {
     const [showDetails, setShowDetails] = useState(false)
 
     return (
@@ -111,17 +113,18 @@ export function DoctorCard({ doctor, onChangeDepartment }: DoctorCardProps) {
                     <div className="flex items-center gap-1 col-span-2">
                         <button
                             onClick={(e) => {
-                                e.preventDefault()
-                                alert(`Docteur ${doctor.name} ${doctor.isVerified ? 'désactivé' : 'activé'}`)
+                                e.stopPropagation();
+                                if (onChangeStatus) {
+                                    onChangeStatus(doctor.id, !doctor.isActive); 
+                                }
                             }}
-                            className={`text-xs px-2 py-0.5 rounded-md border ${doctor.isVerified
-                                ? 'text-green-600 border-green-600 hover:bg-green-50'
-                                : 'text-muted-foreground border-muted hover:bg-muted/30'
+                            className={`text-xs px-2 py-0.5 rounded-md border ${doctor.isActive
+                                    ? 'text-muted-foreground border-muted hover:bg-muted/30 hover:text-muted-foreground'
+                                    : 'text-green-600 border-green-600 hover:bg-green-50'
                                 }`}
                         >
-                            {doctor.isVerified ? 'Désactiver' : 'Activer'}
+                            {doctor.isActive ? 'Désactiver' : 'Activer'}
                         </button>
-
                         {doctor.isVerified && (
                             <div className="flex items-center gap-1 text-green-600 text-xs ml-2">
                                 <CheckCircle className="w-4 h-4" />
