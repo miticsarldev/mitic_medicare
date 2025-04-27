@@ -11,6 +11,6 @@ export default async function DoctorPage({ params }: { params: { id: string } })
         return <DoctorProfilePage doctor={doctor} />;
     } catch (error) {
         console.error("Erreur de chargement du médecin:", error);
-        return notFound(); // ou <div>Erreur...</div> si tu préfères
+        return notFound();
     }
 }
