@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import {  NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -9,11 +9,10 @@ export async function GET() {
     try {
         const session = await getServerSession(authOptions);
 
-        if (!session || session.user.role !== "HOSPITAL_ADMIN") {
+        if (!session || !session.user || session.user.role !== "HOSPITAL_ADMIN") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Récupérer l’hôpital de l’admin connecté
         const hospital = await prisma.hospital.findUnique({
             where: { adminId: session.user.id },
             select: { id: true },
@@ -25,7 +24,6 @@ export async function GET() {
 
         const hospitalId = hospital.id;
 
-        // Récupérer les patients avec au moins un rendez-vous dans l'hôpital
         const patientsWithAppointments = await prisma.patient.findMany({
             where: {
                 appointments: {
@@ -41,9 +39,15 @@ export async function GET() {
                 user: {
                     select: {
                         name: true,
+                        email: true,
+                        phone: true,
                         profile: {
                             select: {
                                 genre: true,
+                                address: true,
+                                city: true,
+                                state: true,
+                                zipCode: true,
                             },
                         },
                     },
@@ -52,8 +56,22 @@ export async function GET() {
                     where: { hospitalId },
                     orderBy: { scheduledAt: "desc" },
                     select: {
-                        scheduledAt: true,
                         id: true,
+                        scheduledAt: true,
+                        status: true,
+                        reason: true,
+                        doctor: {
+                            select: {
+                                id: true,
+                                specialization: true,
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    },
+                                },
+                            },
+                        },
                     },
                 },
                 medicalRecords: {
@@ -68,16 +86,36 @@ export async function GET() {
             },
         });
 
-
         const patientsFormatted = patientsWithAppointments.map((patient) => {
-            const lastAppointment = patient.appointments[0];
+            const appointments = patient.appointments.map((appt) => ({
+                id: appt.id,
+                scheduledAt: appt.scheduledAt,
+                status: appt.status,
+                reason: appt.reason,
+                doctor: {
+                    id: appt.doctor.id,
+                    name: appt.doctor.user.name,
+                    email: appt.doctor.user.email,
+                    specialty: appt.doctor.specialization,
+                },
+            }));
+
+            const lastAppointment = appointments[0];
 
             return {
                 id: patient.id,
                 name: patient.user.name,
                 gender: patient.user.profile?.genre || "Non précisé",
-                numberOfAppointments: patient.appointments.length,
+                email: patient.user.email,
+                phone: patient.user.phone,
+                address: patient.user.profile?.address || null,
+                city: patient.user.profile?.city || null,
+                state: patient.user.profile?.state || null,
+                zipCode: patient.user.profile?.zipCode || null,
+                numberOfMedicalRecords: patient.medicalRecords.length,
+                numberOfAppointments: appointments.length,
                 lastAppointment: lastAppointment?.scheduledAt || null,
+                appointments,
                 medicalRecords: patient.medicalRecords,
                 healthStatus: {
                     allergies: patient.allergies || null,
@@ -85,7 +123,6 @@ export async function GET() {
                 },
             };
         });
-
 
         return NextResponse.json({ patients: patientsFormatted });
     } catch (error) {
