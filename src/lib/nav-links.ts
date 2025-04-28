@@ -437,12 +437,7 @@ export const hospitalDoctorNavItems = [
         title: "Aperçu",
         url: "/dashboard/hopital_doctor/overview",
         icon: ClipboardList,
-      },
-      {
-        title: "Statistiques & Analyse",
-        url: "/dashboard/hopital_doctor/statistics",
-        icon: FileText,
-      },
+      },     
     ],
   },
   {
@@ -484,6 +479,18 @@ export const hospitalDoctorNavItems = [
     ],
   },
   {
+    title: "Paramètres & Sécurité",
+    icon: Settings,
+    url: "/dashboard/hopital_admin/settings",
+    items: [
+      { title: "Mon Profil", url: "/dashboard/hopital_doctor/settings/profile" },
+      {
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/hopital_doctor/settings/security",
+      },
+    ],
+  },
+  {
     title: "Assistance & Aide",
     icon: LifeBuoy,
     url: "/dashboard/hopital_doctor/support",
@@ -510,7 +517,7 @@ export function getNavItems(role: UserRole) {
     case "INDEPENDENT_DOCTOR":
       return doctorNavItems;
     case "HOSPITAL_DOCTOR":
-      return hospitalAdminNavItems;
+      return hospitalDoctorNavItems;
     case "PATIENT":
       return patientNavItems;
     default:
