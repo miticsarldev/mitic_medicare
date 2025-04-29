@@ -18,13 +18,11 @@ import {
   Heart,
   //   Info,
   Loader2,
-  TreesIcon as Lungs,
   MapPin,
   Phone,
   Save,
   Thermometer,
   User,
-  Weight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -76,10 +74,9 @@ import { cn } from "@/lib/utils";
 import {
   getPatientProfile,
   updatePatientProfile,
-  updatePatientVitals,
 } from "@/app/dashboard/patient/actions";
 import { countries } from "@/constant";
-import { BloodType } from "@prisma/client";
+// import { BloodType } from "@prisma/client";
 // import { Calendar } from "../ui/calendar";
 // import { fr } from "date-fns/locale";
 // import { format } from "date-fns";
@@ -162,7 +159,6 @@ type VitalsFormValues = z.infer<typeof vitalsFormSchema>;
 export default function ProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isVitalsLoading, setIsVitalsLoading] = useState(false);
   const [openCountry, setOpenCountry] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -319,32 +315,6 @@ export default function ProfilePage() {
     }
   }
 
-  async function onSubmitVitals(data: VitalsFormValues) {
-    setIsVitalsLoading(true);
-    try {
-      await updatePatientVitals(data);
-
-      toast({
-        title: "Signes vitaux mis à jour",
-        description: "Vos signes vitaux ont été mis à jour avec succès.",
-      });
-
-      // Update local vitals data
-      setVitalsData({
-        ...vitalsData,
-        ...data,
-      });
-    } catch (error) {
-      console.error("Error updating vitals:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour les signes vitaux.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsVitalsLoading(false);
-    }
-  }
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

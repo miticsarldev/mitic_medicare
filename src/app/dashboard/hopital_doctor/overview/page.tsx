@@ -13,10 +13,9 @@ export default function Dashboard() {
   const filterOptions = ['jour', 'semaine', 'mois', 'année'];
   const [appointmentFilter, setAppointmentFilter] = useState("semaine");
   const [typeFilter, setTypeFilter] = useState("mois");
-  const [cancellationFilter, setCancellationFilter] = useState("mois");
+  const [cancellationFilter] = useState("mois");
   const [patientStats, setPatientStats] = useState<PatientStat[]>([]);
   const [appointmentTypeStats, setAppointmentTypeStats] = useState([]);
-  const [cancellationStats, setCancellationStats] = useState([]);
   const { data: session } = useSession(); 
   const [data, setData] = useState <DashboardData | null>(null);
   console.log(data);
@@ -42,7 +41,7 @@ export default function Dashboard() {
           fetch(`${baseUrl}?filter=${cancellationFilter}`),
         ]);
   
-        const [overviewData, patientData, typeData, cancelData] = await Promise.all([
+        const [overviewData, patientData, typeData] = await Promise.all([
           overviewRes.json(),
           patientRes.json(),
           typeRes.json(),
@@ -52,7 +51,7 @@ export default function Dashboard() {
         if (overviewRes.ok) setData(overviewData);
         if (patientRes.ok) setPatientStats([{ name: appointmentFilter, patients: patientData.patientsSeen }]);
         if (typeRes.ok) setAppointmentTypeStats(typeData.appointmentTypeStats || []);
-        if (cancelRes.ok) setCancellationStats(cancelData.cancellations || []);
+        
   
       } catch (error) {
         console.error("Erreur lors du chargement des données :", error);
