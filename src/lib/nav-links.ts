@@ -13,7 +13,6 @@ import {
   FolderHeart,
   MessageSquare,
   UserCheck,
-  UserPlus,
   Stethoscope,
 } from "lucide-react";
 
@@ -254,13 +253,14 @@ export const patientNavItems = [
     url: "/dashboard/patient/doctors",
     items: [
       {
-        title: "Médecins",
+        title: "Rechercher un Médecin",
         url: "/dashboard/patient/doctors/search",
       },
       {
         title: "Centres Médicaux",
         url: "/dashboard/patient/doctors/hospitals",
       },
+      { title: "Mes Médecins", url: "/dashboard/patient/doctors/my-doctors" },
     ],
   },
   {
@@ -321,11 +321,6 @@ export const hospitalAdminNavItems = [
       {
         title: "Liste des Docteurs",
         url: "/dashboard/hopital_admin/doctors/list",
-      },
-      {
-        title: "Ajouter un Docteur",
-        url: "/dashboard/hopital_admin/doctors/add",
-        icon: UserPlus,
       },
       {
         title: "Planning des Docteurs",
@@ -391,22 +386,18 @@ export const hospitalAdminNavItems = [
       },
     ],
   },
-  // {
-  //   title: "Paramètres & Sécurité",
-  //   icon: Settings,
-  //   url: "/dashboard/hopital_admin/settings",
-  //   items: [
-  //     { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
-  //     {
-  //       title: "Sécurité & Confidentialité",
-  //       url: "/dashboard/hopital_admin/settings/security",
-  //     },
-  //     {
-  //       title: "Utilisateurs & Accès",
-  //       url: "/dashboard/hopital_admin/settings/access",
-  //     },
-  //   ],
-  // },
+  {
+    title: "Paramètres & Sécurité",
+    icon: Settings,
+    url: "/dashboard/hopital_admin/settings",
+    items: [
+      { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
+      {
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/hopital_admin/settings/security",
+      },
+    ],
+  },
   {
     title: "Assistance & Aide",
     icon: LifeBuoy,
@@ -437,12 +428,7 @@ export const hospitalDoctorNavItems = [
         title: "Aperçu",
         url: "/dashboard/hopital_doctor/overview",
         icon: ClipboardList,
-      },
-      {
-        title: "Statistiques & Analyse",
-        url: "/dashboard/hopital_doctor/statistics",
-        icon: FileText,
-      },
+      },     
     ],
   },
   {
@@ -484,6 +470,18 @@ export const hospitalDoctorNavItems = [
     ],
   },
   {
+    title: "Paramètres & Sécurité",
+    icon: Settings,
+    url: "/dashboard/hopital_admin/settings",
+    items: [
+      { title: "Mon Profil", url: "/dashboard/hopital_doctor/settings/profile" },
+      {
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/hopital_doctor/settings/security",
+      },
+    ],
+  },
+  {
     title: "Assistance & Aide",
     icon: LifeBuoy,
     url: "/dashboard/hopital_doctor/support",
@@ -510,7 +508,7 @@ export function getNavItems(role: UserRole) {
     case "INDEPENDENT_DOCTOR":
       return doctorNavItems;
     case "HOSPITAL_DOCTOR":
-      return hospitalAdminNavItems;
+      return hospitalDoctorNavItems;
     case "PATIENT":
       return patientNavItems;
     default:

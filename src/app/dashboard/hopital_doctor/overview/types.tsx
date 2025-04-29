@@ -1,4 +1,3 @@
-// types.ts
 export interface WeeklyPatients {
     date: string;
     count: number;
@@ -32,4 +31,3 @@ export interface WeeklyPatients {
     pendingAppointmentsList: PendingAppointment[];
     reviews: Review[];
   }
-  

@@ -88,6 +88,13 @@ export default function PatientMedicalRecord() {
   const [condition, setCondition] = useState("");
   const [details, setDetails] = useState("");
   const [diagnosedDate, setDiagnosedDate] = useState("");
+  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [medicationName, setMedicationName] = useState("");
+  const [dosage, setDosage] = useState("");
+  const [frequency, setFrequency] = useState("");
+  const [duration, setDuration] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -159,13 +166,49 @@ export default function PatientMedicalRecord() {
         const updatedPatient = await response.json();
         setPatient(updatedPatient);
         setIsModalOpen(false);
-        setTitle('');
-        setCondition('');
-        setDetails('');
-        setDiagnosedDate('');
+        // Réinitialiser les champs...
       }
     } catch (err) {
       console.error("Erreur lors de l'ajout de l'historique", err);
+    }
+  };
+  const handlePrescriptionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const lastAppointment = completedAppointments[0];
+      const medicalRecordId = lastAppointment?.medicalRecord?.id;
+  
+      const response = await fetch(`/api/hospital_doctor/patient/${patient.id}/prescription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          medicalRecordId,
+          medicationName,
+          dosage,
+          frequency,
+          duration: duration || undefined,
+          instructions: instructions || undefined,
+          startDate
+        })
+      });
+  
+      if (response.ok) {
+        const updatedPatient = await response.json();
+        setPatient(updatedPatient);
+        setIsPrescriptionModalOpen(false);
+        // Réinitialiser les champs
+        setMedicationName('');
+        setDosage('');
+        setFrequency('');
+        setDuration('');
+        setInstructions('');
+        setStartDate(new Date().toISOString().split('T')[0]);
+      }
+    } catch (err) {
+      console.error("Erreur lors de l'ajout de la prescription", err);
     }
   };
 
@@ -290,13 +333,18 @@ export default function PatientMedicalRecord() {
         </Card>
       )}
 
-      {/* Section : Prescriptions en cours */}
+     {/* Section : Prescriptions en cours */}
       <Card className="bg-white dark:bg-gray-800 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Pill className="w-6 h-6 text-green-500" />
-            Prescriptions en cours
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+              <Pill className="w-6 h-6 text-green-500" />
+              Prescriptions en cours
+            </CardTitle>
+            <Button onClick={() => setIsPrescriptionModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Nouvelle prescription
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {prescriptions.length > 0 ? (
@@ -385,6 +433,84 @@ export default function PatientMedicalRecord() {
           </form>
         </DialogContent>
       </Dialog>
+      {/* Modal pour ajouter une prescription */}
+<Dialog open={isPrescriptionModalOpen} onOpenChange={setIsPrescriptionModalOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Nouvelle prescription</DialogTitle>
+      <DialogDescription>
+        Renseignez les détails du médicament à prescrire.
+      </DialogDescription>
+    </DialogHeader>
+    <form onSubmit={handlePrescriptionSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="medicationName">Nom du médicament</Label>
+        <Input
+          id="medicationName"
+          value={medicationName}
+          onChange={(e) => setMedicationName(e.target.value)}
+          placeholder="Ex: Paracétamol"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="dosage">Dosage</Label>
+        <Input
+          id="dosage"
+          value={dosage}
+          onChange={(e) => setDosage(e.target.value)}
+          placeholder="Ex: 500mg"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="frequency">Fréquence</Label>
+        <Input
+          id="frequency"
+          value={frequency}
+          onChange={(e) => setFrequency(e.target.value)}
+          placeholder="Ex: 3 fois par jour"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="duration">Durée (optionnel)</Label>
+        <Input
+          id="duration"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          placeholder="Ex: 7 jours"
+        />
+      </div>
+      <div>
+      <Label htmlFor="startDate">Date de début</Label>
+      <Input
+        id="startDate"
+        type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        required
+      />
+    </div>
+      <div>
+        <Label htmlFor="instructions">Instructions (optionnel)</Label>
+        <Textarea
+          id="instructions"
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          placeholder="Instructions particulières"
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setIsPrescriptionModalOpen(false)}>
+          Annuler
+        </Button>
+        <Button type="submit">Prescrire</Button>
+      </div>
+    </form>
+  </DialogContent>
+</Dialog>
     </div>
   );
+  
 }

@@ -274,7 +274,7 @@ export default function DoctorAppointmentHistoryPage() {
                     <div className="flex items-center space-x-4">
                       <div className="relative h-10 w-10 rounded-full overflow-hidden">
                         <Image
-                          src={appointment.avatar || "/placeholder.svg"}
+                          src={appointment.avatar }
                           alt={appointment.patientName}
                           className="h-full w-full object-cover"
                         />
@@ -343,7 +343,7 @@ export default function DoctorAppointmentHistoryPage() {
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full overflow-hidden">
                   <Image
-                    src={selectedAppointment.avatar || "/placeholder.svg"}
+                    src={selectedAppointment.avatar }
                     alt={selectedAppointment.patientName}
                     className="h-full w-full object-cover"
                   />
