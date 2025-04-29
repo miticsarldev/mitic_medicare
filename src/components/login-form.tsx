@@ -37,7 +37,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
-
   const { toast } = useToast();
   const router = useRouter();
   const { data: session } = useSession();
@@ -93,17 +92,27 @@ const LoginForm = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+
       const result = await signIn("credentials", {
         redirect: false,
         identifier: data.identifier,
         password: data.password,
+        callbackUrl,
       });
+
+      console.log(result);
 
       if (result?.ok) {
         toast({
           title: "Connexion réussie",
           description: "Vous êtes maintenant connecté à votre compte.",
         });
+
+        if (result.url) {
+          window.location.href = result.url;
+        }
       } else {
         toast({
           variant: "destructive",
@@ -117,7 +126,7 @@ const LoginForm = () => {
         variant: "destructive",
         title: "Échec de la connexion",
         description:
-          "Quelque chose s'est mal passé. Veuillez vérifier vos identifiants et réessayer plus tard.",
+          "Quelque chose s'est mal passé. Veuillez vérifier vos identifiants et réessayer.",
       });
     }
   };

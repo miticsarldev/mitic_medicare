@@ -123,7 +123,7 @@ export function ServicesSection() {
   const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <section className="py-6 md:py-10 relative overflow-hidden bg-gradient-to-b from-blue-50/50 via-white to-white dark:from-background dark:via-background/95 dark:to-background/90">
+    <section className="py-6 z-0 md:py-10 relative overflow-hidden bg-gradient-to-b from-blue-50/50 via-white to-white dark:from-background dark:via-background/95 dark:to-background/90">
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-64 h-64 bg-blue-400/10 dark:bg-blue-400/5 rounded-full blur-3xl" />
@@ -134,7 +134,7 @@ export function ServicesSection() {
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.03]" />
       </div>
 
-      <div className="mx-auto px-4 relative z-10">
+      <div className="mx-auto px-4 relative z-10 py-10 md:py-0">
         <div className="text-center space-y-4 mb-16">
           <motion.div
             initial={{ opacity: 0, y: -10 }}

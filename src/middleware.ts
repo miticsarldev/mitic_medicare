@@ -6,10 +6,16 @@ import { UserRole } from "@prisma/client";
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-  const { pathname } = req.nextUrl;
+  const { pathname, origin } = req.nextUrl;
 
   if (!token) {
-    return NextResponse.redirect(new URL("/auth", req.url));
+    const callbackUrl = encodeURIComponent(
+      req.nextUrl.pathname + req.nextUrl.search
+    );
+    return NextResponse.redirect(
+      new URL(`/auth?callbackUrl=${callbackUrl}`, origin)
+    );
+    // return NextResponse.redirect(new URL("/auth", req.url));
   }
 
   const userRole = token?.role as UserRole;

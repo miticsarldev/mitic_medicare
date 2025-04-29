@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import {
   ArrowRight,
@@ -154,7 +153,7 @@ export function CareGiver() {
                 >
                   <Button
                     size="lg"
-                    className="bg-primary hover:bg-primary/90 text-white gap-2 px-6 py-6 rounded-xl text-lg font-medium"
+                    className="bg-primary hover:bg-primary/90 gap-2 px-6 py-6 rounded-xl text-lg font-medium"
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                   >
@@ -167,13 +166,6 @@ export function CareGiver() {
                     </motion.div>
                   </Button>
                 </motion.div>
-
-                <Link
-                  href="#testimonials"
-                  className="text-primary font-medium hover:underline"
-                >
-                  Voir les témoignages
-                </Link>
               </div>
 
               <div className="mt-8 flex items-center gap-2">

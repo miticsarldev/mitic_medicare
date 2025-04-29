@@ -25,8 +25,6 @@ import { getProfileLink } from "@/lib/utils";
 export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
   const profileLink = getProfileLink(user?.role ?? "SUPER_ADMIN");
 
-  console.log({ user });
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-2 rounded-full">

@@ -1,10 +1,29 @@
 "use client";
 import React, { useState } from "react";
 import { Rendez_vous, stats } from "@/components/stats";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowRight, ArrowUp, Check, Download, RefreshCw } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  Check,
+  Download,
+  RefreshCw,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { AppointmentsChart } from "@/components/chart-medecin-indepandant";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
@@ -131,7 +150,9 @@ const MainPage = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm font-medium">{prochain_rdv.patient}</p>
+                    <p className="text-sm font-medium">
+                      {prochain_rdv.patient}
+                    </p>
                     <div className="flex items-center">
                       <span className="text-xs text-muted-foreground">
                         {prochain_rdv.motif}
@@ -142,7 +163,10 @@ const MainPage = () => {
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
                     <p className="text-sm">
-                      {format(new Date(prochain_rdv.appointmentDate), "dd/MM/yyyy")}
+                      {format(
+                        new Date(prochain_rdv.appointmentDate),
+                        "dd/MM/yyyy"
+                      )}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {prochain_rdv.documents} documents

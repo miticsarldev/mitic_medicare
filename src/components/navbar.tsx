@@ -44,13 +44,15 @@ export default async function Navbar() {
 
         {/* Actions section */}
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="border-[#107ACA] text-[#107ACA] hidden sm:flex"
-            size="sm"
-          >
-            Centre d&apos;aide
-          </Button>
+          <Link href="/help">
+            <Button
+              variant="outline"
+              className="border-[#107ACA] text-[#107ACA] hidden sm:flex"
+              size="sm"
+            >
+              Centre d&apos;aide
+            </Button>
+          </Link>
 
           {/* User section */}
           {session ? (
@@ -97,13 +99,15 @@ export default async function Navbar() {
               </SheetHeader>
               <nav className="flex flex-col space-y-4">
                 <div className="h-px bg-border my-2" />
-                <Button
-                  variant="outline"
-                  className="border-[#107ACA] text-[#107ACA] w-full justify-start"
-                  size="sm"
-                >
-                  Centre d&apos;aide
-                </Button>
+                <Link href="/help">
+                  <Button
+                    variant="outline"
+                    className="border-[#107ACA] text-[#107ACA] w-full justify-start"
+                    size="sm"
+                  >
+                    Centre d&apos;aide
+                  </Button>
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
