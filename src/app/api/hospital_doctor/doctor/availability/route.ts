@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { days, startTime, endTime, slotDuration, specificDates, isRecurring } = body;
+    const { days, startTime, endTime, specificDates, isRecurring } = body;
 
     // Validation des données
     if (!startTime || !endTime) {
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

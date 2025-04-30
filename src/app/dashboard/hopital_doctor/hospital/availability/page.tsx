@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { useTheme } from 'next-themes';
@@ -292,7 +291,7 @@ const AvailabilitySettings = () => {
                 </div>
               ) : (
                 <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Configurez une plage horaire pour voir l'aperçu
+                  Configurez une plage horaire pour voir l&apos;aperçu
                 </p>
               )}
             </div>
