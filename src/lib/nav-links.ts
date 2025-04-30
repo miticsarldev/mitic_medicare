@@ -466,6 +466,7 @@ export const hospitalDoctorNavItems = [
         title: "Informations de l’Hôpital",
         url: "/dashboard/hopital_doctor/hospital/details",
       },
+      { title: "Disponibilité", url: "/dashboard/hopital_doctor/hospital/availability" },
       { title: "Planning", url: "/dashboard/hopital_doctor/hospital/schedule" },
     ],
   },
