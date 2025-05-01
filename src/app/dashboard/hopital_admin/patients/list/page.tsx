@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { PatientCard } from "./patientCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface Appointment {
   id: string;
@@ -66,7 +65,11 @@ export default function PatientList() {
     gender: [] as string[],
     minAppointments: 0,
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6; // nombre de patients par page
 
+
+  // Fonction pour récupérer la liste des patients depuis l'API
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -82,27 +85,44 @@ export default function PatientList() {
     fetchPatients();
   }, []);
 
+  // Met à jour le filtre de recherche lorsque l'utilisateur tape dans le champ de recherche
   const toggleGender = (gender: string) => {
     setGenderFilter((prev) =>
       prev.includes(gender) ? prev.filter((g) => g !== gender) : [...prev, gender]
     );
   };
 
+  // Réinitialise les filtres à leurs valeurs par défaut
   const resetFilters = () => {
     setSearch("");
     setGenderFilter([]);
     setMinAppointments(0);
   };
 
+  // Filtre les patients en fonction de la recherche, du genre et du nombre minimum de rendez-vous
   const filteredPatients = useMemo(() => {
     return patients.filter((p) => {
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-      const matchesGender =
-        genderFilter.length === 0 || genderFilter.includes(p.gender);
+      const matchesGender = genderFilter.length === 0 || genderFilter.includes(p.gender);
       const matchesAppointments = p.numberOfAppointments >= minAppointments;
       return matchesSearch && matchesGender && matchesAppointments;
     });
   }, [patients, search, genderFilter, minAppointments]);
+
+
+  // Calcule la liste des patients paginés en fonction de la page actuelle et du nombre d'éléments par page
+  const paginatedPatients = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredPatients.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredPatients, currentPage]);
+
+  // Calcule le nombre total de pages en fonction du nombre total de patients filtrés
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+
+  // Met à jour le nombre de pages lorsque les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, genderFilter, minAppointments]);
 
   const FilterPanel = ({ isInDialog = false }: { isInDialog?: boolean }) => (
     <Card className={isInDialog ? "" : "hidden md:block"}>
@@ -110,7 +130,6 @@ export default function PatientList() {
         <CardTitle>Filtres</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Recherche */}
         <div className="space-y-2">
           <label htmlFor="search" className="text-sm font-medium">
             Recherche
@@ -131,38 +150,36 @@ export default function PatientList() {
             />
           </div>
         </div>
+
         <Separator />
-        {/* Genre */}
+
         <div className="space-y-2">
           <label className="text-sm font-medium">Genre</label>
           <div className="space-y-1.5">
-            {['MALE', 'FEMALE'].map((gender) => (
+            {["MALE", "FEMALE"].map((gender) => (
               <div key={gender} className="flex items-center gap-2">
                 <Checkbox
                   id={`gender-${gender}`}
-                  checked={
-                    isInDialog
-                      ? mobileTempFilters.gender.includes(gender)
-                      : genderFilter.includes(gender)
-                  }
+                  checked={isInDialog ? mobileTempFilters.gender.includes(gender) : genderFilter.includes(gender)}
                   onCheckedChange={() =>
                     isInDialog
                       ? setMobileTempFilters((prev) => ({
-                          ...prev,
-                          gender: prev.gender.includes(gender)
-                            ? prev.gender.filter((g) => g !== gender)
-                            : [...prev.gender, gender],
-                        }))
+                        ...prev,
+                        gender: prev.gender.includes(gender)
+                          ? prev.gender.filter((g) => g !== gender)
+                          : [...prev.gender, gender],
+                      }))
                       : toggleGender(gender)
                   }
                 />
-                <Label htmlFor={`gender-${gender}`}>{gender}</Label>
+                <Label htmlFor={`gender-${gender}`}>{gender === "MALE" ? 'Homme' : 'femme'}</Label>
               </div>
             ))}
           </div>
         </div>
+
         <Separator />
-        {/* Nombre min. RDV */}
+
         <div className="space-y-2">
           <label className="text-sm font-medium">Nombre min. de rendez-vous</label>
           <Input
@@ -172,14 +189,14 @@ export default function PatientList() {
             onChange={(e) =>
               isInDialog
                 ? setMobileTempFilters((prev) => ({
-                    ...prev,
-                    minAppointments: parseInt(e.target.value) || 0,
-                  }))
+                  ...prev,
+                  minAppointments: parseInt(e.target.value) || 0,
+                }))
                 : setMinAppointments(parseInt(e.target.value) || 0)
             }
           />
         </div>
-        {/* Boutons */}
+
         {isInDialog ? (
           <Button
             className="w-full"
@@ -203,11 +220,12 @@ export default function PatientList() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-10">
-      {/* Desktop Filters */}
+      {/* Filtres Desktop */}
       <aside className="hidden lg:block w-64">
         <FilterPanel />
       </aside>
-      {/* Mobile Filters Trigger */}
+
+      {/* Filtres Mobile */}
       <div className="lg:hidden flex justify-end">
         <Button
           variant="outline"
@@ -215,9 +233,11 @@ export default function PatientList() {
           className="mb-4"
           onClick={() => setShowMobileFilters(true)}
         >
-          <Filter className="h-4 w-4 mr-2" /> Filtres
+          <Filter className="h-4 w-4 mr-2" />
+          Filtres
         </Button>
       </div>
+
       <Dialog open={showMobileFilters} onOpenChange={setShowMobileFilters}>
         <DialogContent>
           <DialogHeader>
@@ -228,73 +248,74 @@ export default function PatientList() {
       </Dialog>
 
       <div className="flex-1 space-y-4">
-        {/* Active Badges */}
         {(search || genderFilter.length > 0 || minAppointments > 0) && (
           <div className="flex flex-wrap gap-2">
             {search && (
               <Badge variant="outline" className="flex items-center gap-1">
                 Recherche: {search}
-                <X
-                  className="w-3 h-3 cursor-pointer"
-                  onClick={() => setSearch("")} />
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setSearch("")} />
               </Badge>
             )}
             {genderFilter.map((gender) => (
-              <Badge
-                key={gender}
-                variant="outline"
-                className="flex items-center gap-1"
-              >
-                {gender}
-                <X
-                  className="w-3 h-3 cursor-pointer"
-                  onClick={() => toggleGender(gender)}
-                />
+              <Badge key={gender} variant="outline" className="flex items-center gap-1">
+                {gender === "MALE" ? 'Homme' : 'femme'}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => toggleGender(gender)} />
               </Badge>
             ))}
             {minAppointments > 0 && (
               <Badge variant="outline" className="flex items-center gap-1">
                 Min. RDV: {minAppointments}
-                <X
-                  className="w-3 h-3 cursor-pointer"
-                  onClick={() => setMinAppointments(0)}
-                />
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setMinAppointments(0)} />
               </Badge>
             )}
           </div>
         )}
 
-        {/* Patient cards or loading skeleton */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, idx) => (
-              <Card key={idx} className="p-4 animate-pulse">
-                <div className="flex items-center gap-4 mb-4">
-                  <Skeleton className="w-12 h-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-5/6" />
-                  <Skeleton className="h-3 w-4/6" />
-                </div>
-              </Card>
-            ))}
-          </div>
+          {Array.from({ length: itemsPerPage }).map((_, idx) => (
+            <div key={idx} className="border rounded-lg p-4 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+              <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            </div>
+          ))}
+        </div>
         ) : filteredPatients.length === 0 ? (
           <div className="text-center text-muted-foreground mt-10">
             Aucun patient ne correspond à vos filtres.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPatients.map((patient) => (
-              <PatientCard key={patient.id} patient={patient} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedPatients.map((patient) => (
+                <PatientCard key={patient.id} patient={patient} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6 gap-2">
+                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  precedant 
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <Button
+                    key={i}
+                    size="sm"
+                    variant={currentPage === i + 1 ? "default" : "outline"}
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  suivant
+                </Button>
+              </div>
+            )}
+          </>
         )}
+
       </div>
     </div>
   );

@@ -7,32 +7,14 @@ import {
 import {
     Calendar,
     CalendarDays,
-    Info,
     MapPin,
     Phone,
-    AlertCircle,
-    StickyNote,
-    FileText,
-    Stethoscope,
     User2,
 } from "lucide-react"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FC } from "react"
 import Link from "next/link"
+import { FC } from "react"
 
 interface Doctor {
     name: string
@@ -54,8 +36,8 @@ interface MedicalRecord {
 }
 
 interface HealthStatus {
-    allergies: string | null;
-    notes: string | null;
+    allergies: string | null
+    notes: string | null
 }
 
 export interface Patient {
@@ -65,7 +47,7 @@ export interface Patient {
     phone?: string
     address?: string
     numberOfAppointments: number
-    lastAppointment?: string;
+    lastAppointment?: string
     appointments: Appointment[]
     medicalRecords: MedicalRecord[]
     healthStatus: HealthStatus
@@ -90,9 +72,12 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
                 </div>
                 <div className="flex-1">
                     <h2 className="text-md font-semibold leading-tight truncate">{patient.name}</h2>
-                    <p className="text-xs text-muted-foreground">{patient.gender}</p>
+                    <p className="text-xs text-muted-foreground">
+                        {patient.gender === "MALE" ? "Homme" : "Femme"}
+                    </p>
                 </div>
             </CardHeader>
+
             <CardContent className="p-4">
                 <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                     <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
@@ -115,98 +100,17 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
                             <span>{patient.phone || "N° inconnu"}</span>
                         </div>
                     </div>
+
                     <div className="mt-3">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-full">
-                                    <Info className="w-4 h-4 mr-1" /> Détails
-                                </Button>
-                            </DialogTrigger>
-
-                            <DialogContent className="max-w-3xl">
-                                <DialogHeader>
-                                    <DialogTitle className="text-lg">Dossier de {patient.name}</DialogTitle>
-                                </DialogHeader>
-
-                                <Tabs defaultValue="allergies" className="mt-4">
-                                    <TabsList className="grid grid-cols-3 gap-2">
-                                        <TabsTrigger value="allergies">
-                                            <AlertCircle className="w-4 h-4 mr-1" /> Santé
-                                        </TabsTrigger>
-                                        <TabsTrigger value="appointments">
-                                            <CalendarDays className="w-4 h-4 mr-1" /> Rendez-vous
-                                        </TabsTrigger>
-                                        <TabsTrigger value="records">
-                                            <FileText className="w-4 h-4 mr-1" /> Médical
-                                        </TabsTrigger>
-                                    </TabsList>
-
-                                    <TabsContent value="allergies" className="space-y-3 mt-4">
-                                        <div>
-                                            <h3 className="font-semibold flex items-center gap-1">
-                                                <AlertCircle className="w-4 h-4" /> Allergies
-                                            </h3>
-                                            <p>{patient.healthStatus.allergies || "Aucune"}</p>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold flex items-center gap-1">
-                                                <StickyNote className="w-4 h-4" /> Notes médicales
-                                            </h3>
-                                            <p>{patient.healthStatus.notes || "Aucune"}</p>
-                                        </div>
-                                    </TabsContent>
-
-                                    <TabsContent value="appointments" className="mt-4">
-                                        <ul className="space-y-2 max-h-64 overflow-auto">
-                                            {patient.appointments.map((appt) => (
-                                                <li key={appt.id} className="border p-2 rounded-md">
-                                                    <p className="text-sm">
-                                                        <span className="font-semibold">Date:</span> {new Date(appt.scheduledAt).toLocaleString()}
-                                                    </p>
-                                                    <p className="text-sm">
-                                                        <span className="font-semibold">Raison:</span> {appt.reason}
-                                                    </p>
-                                                    <p className="text-sm flex items-center gap-1">
-                                                        <Stethoscope className="w-4 h-4" /> Dr. {appt.doctor.name} ({appt.doctor.specialty})
-                                                    </p>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </TabsContent>
-
-                                    <TabsContent value="records" className="mt-4">
-                                        <ul className="space-y-2 max-h-64 overflow-auto">
-                                            {patient.medicalRecords.map((record) => (
-                                                <li key={record.id} className="border p-2 rounded-md">
-                                                    <p className="text-sm">
-                                                        <span className="font-semibold">Diagnostic:</span> {record.diagnosis}
-                                                    </p>
-                                                    <p className="text-sm">
-                                                        <span className="font-semibold">Traitement:</span> {record.treatment}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Créé le {new Date(record.createdAt).toLocaleDateString()}
-                                                    </p>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </TabsContent>
-                                </Tabs>
-
-                                {/* Bouton "Voir profil" */}
-                                <div className="flex justify-end mt-6">
-                                    <Link href={`/dashboard/hopital_admin/patients/${patient.id}`}>
-                                        <Button variant="default">
-                                            <User2 className="w-4 h-4 mr-1" /> Voir le profil complet
-                                        </Button>
-                                    </Link>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-
+                        <Link href={`/dashboard/hopital_admin/patients/${patient.id}`}>
+                            <Button variant="outline" size="sm" className="w-full">
+                                <User2 className="w-4 h-4 mr-1" />
+                                Voir le profil
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             </CardContent>
         </Card>
     )
-}  
+}

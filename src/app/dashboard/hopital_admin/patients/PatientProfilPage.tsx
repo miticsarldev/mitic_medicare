@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Patient } from "@/types/patient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CreateAppointmentModal } from "./CreateAppointmentModal";
-import { CreateVitalSignModal } from "./CreateVitalSignModal";
 import { CreateMedicalHistoryModal } from "./CreateMedicalHistoryModal";
 import { AppointmentStatus } from "@prisma/client";
 
@@ -68,27 +67,11 @@ type MedicalHistory = {
     updatedAt: Date;
 };
 
-//type vital signs
-type vitalSign = { 
-    id: string;
-    temperature?: number;
-    heartRate?: number;
-    bloodPressureSystolic?: number;
-    bloodPressureDiastolic?: number;
-    respiratoryRate?: number;
-    oxygenSaturation?: number;
-    weight?: number;
-    height?: number;
-    notes?: string;
-    recordedAt: Date;
-    createdAt: Date;
-  } 
 
 
 export default function PatientProfilePage({ patient }: { patient: Patient }) {
     const [appointments, setAppointments] = useState<Appointment[]>(patient.appointments || []);
     const [medicalHistories, setMedicalHistories] = useState<MedicalHistory[]>(patient.medicalHistories || []);
-    const [vitalSigns, setVitalSigns] = useState<vitalSign[]>(patient.vitalSigns || []);
     const [selectedDate, setSelectedDate] = useState(new Date());
 
     if (!patient) return <div className="p-4 text-center">Chargement...</div>;
@@ -112,10 +95,6 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
         setMedicalHistories((prev) => [...prev, newHistory]);
     }
 
-    // Fonction pour ajouter un signe vital à la liste locale
-    const addVitalSign = (newVitalSign: vitalSign) => {
-        setVitalSigns((prev) => [...prev, newVitalSign]);
-    }
 
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -252,7 +231,6 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                     <CardContent className="pt-6 space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h2 className="text-lg font-semibold text-foreground">Rendez-vous</h2>
-                                            <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} />
                                         </div>
                                         <div className="border-b mb-4"></div>
                                         {appointments?.length ? (
@@ -310,12 +288,11 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                     <CardContent className="pt-6 space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h2 className="text-lg font-semibold text-foreground">Signes vitaux</h2>
-                                            <CreateVitalSignModal patientId={patient.id} addVitalSign={addVitalSign}/>
                                         </div>
                                         <div className="border-b mb-4"></div>
-                                        {vitalSigns?.length ? (
+                                        {patient.vitalSigns?.length ? (
                                             <div className="space-y-3 text-sm text-muted-foreground">
-                                                {vitalSigns.map((vs) => (
+                                                {patient.vitalSigns.map((vs) => (
                                                     <Card key={vs.id} className="p-4 border bg-muted/50">
                                                         <div>Température : {vs.temperature} °C</div>
                                                         <div>Pression artérielle : {vs.bloodPressureDiastolic}</div>
@@ -383,7 +360,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 className="rounded-md border"
                             />
                             <div className="mt-4 w-full">
-                                <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} />
+                                <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} appointmentDate={selectedDate}/>
                             </div>
                         </CardContent>
                     </Card>
