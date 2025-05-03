@@ -65,7 +65,11 @@ export default function PatientList() {
     gender: [] as string[],
     minAppointments: 0,
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6; // nombre de patients par page
 
+
+  // Fonction pour récupérer la liste des patients depuis l'API
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -81,18 +85,21 @@ export default function PatientList() {
     fetchPatients();
   }, []);
 
+  // Met à jour le filtre de recherche lorsque l'utilisateur tape dans le champ de recherche
   const toggleGender = (gender: string) => {
     setGenderFilter((prev) =>
       prev.includes(gender) ? prev.filter((g) => g !== gender) : [...prev, gender]
     );
   };
 
+  // Réinitialise les filtres à leurs valeurs par défaut
   const resetFilters = () => {
     setSearch("");
     setGenderFilter([]);
     setMinAppointments(0);
   };
 
+  // Filtre les patients en fonction de la recherche, du genre et du nombre minimum de rendez-vous
   const filteredPatients = useMemo(() => {
     return patients.filter((p) => {
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -101,6 +108,21 @@ export default function PatientList() {
       return matchesSearch && matchesGender && matchesAppointments;
     });
   }, [patients, search, genderFilter, minAppointments]);
+
+
+  // Calcule la liste des patients paginés en fonction de la page actuelle et du nombre d'éléments par page
+  const paginatedPatients = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredPatients.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredPatients, currentPage]);
+
+  // Calcule le nombre total de pages en fonction du nombre total de patients filtrés
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+
+  // Met à jour le nombre de pages lorsque les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, genderFilter, minAppointments]);
 
   const FilterPanel = ({ isInDialog = false }: { isInDialog?: boolean }) => (
     <Card className={isInDialog ? "" : "hidden md:block"}>
@@ -142,15 +164,15 @@ export default function PatientList() {
                   onCheckedChange={() =>
                     isInDialog
                       ? setMobileTempFilters((prev) => ({
-                          ...prev,
-                          gender: prev.gender.includes(gender)
-                            ? prev.gender.filter((g) => g !== gender)
-                            : [...prev.gender, gender],
-                        }))
+                        ...prev,
+                        gender: prev.gender.includes(gender)
+                          ? prev.gender.filter((g) => g !== gender)
+                          : [...prev.gender, gender],
+                      }))
                       : toggleGender(gender)
                   }
                 />
-                <Label htmlFor={`gender-${gender}`}>{gender}</Label>
+                <Label htmlFor={`gender-${gender}`}>{gender === "MALE" ? 'Homme' : 'femme'}</Label>
               </div>
             ))}
           </div>
@@ -167,9 +189,9 @@ export default function PatientList() {
             onChange={(e) =>
               isInDialog
                 ? setMobileTempFilters((prev) => ({
-                    ...prev,
-                    minAppointments: parseInt(e.target.value) || 0,
-                  }))
+                  ...prev,
+                  minAppointments: parseInt(e.target.value) || 0,
+                }))
                 : setMinAppointments(parseInt(e.target.value) || 0)
             }
           />
@@ -236,7 +258,7 @@ export default function PatientList() {
             )}
             {genderFilter.map((gender) => (
               <Badge key={gender} variant="outline" className="flex items-center gap-1">
-                {gender}
+                {gender === "MALE" ? 'Homme' : 'femme'}
                 <X className="w-3 h-3 cursor-pointer" onClick={() => toggleGender(gender)} />
               </Badge>
             ))}
@@ -250,18 +272,50 @@ export default function PatientList() {
         )}
 
         {loading ? (
-          <div className="text-center text-muted-foreground mt-10">Chargement des patients...</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: itemsPerPage }).map((_, idx) => (
+            <div key={idx} className="border rounded-lg p-4 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+              <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            </div>
+          ))}
+        </div>
         ) : filteredPatients.length === 0 ? (
           <div className="text-center text-muted-foreground mt-10">
             Aucun patient ne correspond à vos filtres.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPatients.map((patient) => (
-              <PatientCard key={patient.id} patient={patient} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedPatients.map((patient) => (
+                <PatientCard key={patient.id} patient={patient} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6 gap-2">
+                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  precedant 
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <Button
+                    key={i}
+                    size="sm"
+                    variant={currentPage === i + 1 ? "default" : "outline"}
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  suivant
+                </Button>
+              </div>
+            )}
+          </>
         )}
+
       </div>
     </div>
   );

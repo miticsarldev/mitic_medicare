@@ -5,7 +5,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { SubscriptionPlan, UserRole } from "@prisma/client";
-import { DoctorType } from "@/types/doctor";
+import { format } from "date-fns"
+
 
 export async function createDoctor(formData: FormData) {
   try {
@@ -284,150 +285,288 @@ export async function assignDoctorToHospital(
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function formatAvailabilities(availabilities: any[]) {
-    const groupedByDay = availabilities.reduce((acc, curr) => {
-        if (!curr.isActive) return acc;
-        const day = dayNames[curr.dayOfWeek];
-        if (!acc[day]) acc[day] = [];
-        acc[day].push(`${curr.startTime} - ${curr.endTime}`);
-        return acc;
-    }, {} as Record<string, string[]>);
+  const groupedByDay = availabilities.reduce((acc, curr) => {
+    if (!curr.isActive) return acc;
+    const day = dayNames[curr.dayOfWeek];
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(`${curr.startTime} - ${curr.endTime}`);
+    return acc;
+  }, {} as Record<string, string[]>);
 
-    return Object.entries(groupedByDay).map(([day, slots]) => ({
-        day,
-        slots,
-    }));
+  return Object.entries(groupedByDay).map(([day, slots]) => ({
+    day,
+    slots,
+  }));
 }
 
-export async function getDoctorDetailsById(id: string){
-    try {
-        // Récupérer le médecin à partir de l'ID
-        const doctor = await prisma.doctor.findUnique({
-            where: { id },
-            select: {
+export async function getDoctorDetailsById(id: string) {
+  try {
+    // Récupérer le médecin à partir de l'ID
+    const doctor = await prisma.doctor.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        specialization: true,
+        licenseNumber: true,
+        education: true,
+        experience: true,
+        consultationFee: true,
+        isVerified: true,
+        isIndependent: true,
+        availableForChat: true,
+        createdAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+            profile: {
+              select: {
+                bio: true,
+                avatarUrl: true,
+                address: true,
+                city: true,
+                state: true,
+                country: true,
+              },
+            },
+          },
+        },
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        appointments: {
+          select: {
+            id: true,
+            scheduledAt: true,
+            status: true,
+            reason: true,
+            notes: true,
+            startTime: true,
+            endTime: true,
+            createdAt: true,
+            updatedAt: true,
+            patient: {
+              select: {
                 id: true,
-                specialization: true,
-                licenseNumber: true,
-                education: true,
-                experience: true,
-                consultationFee: true,
-                isVerified: true,
-                isIndependent: true,
-                availableForChat: true,
-                createdAt: true,
                 user: {
-                    select: {
-                        name: true,
-                        email: true,
-                        phone: true,
-                        profile: {
-                            select: {
-                                bio: true,
-                                avatarUrl: true,
-                                address: true,
-                                city: true,
-                                state: true,
-                                country: true,
-                            },
-                        },
+                  select: {
+                    name: true,
+                    email: true,
+                    phone: true,
+                    profile: {
+                      select: {
+                        avatarUrl: true,
+                        address: true,
+                        city: true,
+                        state: true,
+                        country: true,
+                        bio: true,
+                      },
                     },
+                  },
                 },
-                department: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
-                appointments: {
-                    select: {
-                        id: true,
-                        scheduledAt: true,
-                        status: true,
-                        reason: true,
-                        notes: true,
-                        startTime: true,
-                        endTime: true,
-                        createdAt: true,
-                        updatedAt: true,
-                        patient: {
-                            select: {
-                                id: true,
-                                user: {
-                                    select: {
-                                        name: true,
-                                        email: true,
-                                        phone: true,
-                                        profile: {
-                                            select: {
-                                                avatarUrl: true,
-                                                address: true,
-                                                city: true,
-                                                state: true,
-                                                country: true,
-                                                bio: true,
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                reviews: {
-                    select: { rating: true },
-                },
+              },
             },
-        });
+          },
+        },
+        reviews: {
+          select: { rating: true },
+        },
+      },
+    });
 
-        if (!doctor) {
-            throw new Error("Doctor not found");
-        }
-
-        // Récupérer les disponibilités du médecin
-        const availabilities = await prisma.doctorAvailability.findMany({
-            where: { doctorId: doctor.id, isActive: true },
-            select: {
-                dayOfWeek: true,
-                startTime: true,
-                endTime: true,
-                isActive: true,
-            },
-        });
-
-        // Calculer la note moyenne
-        const totalRatings = doctor.reviews.reduce((sum, r) => sum + r.rating, 0);
-        const averageRating = doctor.reviews.length ? totalRatings / doctor.reviews.length : 0;
-
-        const formattedSchedule = formatAvailabilities(availabilities);
-
-        // Retourner les détails complets du médecin
-        return {
-            id: doctor.id,
-            name: doctor.user.name,
-            email: doctor.user.email,
-            phone: doctor.user.phone,
-            specialization: doctor.specialization,
-            licenseNumber: doctor.licenseNumber,
-            education: doctor.education,
-            experience: doctor.experience,
-            consultationFee: doctor.consultationFee,
-            isVerified: doctor.isVerified,
-            isIndependent: doctor.isIndependent,
-            availableForChat: doctor.availableForChat,
-            createdAt: doctor.createdAt,
-            avatarUrl: doctor.user.profile?.avatarUrl,
-            bio: doctor.user.profile?.bio,
-            address: doctor.user.profile?.address,
-            city: doctor.user.profile?.city,
-            state: doctor.user.profile?.state,
-            country: doctor.user.profile?.country,
-            department: doctor.department,
-            averageRating,
-            reviewsCount: doctor.reviews.length,
-            schedule: formattedSchedule,
-            appointments: doctor.appointments,
-        };
-    } catch (error) {
-        console.error("Error fetching doctor details:", error);
-        throw new Error("Failed to fetch doctor");
+    if (!doctor) {
+      throw new Error("Doctor not found");
     }
+
+    // Récupérer les disponibilités du médecin
+    const availabilities = await prisma.doctorAvailability.findMany({
+      where: { doctorId: doctor.id, isActive: true },
+      select: {
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        isActive: true,
+      },
+    });
+
+    // Calculer la note moyenne
+    const totalRatings = doctor.reviews.reduce((sum, r) => sum + r.rating, 0);
+    const averageRating = doctor.reviews.length ? totalRatings / doctor.reviews.length : 0;
+
+    const formattedSchedule = formatAvailabilities(availabilities);
+
+    // Retourner les détails complets du médecin
+    return {
+      id: doctor.id,
+      name: doctor.user.name,
+      email: doctor.user.email,
+      phone: doctor.user.phone,
+      specialization: doctor.specialization,
+      licenseNumber: doctor.licenseNumber,
+      education: doctor.education,
+      experience: doctor.experience,
+      consultationFee: doctor.consultationFee,
+      isVerified: doctor.isVerified,
+      isIndependent: doctor.isIndependent,
+      availableForChat: doctor.availableForChat,
+      createdAt: doctor.createdAt,
+      avatarUrl: doctor.user.profile?.avatarUrl,
+      bio: doctor.user.profile?.bio,
+      address: doctor.user.profile?.address,
+      city: doctor.user.profile?.city,
+      state: doctor.user.profile?.state,
+      country: doctor.user.profile?.country,
+      department: doctor.department,
+      averageRating,
+      reviewsCount: doctor.reviews.length,
+      schedule: formattedSchedule,
+      appointments: doctor.appointments,
+    };
+  } catch (error) {
+    console.error("Error fetching doctor details:", error);
+    throw new Error("Failed to fetch doctor");
+  }
 }
+
+
+export async function getDoctorSlotsWithTakenStatus(doctorId: string, date?: Date) {
+  const timeToDate = (baseDate: Date, time: string) => {
+    const [hours, minutes] = time.split(":").map(Number)
+    const d = new Date(baseDate)
+    d.setHours(hours, minutes, 0, 0)
+    return d
+  }
+
+  // --- CAS 1 : Une date est fournie (comportement inchangé) ---
+  if (date) {
+    const dayOfWeek = date.getDay() // 0 = dimanche ... 6 = samedi
+
+    const availability = await prisma.doctorAvailability.findFirst({
+      where: {
+        doctorId,
+        dayOfWeek,
+        isActive: true,
+      },
+    })
+
+    if (!availability) {
+      return {
+        all: [],
+        taken: [],
+      }
+    }
+
+    const slots: string[] = []
+    let current = timeToDate(date, availability.startTime)
+    const end = timeToDate(date, availability.endTime)
+
+    while (current < end) {
+      slots.push(format(current, "HH:mm"))
+      current = new Date(current.getTime() + 60 * 60 * 1000) // +1h
+    }
+
+    const startOfDay = new Date(date)
+    startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(date)
+    endOfDay.setHours(23, 59, 59, 999)
+
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        doctorId,
+        scheduledAt: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+        status: {
+          notIn: ["CANCELED"],
+        },
+      },
+      select: {
+        scheduledAt: true,
+      },
+    })
+
+    const taken = appointments.map((a) => format(new Date(a.scheduledAt), "HH:mm"))
+
+    return {
+      all: slots,
+      taken,
+    }
+  }
+
+  // --- CAS 2 : Aucune date fournie → retourner toute la semaine ---
+  const today = new Date()
+  const currentDay = today.getDay()
+  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+
+  // Obtenir le lundi de la semaine courante
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - ((currentDay + 6) % 7))
+  monday.setHours(0, 0, 0, 0)
+
+  const result: Record<string, { all: string[]; taken: string[] }> = {}
+
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(monday)
+    dayDate.setDate(monday.getDate() + i)
+    const dayOfWeek = dayDate.getDay()
+
+    const availability = await prisma.doctorAvailability.findFirst({
+      where: {
+        doctorId,
+        dayOfWeek,
+        isActive: true,
+      },
+    })
+
+    if (!availability) {
+      result[days[dayOfWeek]] = { all: [], taken: [] }
+      continue
+    }
+
+    const slots: string[] = []
+    let current = timeToDate(dayDate, availability.startTime)
+    const end = timeToDate(dayDate, availability.endTime)
+
+    while (current < end) {
+      slots.push(format(current, "HH:mm"))
+      current = new Date(current.getTime() + 60 * 60 * 1000)
+    }
+
+    const startOfDay = new Date(dayDate)
+    startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(dayDate)
+    endOfDay.setHours(23, 59, 59, 999)
+
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        doctorId,
+        scheduledAt: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+        status: {
+          notIn: ["CANCELED"],
+        },
+      },
+      select: {
+        scheduledAt: true,
+      },
+    })
+
+    const taken = appointments.map((a) => format(new Date(a.scheduledAt), "HH:mm"))
+
+    result[days[dayOfWeek]] = {
+      all: slots,
+      taken,
+    }
+  }
+
+  return result
+}
+

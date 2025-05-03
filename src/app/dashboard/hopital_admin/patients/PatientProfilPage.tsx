@@ -252,7 +252,6 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                     <CardContent className="pt-6 space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h2 className="text-lg font-semibold text-foreground">Rendez-vous</h2>
-                                            <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} />
                                         </div>
                                         <div className="border-b mb-4"></div>
                                         {appointments?.length ? (
@@ -310,7 +309,6 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                     <CardContent className="pt-6 space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h2 className="text-lg font-semibold text-foreground">Signes vitaux</h2>
-                                            <CreateVitalSignModal patientId={patient.id} addVitalSign={addVitalSign}/>
                                         </div>
                                         <div className="border-b mb-4"></div>
                                         {vitalSigns?.length ? (
@@ -383,7 +381,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 className="rounded-md border"
                             />
                             <div className="mt-4 w-full">
-                                <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} />
+                                <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} appointmentDate={selectedDate}/>
                             </div>
                         </CardContent>
                     </Card>

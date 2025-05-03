@@ -57,9 +57,9 @@ export default function AppointmentsTable() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
     const [statusFilter, setStatusFilter] = useState<string>("")
-    const [typeFilter, setTypeFilter] = useState<string>("")
     const [page, setPage] = useState(1)
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+    const [dateFilter, setDateFilter] = useState<string>("")
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -87,14 +87,12 @@ export default function AppointmentsTable() {
         if (statusFilter && statusFilter !== "all") {
             filtered = filtered.filter((a) => a.status === statusFilter)
         }
-
-        if (typeFilter && typeFilter !== "all") {
-            filtered = filtered.filter((a) => a.type === typeFilter)
+        if (dateFilter) {
+            filtered = filtered.filter((a) => new Date(a.scheduledAt).toLocaleDateString() === new Date(dateFilter).toLocaleDateString())
         }
-
         setFiltered(filtered)
         setPage(1)
-    }, [statusFilter, typeFilter, appointments])
+    }, [statusFilter, dateFilter, appointments])
 
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
     const currentItems = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
@@ -109,6 +107,17 @@ export default function AppointmentsTable() {
         }
     }
 
+    const getStatusLabelFr = (status: string) => {
+        switch (status) {
+            case "CONFIRMED": return "Confirmé"
+            case "PENDING": return "En attente"
+            case "CANCELED": return "Annulé"
+            case "COMPLETED": return "Terminé"
+            default: return "Inconnu"
+        }
+    }
+
+
     return (
         <div className="p-4 space-y-6">
             <h1 className="text-2xl font-bold">Liste des rendez-vous</h1>
@@ -119,34 +128,53 @@ export default function AppointmentsTable() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-4">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-[180px] h-10">
                             <SelectValue placeholder="Filtrer par statut" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Tous les statuts</SelectItem>
                             <SelectItem value="PENDING">En attente</SelectItem>
                             <SelectItem value="COMPLETED">Complété</SelectItem>
-                            <SelectItem value="CANCELLED">Annulé</SelectItem>
+                            <SelectItem value="CANCELED">Annulé</SelectItem>
                         </SelectContent>
                     </Select>
 
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Filtrer par type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tous</SelectItem>
-                            <SelectItem value="CONSULTATION">Consultation</SelectItem>
-                            <SelectItem value="SUIVI">Suivi</SelectItem>
-                            <SelectItem value="EXAMEN">Examen</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <input
+                        type="date"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        className="w-[180px] h-10 border rounded px-3 text-sm"
+                    />
+
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            setStatusFilter("")
+                            setDateFilter("")
+                        }}
+                        className="w-[180px] h-10"
+                    >
+                        Réinitialiser
+                    </Button>
                 </CardContent>
             </Card>
 
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {loading ? (
-                    <p className="col-span-full text-center text-muted-foreground">Chargement des rendez-vous...</p>
+                    Array.from({ length: 6 }).map((_, idx) => (
+                        <Card key={idx} className="animate-pulse space-y-2 p-4">
+                            <div className="h-4 bg-muted rounded w-1/2 mb-2" />
+                            <div className="h-4 bg-muted rounded w-2/3" />
+                            <div className="h-4 bg-muted rounded w-3/4" />
+                            <div className="h-4 bg-muted rounded w-1/3" />
+                            <div className="flex gap-2 pt-2">
+                                <div className="h-8 w-20 bg-muted rounded" />
+                                <div className="h-8 w-20 bg-muted rounded" />
+                                <div className="h-8 w-28 bg-muted rounded" />
+                            </div>
+                        </Card>
+                    ))
                 ) : error ? (
                     <p className="col-span-full text-center text-red-500">{error}</p>
                 ) : currentItems.length === 0 ? (
@@ -170,7 +198,7 @@ export default function AppointmentsTable() {
                                     <ClipboardList className="w-4 h-4" /> {appt.reason}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Badge className={getStatusBadgeColor(appt.status)}>{appt.status}</Badge> - {appt.type}
+                                    <Badge className={getStatusBadgeColor(appt.status)}>{getStatusLabelFr(appt.status)}</Badge> - {appt.type}
                                 </div>
                             </CardContent>
                         </Card>

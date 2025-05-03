@@ -22,6 +22,8 @@ import { DateRange } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+
 
 interface Doctor {
     id: string
@@ -57,13 +59,21 @@ export default function AppointmentCalendarView() {
     const [selectedDoctor, setSelectedDoctor] = useState<string>("all")
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
     const [dateRange, setDateRange] = useState<DateRange | undefined>()
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchAppointments = async () => {
-            const res = await fetch("/api/hospital_admin/appointment/list")
-            const data = await res.json()
-            setAppointments(data.appointments || [])
-            setFiltered(data.appointments || [])
+            setLoading(true)
+            try {
+                const res = await fetch("/api/hospital_admin/appointment/list")
+                const data = await res.json()
+                setAppointments(data.appointments || [])
+                setFiltered(data.appointments || [])
+            } catch (err) {
+                console.error("Erreur lors du chargement des rendez-vous :", err)
+            } finally {
+                setLoading(false)
+            }
         }
         fetchAppointments()
     }, [])
@@ -147,34 +157,42 @@ export default function AppointmentCalendarView() {
                         </Popover>
                     </div>
 
-                    <div className="rounded-lg border shadow-sm p-2 bg-background dark:bg-muted">
-                        <FullCalendar
-                            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                            initialView="timeGridWeek"
-                            locale={frLocale}
-                            events={filtered.map((appt) => ({
-                                id: appt.id,
-                                title: `${appt.patient.name} (${appt.type})`,
-                                start: appt.scheduledAt,
-                                extendedProps: { appointment: appt },
-                            }))}
-                            eventClick={(info) => {
-                                const appt = info.event.extendedProps.appointment as Appointment
-                                setSelectedAppointment(appt)
-                            }}
-                            height="auto"
-                            slotMinTime="07:00:00"
-                            slotMaxTime="20:00:00"
-                            headerToolbar={{
-                                start: 'prev,next today',
-                                center: 'title',
-                                end: 'dayGridMonth,timeGridWeek,timeGridDay',
-                            }}
-                            eventClassNames="text-sm font-medium text-gray-800 dark:text-gray-100"
-                            dayHeaderClassNames="bg-muted text-muted-foreground text-sm"
-                            dayCellClassNames="bg-muted/50 dark:bg-muted/30"
-                        />
-                    </div>
+                    {loading ? (
+                        <div className="grid gap-4">
+                            <Skeleton className="h-10 w-1/3" />
+                            <Skeleton className="h-[500px] w-full rounded-md" />
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border shadow-sm p-2 bg-background dark:bg-muted">
+                            <FullCalendar
+                                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                                initialView="timeGridWeek"
+                                locale={frLocale}
+                                events={filtered.map((appt) => ({
+                                    id: appt.id,
+                                    title: `${appt.patient.name}`,
+                                    start: appt.scheduledAt,
+                                    extendedProps: { appointment: appt },
+                                }))}
+                                eventClick={(info) => {
+                                    const appt = info.event.extendedProps.appointment as Appointment
+                                    setSelectedAppointment(appt)
+                                }}
+                                height="auto"
+                                slotMinTime="07:00:00"
+                                slotMaxTime="20:00:00"
+                                headerToolbar={{
+                                    start: 'prev,next today',
+                                    center: 'title',
+                                    end: 'dayGridMonth,timeGridWeek,timeGridDay',
+                                }}
+                                eventClassNames="text-sm font-medium text-gray-800 dark:text-gray-100"
+                                dayHeaderClassNames="bg-muted text-muted-foreground text-sm"
+                                dayCellClassNames="bg-muted/50 dark:bg-muted/30"
+                            />
+                        </div>
+                    )}
+
                 </CardContent>
             </Card>
 
