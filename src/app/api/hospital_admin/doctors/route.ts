@@ -5,20 +5,40 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
-import { Availability } from "@/types/doctor";
 
-type DoctorFilters = Prisma.DoctorWhereInput;
+
 
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-function formatAvailabilities(availabilities: Availability[]) {
-    const groupedByDay = availabilities.reduce((acc, curr) => {
-        if (!curr.isActive) return acc;
-        const day = dayNames[curr.dayOfWeek];
-        if (!acc[day]) acc[day] = [];
-        acc[day].push(`${curr.startTime} - ${curr.endTime}`);
-        return acc;
-    }, {} as Record<string, string[]>);
+function formatAvailabilities(availabilities: { doctorId: string; dayOfWeek: number; startTime: string; endTime: string; isActive: boolean; }[]) {
+    const groupedByDay: Record<string, string[]> = {};
+
+    for (const availability of availabilities) {
+        if (!availability.isActive) continue;
+
+        const day = dayNames[availability.dayOfWeek];
+        if (!groupedByDay[day]) groupedByDay[day] = [];
+
+        const [startHour, startMinute] = availability.startTime.split(":").map(Number);
+        const [endHour, endMinute] = availability.endTime.split(":").map(Number);
+
+        let current = new Date();
+        current.setHours(startHour, startMinute, 0, 0);
+
+        const end = new Date();
+        end.setHours(endHour, endMinute, 0, 0);
+
+        while (current < end) {
+            const next = new Date(current.getTime() + 60 * 60 * 1000); // +1 heure
+            if (next > end) break;
+
+            const startStr = `${current.getHours().toString().padStart(2, "0")}:${current.getMinutes().toString().padStart(2, "0")}`;
+            const endStr = `${next.getHours().toString().padStart(2, "0")}:${next.getMinutes().toString().padStart(2, "0")}`;
+
+            groupedByDay[day].push(`${startStr} - ${endStr}`);
+            current = next;
+        }
+    }
 
     return Object.entries(groupedByDay).map(([day, slots]) => ({
         day,
@@ -52,7 +72,7 @@ export async function GET(request: NextRequest) {
         const isAvailable = searchParams.get("isAvailable");
         const search = searchParams.get("search");
 
-        const filters: DoctorFilters = {
+        const filters: Prisma.DoctorWhereInput = {
             hospitalId: hospital.id,
             ...(specialization && { specialization }),
             ...(isVerified !== null && { isVerified: isVerified === "true" }),

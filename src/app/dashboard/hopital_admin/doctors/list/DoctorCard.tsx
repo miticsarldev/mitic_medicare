@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
     Card, CardHeader, CardTitle, CardContent,
 } from "@/components/ui/card"
 import {
-    Dialog, DialogContent, DialogTitle, DialogDescription,
+    Dialog, DialogContent, DialogDescription,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -18,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
+import { getDoctorSlotsWithTakenStatus } from "@/app/actions/doctor-actions"
 
 export interface Doctor {
     id: string
@@ -51,6 +53,38 @@ interface DoctorCardProps {
 
 export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: DoctorCardProps) {
     const [showDetails, setShowDetails] = useState(false)
+    const [weeklySlots, setWeeklySlots] = useState<{ day: string; slot: string; taken: boolean }[]>([])
+    const [loadingSlots, setLoadingSlots] = useState(false)
+
+    useEffect(() => {
+        if (showDetails) {
+            setLoadingSlots(true)
+            getDoctorSlotsWithTakenStatus(doctor.id)
+                .then((data) => {
+                    const transformedSlots = Object.entries(data).flatMap(([day, { all, taken }]) =>
+                        all.map((slot) => ({
+                            day,
+                            slot,
+                            taken: taken.includes(slot),
+                        }))
+                    );
+                    setWeeklySlots(transformedSlots);
+                })
+                .finally(() => setLoadingSlots(false))
+        }
+    }, [showDetails, doctor.id])
+
+    const frenchDayNames: Record<string, string> = {
+        monday: "Lundi",
+        tuesday: "Mardi",
+        wednesday: "Mercredi",
+        thursday: "Jeudi",
+        friday: "Vendredi",
+        saturday: "Samedi",
+        sunday: "Dimanche",
+    }
+
+
 
     return (
         <>
@@ -115,16 +149,18 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (onChangeStatus) {
-                                    onChangeStatus(doctor.id, !doctor.isActive); 
+                                    onChangeStatus(doctor.id, !doctor.isActive);
                                 }
                             }}
                             className={`text-xs px-2 py-0.5 rounded-md border ${doctor.isActive
-                                    ? 'text-muted-foreground border-muted hover:bg-muted/30 hover:text-muted-foreground'
-                                    : 'text-green-600 border-green-600 hover:bg-green-50'
+                                ? 'text-muted-foreground border-muted hover:bg-muted/30 hover:text-muted-foreground'
+                                : 'text-green-600 border-green-600 hover:bg-green-50'
                                 }`}
                         >
                             {doctor.isActive ? 'Désactiver' : 'Activer'}
                         </button>
+
+
                         {doctor.isVerified && (
                             <div className="flex items-center gap-1 text-green-600 text-xs ml-2">
                                 <CheckCircle className="w-4 h-4" />
@@ -225,13 +261,24 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                         </TabsContent>
 
                         <TabsContent value="schedule" className="space-y-2 text-sm">
-                            {doctor.schedule && doctor.schedule.length > 0 ? (
-                                doctor.schedule.map((day) => (
-                                    <div key={day.day} className="flex items-start gap-2">
-                                        <Clock className="w-5 h-5 text-muted-foreground mt-1" />
-                                        <div>
-                                            <span className="font-semibold leading-tight">{day.day}:</span>
-                                            <div className="text-muted-foreground text-xs leading-snug">{day.slots.join(", ")}</div>
+                            {loadingSlots ? (
+                                <div className="text-center text-muted-foreground">Chargement...</div>
+                            ) : weeklySlots.length > 0 ? (
+                                Array.from(new Set(weeklySlots.map(s => s.day))).map(day => (
+                                    <div key={day}>
+                                        <div className="font-semibold">{frenchDayNames[day] || day}</div>
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            {weeklySlots
+                                                .filter(slot => slot.day === day)
+                                                .map(slot => (
+                                                    <Badge
+                                                        key={slot.slot}
+                                                        variant={"outline"}
+                                                        className={slot.taken ? "opacity-50 line-through cursor-not-allowed" : ""}
+                                                    >
+                                                        {slot.slot}
+                                                    </Badge>
+                                                ))}
                                         </div>
                                     </div>
                                 ))
@@ -239,6 +286,7 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                                 <div className="text-center text-muted-foreground">Aucun horaire disponible.</div>
                             )}
                         </TabsContent>
+
                     </Tabs>
                 </DialogContent>
             </Dialog>

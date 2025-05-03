@@ -1,9 +1,54 @@
-
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { startOfWeek, endOfWeek } from "date-fns";
+import { getWeek, getYear } from "date-fns";
+
+// Type local pour typer un rendez-vous avec patient et utilisateur
+type AppointmentWithPatient = {
+    id: string;
+    scheduledAt: Date;
+    status: string;
+    patient: {
+        id: string;
+        user: {
+            name: string;
+        };
+    };
+};
+
+type FormattedAppointment = {
+    id: string;
+    scheduledAt: Date;
+    status: string;
+    patientId: string;
+    patientName: string;
+    day: string;
+};
+
+// Fonction pour grouper les rendez-vous par semaine
+const groupAppointmentsByWeek = (appointments: AppointmentWithPatient[]) => {
+    const weeks: Record<string, FormattedAppointment[]> = {};
+
+    for (const apt of appointments) {
+        const weekKey = `${getYear(apt.scheduledAt)}-S${getWeek(apt.scheduledAt)}`;
+
+        if (!weeks[weekKey]) {
+            weeks[weekKey] = [];
+        }
+
+        weeks[weekKey].push({
+            id: apt.id,
+            scheduledAt: apt.scheduledAt,
+            status: apt.status,
+            patientId: apt.patient.id,
+            patientName: apt.patient.user.name,
+            day: apt.scheduledAt.toLocaleDateString("fr-FR", { weekday: "long" }), // jour en français
+        });
+    }
+
+    return weeks;
+};
 
 export async function GET() {
     try {
@@ -22,9 +67,6 @@ export async function GET() {
             return NextResponse.json({ error: "Hospital not found" }, { status: 404 });
         }
 
-        const startDate = startOfWeek(new Date(), { weekStartsOn: 1 }); // Lundi
-        const endDate = endOfWeek(new Date(), { weekStartsOn: 1 });     // Dimanche
-
         const doctors = await prisma.doctor.findMany({
             where: { hospitalId: hospital.id },
             select: {
@@ -32,18 +74,13 @@ export async function GET() {
                 specialization: true,
                 user: { select: { name: true } },
                 appointments: {
-                    where: {
-                        scheduledAt: {
-                            gte: startDate,
-                            lte: endDate,
-                        },
-                    },
                     select: {
                         id: true,
                         scheduledAt: true,
                         status: true,
                         patient: {
                             select: {
+                                id: true,
                                 user: {
                                     select: { name: true },
                                 },
@@ -59,18 +96,12 @@ export async function GET() {
             id: doc.id,
             name: doc.user.name,
             specialization: doc.specialization,
-            schedule: doc.appointments.map((apt) => ({
-                id: apt.id,
-                scheduledAt: apt.scheduledAt,
-                status: apt.status,
-                patientName: apt.patient.user.name,
-                day: apt.scheduledAt.toLocaleDateString("fr-FR", { weekday: "long" }),
-            })),
+            weeklyAppointments: groupAppointmentsByWeek(doc.appointments),
         }));
 
         return NextResponse.json({ doctors: formatted });
     } catch (error) {
-        console.error("Error fetching schedule:", error);
-        return NextResponse.json({ error: "Failed to fetch schedule" }, { status: 500 });
+        console.error("Error fetching full schedule:", error);
+        return NextResponse.json({ error: "Failed to fetch full schedule" }, { status: 500 });
     }
 }

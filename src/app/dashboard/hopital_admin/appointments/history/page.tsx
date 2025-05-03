@@ -22,6 +22,8 @@ import { DateRange } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+
 
 interface Doctor {
     id: string
@@ -68,7 +70,7 @@ export default function AppointmentCalendarView() {
                 setAppointments(data.appointments || [])
                 setFiltered(data.appointments || [])
             } catch (err) {
-                console.error("Erreur chargement rendez-vous", err)
+                console.error("Erreur lors du chargement des rendez-vous :", err)
             } finally {
                 setLoading(false)
             }
@@ -78,9 +80,11 @@ export default function AppointmentCalendarView() {
 
     useEffect(() => {
         let result = [...appointments]
+
         if (selectedDoctor !== "all") {
             result = result.filter((a) => a.doctor.id === selectedDoctor)
         }
+
         if (dateRange?.from && dateRange?.to) {
             result = result.filter((a) =>
                 isWithinInterval(parseISO(a.scheduledAt), {
@@ -89,6 +93,7 @@ export default function AppointmentCalendarView() {
                 })
             )
         }
+
         setFiltered(result)
     }, [selectedDoctor, dateRange, appointments])
 
@@ -108,60 +113,55 @@ export default function AppointmentCalendarView() {
     }
 
     return (
-        <div className="space-y-6 p-10">
+        <div className="p-4 space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-xl font-bold">Agenda des rendez-vous</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Filtres avec Skeleton */}
                     <div className="flex flex-wrap gap-4">
-                        {loading ? (
-                            <>
-                                <div className="h-10 w-[250px] bg-gray-200 rounded animate-pulse"></div>
-                                <div className="h-10 w-[250px] bg-gray-200 rounded animate-pulse"></div>
-                            </>
-                        ) : (
-                            <>
-                                <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                                    <SelectTrigger className="w-[250px]">
-                                        <SelectValue placeholder="Filtrer par médecin" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Tous les médecins</SelectItem>
-                                        {Array.from(new Set(appointments.map((a) => a.doctor.id))).map((id) => {
-                                            const doc = appointments.find((a) => a.doctor.id === id)?.doctor
-                                            return (
-                                                <SelectItem key={id} value={id}>{doc?.name}</SelectItem>
-                                            )
-                                        })}
-                                    </SelectContent>
-                                </Select>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-[250px] justify-start text-left font-normal">
-                                            <CalendarDays className="mr-2 h-4 w-4" />
-                                            {dateRange?.from && dateRange?.to
-                                                ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
-                                                : "Filtrer par date"}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="range"
-                                            selected={dateRange}
-                                            onSelect={setDateRange}
-                                            numberOfMonths={2}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </>
-                        )}
+                        <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                            <SelectTrigger className="w-[250px]">
+                                <SelectValue placeholder="Filtrer par médecin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tous les médecins</SelectItem>
+                                {Array.from(new Set(appointments.map((a) => a.doctor.id))).map((id) => {
+                                    const doctor = appointments.find((a) => a.doctor.id === id)?.doctor
+                                    return (
+                                        <SelectItem key={id} value={id}>
+                                            {doctor?.name}
+                                        </SelectItem>
+                                    )
+                                })}
+                            </SelectContent>
+                        </Select>
+
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-[250px] justify-start text-left font-normal">
+                                    <CalendarDays className="mr-2 h-4 w-4" />
+                                    {dateRange?.from && dateRange?.to
+                                        ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
+                                        : "Filtrer par date"}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="range"
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                />
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
-                    {/* Calendrier ou Skeleton */}
                     {loading ? (
-                        <div className="rounded-lg border shadow-sm p-2 bg-background dark:bg-muted animate-pulse" style={{ height: 600 }} />
+                        <div className="grid gap-4">
+                            <Skeleton className="h-10 w-1/3" />
+                            <Skeleton className="h-[500px] w-full rounded-md" />
+                        </div>
                     ) : (
                         <div className="rounded-lg border shadow-sm p-2 bg-background dark:bg-muted">
                             <FullCalendar
@@ -170,7 +170,7 @@ export default function AppointmentCalendarView() {
                                 locale={frLocale}
                                 events={filtered.map((appt) => ({
                                     id: appt.id,
-                                    title: `${appt.patient.name} (${appt.type})`,
+                                    title: `${appt.patient.name}`,
                                     start: appt.scheduledAt,
                                     extendedProps: { appointment: appt },
                                 }))}
@@ -181,28 +181,49 @@ export default function AppointmentCalendarView() {
                                 height="auto"
                                 slotMinTime="07:00:00"
                                 slotMaxTime="20:00:00"
-                                headerToolbar={{ start: 'prev,next today', center: 'title', end: 'dayGridMonth,timeGridWeek,timeGridDay' }}
+                                headerToolbar={{
+                                    start: 'prev,next today',
+                                    center: 'title',
+                                    end: 'dayGridMonth,timeGridWeek,timeGridDay',
+                                }}
                                 eventClassNames="text-sm font-medium text-gray-800 dark:text-gray-100"
                                 dayHeaderClassNames="bg-muted text-muted-foreground text-sm"
                                 dayCellClassNames="bg-muted/50 dark:bg-muted/30"
                             />
                         </div>
                     )}
+
                 </CardContent>
             </Card>
 
             <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
                 <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle>Détails du rendez-vous</DialogTitle></DialogHeader>
+                    <DialogHeader>
+                        <DialogTitle>Détails du rendez-vous</DialogTitle>
+                    </DialogHeader>
                     {selectedAppointment && (
                         <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2"><User className="w-4 h-4" /> {selectedAppointment.patient.name}</div>
-                            <div className="flex items-center gap-2"><ClipboardList className="w-4 h-4" /> {selectedAppointment.reason}</div>
-                            <div className="flex items-center gap-2"><CalendarDays className="w-4 h-4" /> {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}</div>
-                            <div className="flex items-center gap-2">Statut : <Badge className={getStatusColor(selectedAppointment.status)}>{selectedAppointment.status}</Badge></div>
-                            <div className="text-muted-foreground mt-2"><strong>Médecin :</strong> {selectedAppointment.doctor.name} ({selectedAppointment.doctor.specialization})</div>
-                            <div className="text-muted-foreground"><strong>Email :</strong> {selectedAppointment.patient.email}</div>
-                            <div className="text-muted-foreground"><strong>Téléphone :</strong> {selectedAppointment.patient.phone}</div>
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4" /> {selectedAppointment.patient.name}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4" /> {selectedAppointment.reason}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <CalendarDays className="w-4 h-4" /> {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                Statut : <Badge className={getStatusColor(selectedAppointment.status)}>{selectedAppointment.status}</Badge>
+                            </div>
+                            <div className="text-muted-foreground mt-2">
+                                <strong>Médecin :</strong> {selectedAppointment.doctor.name} ({selectedAppointment.doctor.specialization})
+                            </div>
+                            <div className="text-muted-foreground">
+                                <strong>Email :</strong> {selectedAppointment.patient.email}
+                            </div>
+                            <div className="text-muted-foreground">
+                                <strong>Téléphone :</strong> {selectedAppointment.patient.phone}
+                            </div>
                         </div>
                     )}
                 </DialogContent>
