@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from "next-themes";
-import { Calendar as CalendarIcon, Clock, User, Bell } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, User, X } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { fr } from 'date-fns/locale/fr';
@@ -22,7 +23,7 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-interface DoctorSchedule {
+interface DoctorData {
   id: string;
   name: string;
   hospital?: string;
@@ -40,53 +41,68 @@ interface DoctorSchedule {
     scheduledAt: Date;
     startTime: Date | null;
     endTime: Date | null;
-    status: string;
+    status: 'PENDING' | 'CONFIRMED';
     patient: {
       user: {
         name: string;
+        email: string;
+        phone: string;
       };
     };
+    notes?: string;
   }[];
 }
 
-interface AvailabilityEventResource {
-  type: 'availability';
-}
-
 interface AppointmentEventResource {
-  type: 'appointment';
   status: string;
   patientName: string;
+  patientEmail: string;
+  patientPhone: string;
+  notes?: string;
 }
-
-type EventResource = AvailabilityEventResource | AppointmentEventResource;
 
 interface CalendarEvent {
   id: string;
   title: string;
   start: Date;
   end: Date;
-  resource: EventResource;
+  resource: AppointmentEventResource;
   color?: string;
 }
 
+const CustomEvent = ({ event }: { event: CalendarEvent }) => {
+  return (
+    <div className="p-1">
+      <div className="font-medium">{event.resource.patientName}</div>
+      <div className="text-xs">
+        {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+      </div>
+    </div>
+  );
+};
+
 export default function DoctorSchedulePage() {
   const { theme } = useTheme();
-  const [schedule, setSchedule] = useState<DoctorSchedule | null>(null);
+  const [doctorData, setDoctorData] = useState<DoctorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedAppointment, setSelectedAppointment] = useState<CalendarEvent | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch('/api/hospital_doctor/hospital');
+        if (!response.ok) {
+          throw new Error('Erreur de chargement des données');
+        }
         const data = await response.json();
-        setSchedule(data.doctor);
-        setLoading(false);
+        setDoctorData(data.doctor);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur inconnue');
+        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      } finally {
         setLoading(false);
       }
     };
@@ -94,65 +110,34 @@ export default function DoctorSchedulePage() {
     fetchData();
   }, []);
 
-  const generateEvents = useCallback((schedule: DoctorSchedule, date: Date) => {
-    const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-    
-    const availabilityEvents: CalendarEvent[] = schedule.availabilities.flatMap(avail => {
-      return Array.from({ length: 4 }).map((_, weekIndex) => {
-        const baseDate = new Date(date);
-        baseDate.setDate(baseDate.getDate() + (7 * (weekIndex - 2)));
-        
-        const eventDate = new Date(baseDate);
-        eventDate.setDate(baseDate.getDate() + (avail.dayOfWeek - baseDate.getDay() + 7) % 7);
-        
-        const start = new Date(eventDate);
-        const [startHours, startMinutes] = avail.startTime.split(':').map(Number);
-        start.setHours(startHours, startMinutes, 0, 0);
-
-        const end = new Date(eventDate);
-        const [endHours, endMinutes] = avail.endTime.split(':').map(Number);
-        end.setHours(endHours, endMinutes, 0, 0);
-
-        return {
-          id: `avail-${avail.id}-${weekIndex}`,
-          title: `Disponibilité: ${days[avail.dayOfWeek]}`,
-          start,
-          end,
-          color: '#3b82f6',
-          resource: { 
-            type: 'availability'
-          }
-        };
-      });
-    });
-
-    const appointmentEvents: CalendarEvent[] = schedule.appointments.map(appt => {
+  const generateEvents = useCallback((doctor: DoctorData) => {
+    return doctor.appointments.map(appt => {
       const start = new Date(appt.scheduledAt);
       const end = appt.endTime ? new Date(appt.endTime) : new Date(start.getTime() + 30 * 60 * 1000);
     
       return {
         id: `appt-${appt.id}`,
-        title: `RDV: ${appt.patient.user.name}`,
+        title: appt.patient.user.name,
         start,
         end,
         color: appt.status === 'CONFIRMED' ? '#10b981' : '#f59e0b',
-        resource: { 
-          type: 'appointment',
+        resource: {
           status: appt.status,
-          patientName: appt.patient.user.name
+          patientName: appt.patient.user.name,
+          patientEmail: appt.patient.user.email,
+          patientPhone: appt.patient.user.phone,
+          notes: appt.notes
         }
       };
     });
-
-    return [...availabilityEvents, ...appointmentEvents];
   }, []);
 
   useEffect(() => {
-    if (schedule) {
-      const newEvents = generateEvents(schedule, currentDate);
+    if (doctorData) {
+      const newEvents = generateEvents(doctorData);
       setEvents(newEvents);
     }
-  }, [schedule, currentDate, generateEvents]);
+  }, [doctorData, generateEvents]);
 
   const bgColor = theme === "dark" ? "bg-gray-900" : "bg-gray-50";
   const cardBgColor = theme === "dark" ? "bg-gray-800" : "bg-white";
@@ -166,14 +151,14 @@ export default function DoctorSchedulePage() {
       color: 'white',
       border: '0px',
       display: 'block',
+      padding: '2px',
     };
     return { style };
   };
 
   const handleSelectEvent = (event: CalendarEvent) => {
-    if (event.resource?.type === 'appointment') {
-      alert(`Rendez-vous avec ${event.title}\nStatut: ${event.resource.status}`);
-    }
+    setSelectedAppointment(event);
+    setIsModalOpen(true);
   };
 
   const handleNavigate = (newDate: Date) => {
@@ -182,22 +167,85 @@ export default function DoctorSchedulePage() {
 
   if (loading) return <div className={`p-6 ${bgColor}`}>Chargement...</div>;
   if (error) return <div className={`p-6 ${bgColor}`}>Erreur: {error}</div>;
-  if (!schedule) return <div className={`p-6 ${bgColor}`}>Aucune donnée disponible</div>;
+  if (!doctorData) return <div className={`p-6 ${bgColor}`}>Aucune donnée disponible</div>;
 
   return (
     <div className={`p-6 space-y-6 min-h-screen ${bgColor}`}>
+      {/* Modal des détails du rendez-vous */}
+      {isModalOpen && selectedAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`${cardBgColor} rounded-lg p-6 w-full max-w-md`}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Détails du rendez-vous</h2>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Patient</h3>
+                <p className="mt-1 text-sm">{selectedAppointment.resource.patientName}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Email</h3>
+                <p className="mt-1 text-sm">{selectedAppointment.resource.patientEmail}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Téléphone</h3>
+                <p className="mt-1 text-sm">{selectedAppointment.resource.patientPhone}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Date et heure</h3>
+                <p className="mt-1 text-sm">
+                  {format(selectedAppointment.start, 'EEEE d MMMM yyyy', { locale: fr })} à{' '}
+                  {format(selectedAppointment.start, 'HH:mm')} -{' '}
+                  {format(selectedAppointment.end, 'HH:mm')}
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Statut</h3>
+                <p className="mt-1 text-sm">
+                  {selectedAppointment.resource.status === 'CONFIRMED' ? 'Confirmé' : 'En attente'}
+                </p>
+              </div>
+              
+              {selectedAppointment.resource.notes && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Notes</h3>
+                  <p className="mt-1 text-sm">{selectedAppointment.resource.notes}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <Button onClick={() => setIsModalOpen(false)}>
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* En-tête */}
       <div className="text-center">
         <h1 className={`text-3xl font-bold ${textColor}`}>Mon Planning</h1>
         <div className="flex justify-center gap-4 mt-2">
           <Badge variant="outline">
-            {schedule.hospital || "Hôpital non spécifié"}
+            {doctorData.hospital || "Hôpital non spécifié"}
           </Badge>
           <Badge variant="outline">
-            {schedule.department || "Département non spécifié"}
+            {doctorData.department || "Département non spécifié"}
           </Badge>
           <Badge variant="outline">
-            {schedule.specialization}
+            {doctorData.specialization}
           </Badge>
         </div>
       </div>
@@ -207,7 +255,7 @@ export default function DoctorSchedulePage() {
         <CardHeader>
           <CardTitle className={`flex items-center gap-2 ${textColor}`}>
             <CalendarIcon className="w-6 h-6 text-blue-500" />
-            Calendrier
+            Calendrier des rendez-vous
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -235,14 +283,16 @@ export default function DoctorSchedulePage() {
                 agenda: "Agenda",
                 date: "Date",
                 time: "Heure",
-                event: "Événement",
+                event: "Rendez-vous",
               }}
               culture="fr"
+              components={{
+                event: CustomEvent
+              }}
             />
           </div>
         </CardContent>
       </Card>
-
 
       {/* Mes horaires de travail */}
       <Card className={`${cardBgColor} shadow-sm`}>
@@ -254,12 +304,12 @@ export default function DoctorSchedulePage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {schedule.availabilities.length === 0 ? (
+            {doctorData.availabilities.length === 0 ? (
               <p className={`text-sm ${textColor}`}>
-                Aucun horaire de travail défini par l&apos;administration
+                Aucun horaire de travail défini
               </p>
             ) : (
-              schedule.availabilities.map(avail => {
+              doctorData.availabilities.map(avail => {
                 const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
                 return (
                   <div key={avail.id} className="flex items-center justify-between p-3 border rounded-md">
@@ -292,18 +342,18 @@ export default function DoctorSchedulePage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {schedule.appointments.length === 0 ? (
+            {doctorData.appointments.length === 0 ? (
               <p className={`text-sm ${textColor}`}>
                 Aucun rendez-vous à venir
               </p>
             ) : (
-              schedule.appointments.map(appt => (
+              doctorData.appointments.map(appt => (
                 <div key={appt.id} className="flex items-center justify-between p-3 border rounded-md">
                   <div>
                     <p className="font-medium">{appt.patient.user.name}</p>
                     <p>
-                      {appt.scheduledAt.toLocaleDateString()} - 
-                      {appt.startTime?.toLocaleTimeString() || 'Heure non définie'}
+                      {appt.startTime?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) || 
+                       format(new Date(appt.scheduledAt), 'HH:mm')}
                     </p>
                   </div>
                   <div>
@@ -318,22 +368,6 @@ export default function DoctorSchedulePage() {
               ))
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
-      <Card className={`${cardBgColor} shadow-sm`}>
-        <CardHeader>
-          <CardTitle className={`flex items-center gap-2 ${textColor}`}>
-            <Bell className="w-6 h-6 text-blue-500" />
-            Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className={`text-sm ${textColor}`}>
-            Les modifications de votre planning sont gérées par l&apos;administration de l&apos;hôpital.
-            Contactez-les pour toute demande de changement.
-          </p>
         </CardContent>
       </Card>
     </div>
