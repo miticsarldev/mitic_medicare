@@ -439,7 +439,7 @@ export default function SuperAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/superadmin/users/patients">
+              <a href="/dashboard/hopital_admin/patients/list">
                 <User className="h-6 w-6 text-green-500" />
                 <span>Gérer les Patients</span>
               </a>
@@ -449,7 +449,7 @@ export default function SuperAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/superadmin/notifications/tickets">
+              <a href="/dashboard/hopital_admin/support/contact">
                 <LifeBuoy className="h-6 w-6 text-cyan-500" />
                 <span>Support</span>
               </a>
@@ -459,7 +459,7 @@ export default function SuperAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/superadmin/system/settings">
+              <a href="/dashboard/hopital_admin/management/details">
                 <Settings className="h-6 w-6 text-gray-500" />
                 <span>Paramètres</span>
               </a>

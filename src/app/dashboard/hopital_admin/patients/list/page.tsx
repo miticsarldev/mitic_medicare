@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Filter, Search, X } from "lucide-react";
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { PatientCard } from "./patientCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
 
 interface Appointment {
   id: string;
@@ -53,6 +55,19 @@ interface Patient {
   };
 }
 
+type PaginationControlsProps = {
+  currentPage: number;
+  totalPages: number;
+  setCurrentPage: (page: number | ((prev: number) => number)) => void;
+};
+
+const GENDER_OPTIONS = [
+  { value: "MALE", label: "Homme" },
+  { value: "FEMALE", label: "Femme" }
+];
+
+const ITEMS_PER_PAGE = 6;
+
 export default function PatientList() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [search, setSearch] = useState("");
@@ -60,262 +75,411 @@ export default function PatientList() {
   const [minAppointments, setMinAppointments] = useState(0);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [mobileTempFilters, setMobileTempFilters] = useState({
-    search: "",
-    gender: [] as string[],
-    minAppointments: 0,
-  });
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6; // nombre de patients par page
 
-
-  // Fonction pour récupérer la liste des patients depuis l'API
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const res = await fetch("/api/hospital_admin/patients/list");
-        const data = await res.json();
-        setPatients(data.patients);
-      } catch (err) {
-        console.error("Erreur lors du chargement des patients", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPatients();
+  const fetchPatients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/hospital_admin/patients/list");
+      if (!res.ok) throw new Error("Failed to fetch patients");
+      const data = await res.json();
+      setPatients(data.patients);
+    } catch (err) {
+      console.error("Error loading patients", err);
+      setError("Impossible de charger les patients");
+      toast({
+        title: "Erreur",
+        description: "Échec du chargement des patients",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Met à jour le filtre de recherche lorsque l'utilisateur tape dans le champ de recherche
-  const toggleGender = (gender: string) => {
-    setGenderFilter((prev) =>
-      prev.includes(gender) ? prev.filter((g) => g !== gender) : [...prev, gender]
-    );
-  };
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
-  // Réinitialise les filtres à leurs valeurs par défaut
-  const resetFilters = () => {
+  const toggleGender = useCallback((gender: string) => {
+    setGenderFilter(prev =>
+      prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
+    );
+  }, []);
+
+  const resetFilters = useCallback(() => {
     setSearch("");
     setGenderFilter([]);
     setMinAppointments(0);
-  };
+    setCurrentPage(1);
+  }, []);
 
-  // Filtre les patients en fonction de la recherche, du genre et du nombre minimum de rendez-vous
   const filteredPatients = useMemo(() => {
-    return patients.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-      const matchesGender = genderFilter.length === 0 || genderFilter.includes(p.gender);
-      const matchesAppointments = p.numberOfAppointments >= minAppointments;
+    return patients.filter(patient => {
+      const matchesSearch = patient.name.toLowerCase().includes(search.toLowerCase());
+      const matchesGender = genderFilter.length === 0 || genderFilter.includes(patient.gender);
+      const matchesAppointments = patient.numberOfAppointments >= minAppointments;
       return matchesSearch && matchesGender && matchesAppointments;
     });
   }, [patients, search, genderFilter, minAppointments]);
 
-
-  // Calcule la liste des patients paginés en fonction de la page actuelle et du nombre d'éléments par page
   const paginatedPatients = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredPatients.slice(startIndex, startIndex + itemsPerPage);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredPatients.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredPatients, currentPage]);
 
-  // Calcule le nombre total de pages en fonction du nombre total de patients filtrés
-  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredPatients.length / ITEMS_PER_PAGE);
 
-  // Met à jour le nombre de pages lorsque les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, genderFilter, minAppointments]);
+  }, [filteredPatients.length]);
 
-  const FilterPanel = ({ isInDialog = false }: { isInDialog?: boolean }) => (
-    <Card className={isInDialog ? "" : "hidden md:block"}>
-      <CardHeader>
-        <CardTitle>Filtres</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="search" className="text-sm font-medium">
-            Recherche
-          </label>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+  const FilterPanel = React.memo(function FilterPanelComponent({
+    isMobile = false,
+    onApply
+  }: {
+    isMobile?: boolean;
+    onApply?: () => void;
+  }) {
+    const [localSearch, setLocalSearch] = useState(search);
+    const [localGenderFilter, setLocalGenderFilter] = useState(genderFilter);
+    const [localMinAppointments, setLocalMinAppointments] = useState(minAppointments);
+
+    useEffect(() => {
+      if (isMobile) {
+        setLocalSearch(search);
+        setLocalGenderFilter(genderFilter);
+        setLocalMinAppointments(minAppointments);
+      }
+    }, [search, genderFilter, minAppointments]);
+
+    const handleToggleGender = (gender: string) => {
+      setLocalGenderFilter(prev =>
+        prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
+      );
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Filtres</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="search">Recherche</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search"
+                type="search"
+                placeholder="Nom du patient..."
+                className="pl-9"
+                value={isMobile ? localSearch : search}
+                onChange={(e) =>
+                  isMobile
+                    ? setLocalSearch(e.target.value)
+                    : setSearch(e.target.value)
+                }
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label>Genre</Label>
+            <div className="space-y-2">
+              {GENDER_OPTIONS.map((gender) => (
+                <div key={gender.value} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`gender-${gender.value}`}
+                    checked={
+                      isMobile
+                        ? localGenderFilter.includes(gender.value)
+                        : genderFilter.includes(gender.value)
+                    }
+                    onCheckedChange={() =>
+                      isMobile
+                        ? handleToggleGender(gender.value)
+                        : toggleGender(gender.value)
+                    }
+                  />
+                  <Label htmlFor={`gender-${gender.value}`}>{gender.label}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="minAppointments">Nombre min. de rendez-vous</Label>
             <Input
-              id="search"
-              type="search"
-              placeholder="Nom du patient..."
-              className="pl-8"
-              value={isInDialog ? mobileTempFilters.search : search}
-              onChange={(e) =>
-                isInDialog
-                  ? setMobileTempFilters((prev) => ({ ...prev, search: e.target.value }))
-                  : setSearch(e.target.value)
-              }
+              id="minAppointments"
+              type="number"
+              min={0}
+              value={isMobile ? localMinAppointments : minAppointments}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 0;
+                if (isMobile) {
+                  setLocalMinAppointments(value);
+                } else {
+                  setMinAppointments(value);
+                }
+              }}
+
             />
           </div>
-        </div>
 
-        <Separator />
+          {isMobile ? (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setLocalSearch(search);
+                  setLocalGenderFilter(genderFilter);
+                  setLocalMinAppointments(minAppointments);
+                  setShowMobileFilters(false);
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  setSearch(localSearch);
+                  setGenderFilter(localGenderFilter);
+                  setMinAppointments(localMinAppointments);
+                  onApply?.();
+                }}
+              >
+                Appliquer
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={resetFilters}
+            >
+              Réinitialiser
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  });
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Genre</label>
-          <div className="space-y-1.5">
-            {["MALE", "FEMALE"].map((gender) => (
-              <div key={gender} className="flex items-center gap-2">
-                <Checkbox
-                  id={`gender-${gender}`}
-                  checked={isInDialog ? mobileTempFilters.gender.includes(gender) : genderFilter.includes(gender)}
-                  onCheckedChange={() =>
-                    isInDialog
-                      ? setMobileTempFilters((prev) => ({
-                        ...prev,
-                        gender: prev.gender.includes(gender)
-                          ? prev.gender.filter((g) => g !== gender)
-                          : [...prev.gender, gender],
-                      }))
-                      : toggleGender(gender)
-                  }
-                />
-                <Label htmlFor={`gender-${gender}`}>{gender === "MALE" ? 'Homme' : 'femme'}</Label>
-              </div>
-            ))}
-          </div>
-        </div>
+  const ActiveFilters = React.memo(function ActiveFiltersComponent() {
+    if (!search && genderFilter.length === 0 && minAppointments === 0) return null;
 
-        <Separator />
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Nombre min. de rendez-vous</label>
-          <Input
-            type="number"
-            min={0}
-            value={isInDialog ? mobileTempFilters.minAppointments : minAppointments}
-            onChange={(e) =>
-              isInDialog
-                ? setMobileTempFilters((prev) => ({
-                  ...prev,
-                  minAppointments: parseInt(e.target.value) || 0,
-                }))
-                : setMinAppointments(parseInt(e.target.value) || 0)
-            }
-          />
-        </div>
-
-        {isInDialog ? (
-          <Button
-            className="w-full"
-            onClick={() => {
-              setSearch(mobileTempFilters.search);
-              setGenderFilter(mobileTempFilters.gender);
-              setMinAppointments(mobileTempFilters.minAppointments);
-              setShowMobileFilters(false);
-            }}
-          >
-            Appliquer les filtres
-          </Button>
-        ) : (
-          <Button variant="outline" className="w-full" onClick={resetFilters}>
-            Réinitialiser les filtres
-          </Button>
+    return (
+      <div className="flex flex-wrap gap-2">
+        {search && (
+          <Badge variant="outline" className="flex items-center gap-1">
+            Recherche: {search}
+            <X
+              className="w-3 h-3 cursor-pointer"
+              onClick={() => setSearch("")}
+            />
+          </Badge>
         )}
-      </CardContent>
-    </Card>
-  );
+        {genderFilter.map((gender) => {
+          const genderLabel = GENDER_OPTIONS.find(g => g.value === gender)?.label || gender;
+          return (
+            <Badge key={gender} variant="outline" className="flex items-center gap-1">
+              {genderLabel}
+              <X
+                className="w-3 h-3 cursor-pointer"
+                onClick={() => toggleGender(gender)}
+              />
+            </Badge>
+          );
+        })}
+        {minAppointments > 0 && (
+          <Badge variant="outline" className="flex items-center gap-1">
+            Min. RDV: {minAppointments}
+            <X
+              className="w-3 h-3 cursor-pointer"
+              onClick={() => setMinAppointments(0)}
+            />
+          </Badge>
+        )}
+      </div>
+    );
+  });
 
-  return (
-    <div className="flex flex-col lg:flex-row gap-6 p-10">
-      {/* Filtres Desktop */}
-      <aside className="hidden lg:block w-64">
-        <FilterPanel />
-      </aside>
+  const LoadingSkeleton = React.memo(function LoadingSkeletonComponent() {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+          <Card key={idx} className="h-[180px]">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <Skeleton className="h-4 w-full mt-2" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  });
 
-      {/* Filtres Mobile */}
-      <div className="lg:hidden flex justify-end">
+  const EmptyState = React.memo(function EmptyStateComponent() {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 border rounded-lg">
+        <p className="text-muted-foreground mb-2">Aucun patient trouvé</p>
         <Button
           variant="outline"
           size="sm"
-          className="mb-4"
-          onClick={() => setShowMobileFilters(true)}
+          onClick={resetFilters}
         >
-          <Filter className="h-4 w-4 mr-2" />
-          Filtres
+          Réinitialiser les filtres
         </Button>
       </div>
+    );
+  });
 
-      <Dialog open={showMobileFilters} onOpenChange={setShowMobileFilters}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Filtres</DialogTitle>
-          </DialogHeader>
-          <FilterPanel isInDialog />
-        </DialogContent>
-      </Dialog>
+  const PaginationControls = React.memo(function PaginationControlsComponent({
+    currentPage,
+    totalPages,
+    setCurrentPage,
+  }: PaginationControlsProps) {
+    const visiblePages = useMemo(() => {
+      const pages: (number | string)[] = [];
+      const maxVisible = 5;
+      let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      const end = Math.min(totalPages, start + maxVisible - 1);
 
-      <div className="flex-1 space-y-4">
-        {(search || genderFilter.length > 0 || minAppointments > 0) && (
-          <div className="flex flex-wrap gap-2">
-            {search && (
-              <Badge variant="outline" className="flex items-center gap-1">
-                Recherche: {search}
-                <X className="w-3 h-3 cursor-pointer" onClick={() => setSearch("")} />
-              </Badge>
-            )}
-            {genderFilter.map((gender) => (
-              <Badge key={gender} variant="outline" className="flex items-center gap-1">
-                {gender === "MALE" ? 'Homme' : 'femme'}
-                <X className="w-3 h-3 cursor-pointer" onClick={() => toggleGender(gender)} />
-              </Badge>
-            ))}
-            {minAppointments > 0 && (
-              <Badge variant="outline" className="flex items-center gap-1">
-                Min. RDV: {minAppointments}
-                <X className="w-3 h-3 cursor-pointer" onClick={() => setMinAppointments(0)} />
-              </Badge>
-            )}
-          </div>
+      if (end - start + 1 < maxVisible) {
+        start = Math.max(1, end - maxVisible + 1);
+      }
+
+      if (start > 1) pages.push(1);
+      if (start > 2) pages.push("...");
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      if (end < totalPages - 1) pages.push("...");
+      if (end < totalPages) pages.push(totalPages);
+
+      return pages;
+    }, [currentPage, totalPages]);
+
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="flex justify-center mt-6 gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(p => p - 1)}
+        >
+          Précédent
+        </Button>
+
+        {visiblePages.map((page, idx) =>
+          page === "..." ? (
+            <Button key={idx} variant="ghost" size="sm" disabled>
+              ...
+            </Button>
+          ) : (
+            <Button
+              key={page}
+              size="sm"
+              variant={currentPage === page ? "default" : "outline"}
+              onClick={() => setCurrentPage(page as number)}
+            >
+              {page}
+            </Button>
+          )
         )}
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: itemsPerPage }).map((_, idx) => (
-            <div key={idx} className="border rounded-lg p-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-            </div>
-          ))}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(p => p + 1)}
+        >
+          Suivant
+        </Button>
+      </div>
+    );
+  });
+
+  if (error) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center space-y-4">
+        <p className="text-red-500">{error}</p>
+        <Button variant="outline" onClick={fetchPatients}>
+          Réessayer
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-4 p-4 md:p-6">
+      <aside className="hidden lg:block w-64 flex-shrink-0">
+        <FilterPanel />
+      </aside>
+
+      <div className="flex-1 space-y-4">
+        <div className="lg:hidden flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMobileFilters(true)}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filtres
+          </Button>
         </div>
+
+        <Dialog open={showMobileFilters} onOpenChange={setShowMobileFilters}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Filtres</DialogTitle>
+            </DialogHeader>
+            <FilterPanel
+              isMobile
+              onApply={() => setShowMobileFilters(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <ActiveFilters />
+
+        {loading ? (
+          <LoadingSkeleton />
         ) : filteredPatients.length === 0 ? (
-          <div className="text-center text-muted-foreground mt-10">
-            Aucun patient ne correspond à vos filtres.
-          </div>
+          <EmptyState />
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedPatients.map((patient) => (
+              {paginatedPatients.map(patient => (
                 <PatientCard key={patient.id} patient={patient} />
               ))}
             </div>
-
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-6 gap-2">
-                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-                  precedant 
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <Button
-                    key={i}
-                    size="sm"
-                    variant={currentPage === i + 1 ? "default" : "outline"}
-                    onClick={() => setCurrentPage(i + 1)}
-                  >
-                    {i + 1}
-                  </Button>
-                ))}
-                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-                  suivant
-                </Button>
-              </div>
-            )}
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              setCurrentPage={setCurrentPage}
+            />
           </>
         )}
-
       </div>
     </div>
   );

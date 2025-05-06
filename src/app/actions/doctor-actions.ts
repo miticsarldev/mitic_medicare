@@ -608,3 +608,82 @@ export async function getDoctorSlotsWithTakenStatus(doctorId: string, date?: Dat
 
   return result
 }
+
+// Lister toutes les disponibilités d'un médecin
+export async function getDoctorAvailabilities(doctorId: string) {
+  return await prisma.doctorAvailability.findMany({
+    where: { doctorId },
+    orderBy: { dayOfWeek: 'asc' },
+  });
+}
+
+// Créer ou mettre à jour une disponibilité
+export async function upsertDoctorAvailability(availability: {
+  id?: string;
+  doctorId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+}) {
+  const { id, ...data } = availability;
+
+  if (id) {
+    // Mise à jour si l'ID est fourni
+    return await prisma.doctorAvailability.update({
+      where: { id },
+      data,
+    });
+  }
+}
+
+
+// Mettre à jour plusieurs disponibilités en une transaction
+export async function upsertManyDoctorAvailabilities(
+  doctorId: string,
+  availabilities: {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    isActive: boolean;
+  }[]
+) {
+  return await prisma.$transaction(
+    availabilities.map((avail) =>
+      prisma.doctorAvailability.upsert({
+        where: {
+          doctorId_dayOfWeek_startTime_endTime: {
+            doctorId,
+            dayOfWeek: avail.dayOfWeek,
+            startTime: avail.startTime,
+            endTime: avail.endTime,
+          },
+        },
+        update: {
+          isActive: avail.isActive,
+          startTime: avail.startTime,
+          endTime: avail.endTime,
+        },
+        create: {
+          doctorId,
+          ...avail,
+        },
+      })
+    )
+  );
+}
+
+// Supprimer une disponibilité
+export async function deleteDoctorAvailability(id: string) {
+  return await prisma.doctorAvailability.delete({
+    where: { id },
+  });
+}
+
+// Supprimer toutes les disponibilités d'un médecin
+export async function deleteAllDoctorAvailabilities(doctorId: string) {
+  return await prisma.doctorAvailability.deleteMany({
+    where: { doctorId },
+  });
+}
+

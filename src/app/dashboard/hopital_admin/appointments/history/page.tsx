@@ -112,6 +112,22 @@ export default function AppointmentCalendarView() {
         }
     }
 
+    //methode pour mettre le status en francais
+    const translateStatus = (status: string) => {
+        switch (status) {
+            case "CONFIRMED":
+                return "Confirmé";
+            case "CANCELED":
+                return "Annulé";
+            case "PENDING":
+                return "En attente";
+            case "COMPLETED":
+                return "Terminé";
+            default:
+                return status;
+        }
+    };
+
     return (
         <div className="p-4 space-y-6">
             <Card>
@@ -213,7 +229,7 @@ export default function AppointmentCalendarView() {
                                 <CalendarDays className="w-4 h-4" /> {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}
                             </div>
                             <div className="flex items-center gap-2">
-                                Statut : <Badge className={getStatusColor(selectedAppointment.status)}>{selectedAppointment.status}</Badge>
+                                Statut : <Badge className={getStatusColor(selectedAppointment.status)}>{translateStatus(selectedAppointment.status)}</Badge>
                             </div>
                             <div className="text-muted-foreground mt-2">
                                 <strong>Médecin :</strong> {selectedAppointment.doctor.name} ({selectedAppointment.doctor.specialization})
