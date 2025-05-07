@@ -1,10 +1,9 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip,  ResponsiveContainer } from "recharts";
-import { Calendar as CalendarIcon, Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar, Pill, Activity, Star } from "lucide-react";
+import { Calendar as CalendarIcon, Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar, Pill } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { patientData } from "@/constant";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { DashboardData } from "./types";
