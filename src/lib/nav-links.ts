@@ -412,8 +412,8 @@ export const hospitalAdminNavItems = [
         url: "/dashboard/hopital_admin/management/services",
       },
       {
-        title: "Commentaires & Avis",
-        url: "/dashboard/hopital_admin/management/reviews",
+        title: "Gestion Heures de travail",
+        url: "/dashboard/hopital_admin/management/avaibility",
       },
     ],
   },
@@ -434,10 +434,6 @@ export const hospitalAdminNavItems = [
     icon: LifeBuoy,
     url: "/dashboard/hopital_admin/support",
     items: [
-      {
-        title: "Centre d'Aide",
-        url: "/dashboard/hopital_admin/support/help-center",
-      },
       { title: "FAQs", url: "/dashboard/hopital_admin/support/faq" },
       {
         title: "Support Technique",

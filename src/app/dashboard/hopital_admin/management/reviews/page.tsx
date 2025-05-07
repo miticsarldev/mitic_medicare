@@ -152,7 +152,6 @@ export default function ReviewAdminCardView() {
                                                 </div>
                                             )}
 
-
                                         {
                                             review.status === "PENDING" && (
                                                 <div className="flex gap-2" >
