@@ -466,7 +466,7 @@ export const hospitalDoctorNavItems = [
         title: "Informations de l’Hôpital",
         url: "/dashboard/hopital_doctor/hospital/details",
       },
-      { title: "Disponibilité", url: "/dashboard/hopital_doctor/hospital/availability" },
+
       { title: "Planning", url: "/dashboard/hopital_doctor/hospital/schedule" },
     ],
   },
@@ -487,10 +487,6 @@ export const hospitalDoctorNavItems = [
     icon: LifeBuoy,
     url: "/dashboard/hopital_doctor/support",
     items: [
-      {
-        title: "Centre d'Aide",
-        url: "/dashboard/hopital_doctor/support/help-center",
-      },
       { title: "FAQs", url: "/dashboard/hopital_doctor/support/faq" },
       {
         title: "Support Technique",
