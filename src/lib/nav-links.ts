@@ -505,10 +505,6 @@ export const hospitalDoctorNavItems = [
     icon: LifeBuoy,
     url: "/dashboard/hopital_doctor/support",
     items: [
-      {
-        title: "Centre d'Aide",
-        url: "/dashboard/hopital_doctor/support/help-center",
-      },
       { title: "FAQs", url: "/dashboard/hopital_doctor/support/faq" },
       {
         title: "Support Technique",

@@ -222,6 +222,31 @@ export async function GET(req: Request) {
       count: item._count.type,
     }));
 
+    const [recentPrescriptions, upcomingAvailabilities] = await Promise.all([
+      prisma.prescription.findMany({
+        where: { doctorId },
+        orderBy: { createdAt: 'desc' },
+        take: 4, 
+        include: {
+          patient: {
+            include: {
+              user: {
+                select: { name: true }
+              }
+            }
+          }
+        }
+      }),
+      prisma.doctorAvailability.findMany({
+        where: { 
+          doctorId,
+          dayOfWeek: { gte: new Date().getDay() }, 
+          isActive: true
+        },
+        orderBy: { dayOfWeek: 'asc' }
+      })
+    ]);
+
     return NextResponse.json({
       patientsToday,
       confirmedAppointments,
@@ -256,6 +281,23 @@ export async function GET(req: Request) {
         { reason: "Autres", count: reasonCounts.Autres },
       ],
       appointmentTypeStats,
+      recentPrescriptions: recentPrescriptions.map(prescription => ({
+        id: prescription.id,
+        patient: prescription.patient.user.name,
+        medicationName: prescription.medicationName,
+        dosage: prescription.dosage,
+        frequency: prescription.frequency,
+        instructions: prescription.instructions,
+        createdAt: prescription.createdAt.toISOString()
+      })),
+      upcomingAvailabilities: upcomingAvailabilities.map(availability => ({
+        id: availability.id,
+        dayOfWeek: availability.dayOfWeek,
+        dayName: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][availability.dayOfWeek],
+        startTime: availability.startTime,
+        endTime: availability.endTime,
+        isActive: availability.isActive
+      }))
     });
   } catch (error) {
     console.error("Erreur:", error);

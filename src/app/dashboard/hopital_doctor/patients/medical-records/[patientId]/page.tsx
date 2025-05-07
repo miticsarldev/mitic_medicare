@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {  Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus } from "lucide-react";
+import { Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus, User2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface PatientDetails {
   id: string;
@@ -29,6 +30,9 @@ interface PatientDetails {
   allergies?: string;
   emergencyContact?: string;
   emergencyPhone?: string;
+  emergencyRelation?: string;
+  insuranceProvider?: string;
+  insuranceNumber?: string;
   medicalNotes?: string;
   medicalHistories: {
     id: string;
@@ -172,6 +176,7 @@ export default function PatientMedicalRecord() {
       console.error("Erreur lors de l'ajout de l'historique", err);
     }
   };
+
   const handlePrescriptionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -227,9 +232,6 @@ export default function PatientMedicalRecord() {
                 </p>
               </div>
             </CardTitle>
-            <Button onClick={() => setIsModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Ajouter un historique
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -252,129 +254,323 @@ export default function PatientMedicalRecord() {
         </CardContent>
       </Card>
 
-      {/* Section : Antécédents médicaux */}
-      <Card className="bg-white dark:bg-gray-800 shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <HeartPulse className="w-6 h-6 text-purple-500" />
-            Antécédents médicaux
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {patient.medicalHistories.length > 0 ? (
-            <ul className="space-y-3">
-              {patient.medicalHistories.map((history) => (
-                <li key={history.id} className="flex items-center gap-4 p-3 border rounded-md dark:border-gray-700">
-                  <Badge variant="outline" className="shrink-0">
-                    {history.status}
-                  </Badge>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{history.title} - {history.condition}</p>
-                    {history.diagnosedDate && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Diagnostiqué le: {formatDate(history.diagnosedDate)}
-                      </p>
-                    )}
-                    {history.details && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{history.details}</p>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400">Aucun antécédent médical enregistré</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Système d'onglets */}
+      <Tabs defaultValue="medical-history" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="infos">
+            <User2 className="w-4 h-4 mr-2" />
+            Infos
+          </TabsTrigger>
+          <TabsTrigger value="medical-history">
+            <HeartPulse className="w-4 h-4 mr-2" />
+            Antécédents
+          </TabsTrigger>
+          <TabsTrigger value="vital-signs">
+            <Activity className="w-4 h-4 mr-2" />
+            Signes vitaux
+          </TabsTrigger>
+          <TabsTrigger value="prescriptions">
+            <Pill className="w-4 h-4 mr-2" />
+            Prescriptions
+          </TabsTrigger>
+          <TabsTrigger value="appointments">
+            <Calendar className="w-4 h-4 mr-2" />
+            Consultations
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="infos">
+    <Card className="bg-white dark:bg-gray-800 shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+          <User className="w-6 h-6 text-blue-500" />
+          Informations du patient
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Coordonnées</h3>
+            <div className="space-y-2">
+              <div className="flex items-start gap-3">
+                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Email:</span>
+                <p className="text-sm text-gray-900 dark:text-gray-100">{patient.user.email}</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Téléphone:</span>
+                <p className="text-sm text-gray-900 dark:text-gray-100">{patient.user.phone}</p>
+              </div>
+            </div>
+          </div>
 
-      {/* Section : Signes vitaux */}
-      {latestVitalSigns && (
-        <Card className="bg-white dark:bg-gray-800 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-              <Activity className="w-6 h-6 text-orange-500" />
-              Signes vitaux récents
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {latestVitalSigns.temperature && (
-                <div className="border rounded-md p-3">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
-                  <p className="font-medium">{latestVitalSigns.temperature}°C</p>
-                </div>
-              )}
-              {latestVitalSigns.bloodPressureSystolic && latestVitalSigns.bloodPressureDiastolic && (
-                <div className="border rounded-md p-3">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
-                  <p className="font-medium">
-                    {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
-                  </p>
-                </div>
-              )}
-              {latestVitalSigns.heartRate && (
-                <div className="border rounded-md p-3">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
-                  <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
-                </div>
-              )}
-              {latestVitalSigns.oxygenSaturation && (
-                <div className="border rounded-md p-3">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
-                  <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Informations médicales</h3>
+            <div className="space-y-2">
+              <div className="flex items-start gap-3">
+                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Date de naissance:</span>
+                <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(patient.dateOfBirth)}</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Groupe sanguin:</span>
+                <p className="text-sm text-gray-900 dark:text-gray-100">{formatBloodType(patient.bloodType)}</p>
+              </div>
+              {patient.allergies && (
+                <div className="flex items-start gap-3">
+                  <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Allergies:</span>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{patient.allergies}</p>
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Mesuré le: {formatDate(latestVitalSigns.recordedAt)}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-     {/* Section : Prescriptions en cours */}
-      <Card className="bg-white dark:bg-gray-800 shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-              <Pill className="w-6 h-6 text-green-500" />
-              Prescriptions en cours
-            </CardTitle>
-            <Button onClick={() => setIsPrescriptionModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Nouvelle prescription
-            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {prescriptions.length > 0 ? (
-            <ul className="space-y-3">
-              {prescriptions.map((prescription) => (
-                <li key={prescription.id} className="p-3 border rounded-md dark:border-gray-700">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{prescription.medicationName}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {prescription.dosage} - {prescription.frequency} {prescription.duration && `(${prescription.duration})`}
-                      </p>
-                      {prescription.instructions && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          Instructions: {prescription.instructions}
-                        </p>
-                      )}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Urgence</h3>
+            <div className="space-y-2">
+              {patient.emergencyContact && (
+                <div className="flex items-start gap-3">
+                  <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Contact:</span>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{patient.emergencyContact}</p>
+                </div>
+              )}
+              {patient.emergencyPhone && (
+                <div className="flex items-start gap-3">
+                  <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Téléphone:</span>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{patient.emergencyPhone}</p>
+                </div>
+              )}
+              {patient.emergencyRelation && (
+                <div className="flex items-start gap-3">
+                  <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Relation:</span>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{patient.emergencyRelation}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Assurance</h3>
+            <div className="space-y-2">
+              {patient.insuranceProvider && (
+                <div className="flex items-start gap-3">
+                  <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Assureur:</span>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{patient.insuranceProvider}</p>
+                </div>
+              )}
+              {patient.insuranceNumber && (
+                <div className="flex items-start gap-3">
+                  <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Numéro:</span>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{patient.insuranceNumber}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </TabsContent>
+
+        {/* Contenu de l'onglet Antécédents médicaux */}
+        <TabsContent value="medical-history">
+          <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <HeartPulse className="w-6 h-6 text-purple-500" />
+                  Antécédents médicaux
+                </CardTitle>
+                <Button onClick={() => setIsModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Ajouter un historique
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {patient.medicalHistories.length > 0 ? (
+                <ul className="space-y-3">
+                  {patient.medicalHistories.map((history) => (
+                    <li key={history.id} className="flex items-center gap-4 p-3 border rounded-md dark:border-gray-700">
+                      <Badge variant="outline" className="shrink-0">
+                        {history.status}
+                      </Badge>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{history.title} - {history.condition}</p>
+                        {history.diagnosedDate && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Diagnostiqué le: {formatDate(history.diagnosedDate)}
+                          </p>
+                        )}
+                        {history.details && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{history.details}</p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">Aucun antécédent médical enregistré</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Contenu de l'onglet Signes vitaux */}
+        <TabsContent value="vital-signs">
+          {latestVitalSigns ? (
+            <Card className="bg-white dark:bg-gray-800 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <Activity className="w-6 h-6 text-orange-500" />
+                  Signes vitaux récents
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {latestVitalSigns.temperature && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
+                      <p className="font-medium">{latestVitalSigns.temperature}°C</p>
                     </div>
-                    <Badge variant="outline" className="shrink-0">
-                      En cours
-                    </Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  )}
+                  {latestVitalSigns.bloodPressureSystolic && latestVitalSigns.bloodPressureDiastolic && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
+                      <p className="font-medium">
+                        {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
+                      </p>
+                    </div>
+                  )}
+                  {latestVitalSigns.heartRate && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
+                      <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
+                    </div>
+                  )}
+                  {latestVitalSigns.oxygenSaturation && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
+                      <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Mesuré le: {formatDate(latestVitalSigns.recordedAt)}
+                </p>
+              </CardContent>
+            </Card>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">Aucune prescription active</p>
+            <Card className="bg-white dark:bg-gray-800 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <Activity className="w-6 h-6 text-orange-500" />
+                  Signes vitaux
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-500 dark:text-gray-400">Aucun signe vital enregistré</p>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        {/* Contenu de l'onglet Prescriptions */}
+        <TabsContent value="prescriptions">
+          <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <Pill className="w-6 h-6 text-green-500" />
+                  Prescriptions en cours
+                </CardTitle>
+                <Button onClick={() => setIsPrescriptionModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Nouvelle prescription
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {prescriptions.length > 0 ? (
+                <ul className="space-y-3">
+                  {prescriptions.map((prescription) => (
+                    <li key={prescription.id} className="p-3 border rounded-md dark:border-gray-700">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{prescription.medicationName}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {prescription.dosage} - {prescription.frequency} {prescription.duration && `(${prescription.duration})`}
+                          </p>
+                          {prescription.instructions && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              Instructions: {prescription.instructions}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="shrink-0">
+                          En cours
+                        </Badge>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">Aucune prescription active</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Contenu de l'onglet Consultations */}
+        <TabsContent value="appointments">
+          <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                <Calendar className="w-6 h-6 text-blue-500" />
+                Historique des consultations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {completedAppointments.length > 0 ? (
+                <ul className="space-y-4">
+                  {completedAppointments.map((appointment) => (
+                    <li key={appointment.id} className="border rounded-md p-4 dark:border-gray-700">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">
+                            Consultation avec Dr. {appointment.doctor.user.name}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(appointment.scheduledAt)} - {appointment.type}
+                          </p>
+                          {appointment.reason && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              Motif: {appointment.reason}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="shrink-0">
+                          Terminée
+                        </Badge>
+                      </div>
+                      {appointment.medicalRecord && (
+                        <div className="mt-3 pt-3 border-t dark:border-gray-700">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">
+                            Diagnostic: {appointment.medicalRecord.diagnosis}
+                          </p>
+                          {appointment.medicalRecord.treatment && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              Traitement: {appointment.medicalRecord.treatment}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">Aucune consultation terminée</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Modal pour ajouter un historique médical */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -433,84 +629,84 @@ export default function PatientMedicalRecord() {
           </form>
         </DialogContent>
       </Dialog>
+
       {/* Modal pour ajouter une prescription */}
-<Dialog open={isPrescriptionModalOpen} onOpenChange={setIsPrescriptionModalOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Nouvelle prescription</DialogTitle>
-      <DialogDescription>
-        Renseignez les détails du médicament à prescrire.
-      </DialogDescription>
-    </DialogHeader>
-    <form onSubmit={handlePrescriptionSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="medicationName">Nom du médicament</Label>
-        <Input
-          id="medicationName"
-          value={medicationName}
-          onChange={(e) => setMedicationName(e.target.value)}
-          placeholder="Ex: Paracétamol"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="dosage">Dosage</Label>
-        <Input
-          id="dosage"
-          value={dosage}
-          onChange={(e) => setDosage(e.target.value)}
-          placeholder="Ex: 500mg"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="frequency">Fréquence</Label>
-        <Input
-          id="frequency"
-          value={frequency}
-          onChange={(e) => setFrequency(e.target.value)}
-          placeholder="Ex: 3 fois par jour"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="duration">Durée (optionnel)</Label>
-        <Input
-          id="duration"
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-          placeholder="Ex: 7 jours"
-        />
-      </div>
-      <div>
-      <Label htmlFor="startDate">Date de début</Label>
-      <Input
-        id="startDate"
-        type="date"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-        required
-      />
-    </div>
-      <div>
-        <Label htmlFor="instructions">Instructions (optionnel)</Label>
-        <Textarea
-          id="instructions"
-          value={instructions}
-          onChange={(e) => setInstructions(e.target.value)}
-          placeholder="Instructions particulières"
-        />
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => setIsPrescriptionModalOpen(false)}>
-          Annuler
-        </Button>
-        <Button type="submit">Prescrire</Button>
-      </div>
-    </form>
-  </DialogContent>
-</Dialog>
+      <Dialog open={isPrescriptionModalOpen} onOpenChange={setIsPrescriptionModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle prescription</DialogTitle>
+            <DialogDescription>
+              Renseignez les détails du médicament à prescrire.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePrescriptionSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="medicationName">Nom du médicament</Label>
+              <Input
+                id="medicationName"
+                value={medicationName}
+                onChange={(e) => setMedicationName(e.target.value)}
+                placeholder="Ex: Paracétamol"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="dosage">Dosage</Label>
+              <Input
+                id="dosage"
+                value={dosage}
+                onChange={(e) => setDosage(e.target.value)}
+                placeholder="Ex: 500mg"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="frequency">Fréquence</Label>
+              <Input
+                id="frequency"
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value)}
+                placeholder="Ex: 3 fois par jour"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="duration">Durée (optionnel)</Label>
+              <Input
+                id="duration"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="Ex: 7 jours"
+              />
+            </div>
+            <div>
+              <Label htmlFor="startDate">Date de début</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="instructions">Instructions (optionnel)</Label>
+              <Textarea
+                id="instructions"
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Instructions particulières"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsPrescriptionModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit">Prescrire</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-  
 }

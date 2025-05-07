@@ -1,10 +1,9 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip,  ResponsiveContainer } from "recharts";
-import { Calendar as CalendarIcon, Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar, Pill, Activity, Star } from "lucide-react";
+import { Calendar as CalendarIcon, Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar, Pill } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { patientData } from "@/constant";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { DashboardData } from "./types";
@@ -250,72 +249,90 @@ export default function Dashboard() {
  
 
       <div className="md:col-span-3 grid grid-cols-2 gap-6">
-        <Card className="bg-white dark:bg-gray-800">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-gray-100">Activité récente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              {patientData.recentActivity.map((activity, index) => (
-                <div key={index} className="flex">
-                  <div className="relative mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted dark:bg-gray-700">
-                    {activity.type === "appointment" && (
-                      <Calendar className="h-6 w-6 text-gray-900 dark:text-gray-100" />
-                    )}
-                    {activity.type === "medication" && (
-                      <Pill className="h-6 w-6 text-gray-900 dark:text-gray-100" />
-                    )}
-                    {activity.type === "test" && <Activity className="h-6 w-6 text-gray-900 dark:text-gray-100" />}
-                    {index < patientData.recentActivity.length - 1 && (
-                      <div className="absolute bottom-0 left-1/2 h-full w-px -translate-x-1/2 translate-y-full bg-muted dark:bg-gray-700" />
-                    )}
-                  </div>
-                  <div className="flex flex-col pb-8">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {activity.description}
+      {/* Section Prescriptions récentes */}
+      <Card className="bg-white dark:bg-gray-800">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Pill className="h-6 w-6 text-blue-500" />
+            <span className="text-gray-900 dark:text-gray-100">Prescriptions récentes</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.recentPrescriptions?.length > 0 ? (
+            <div className="space-y-4">
+              {data.recentPrescriptions.map((prescription) => (
+                <div key={prescription.id} className="border rounded-md p-4 dark:border-gray-700">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                        {prescription.medicationName}
+                      </h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Pour: {prescription.patient}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {prescription.dosage} - {prescription.frequency}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {format(new Date(prescription.createdAt), "d MMM", { locale: fr })}
                     </span>
-                    <span className="text-xs text-muted-foreground dark:text-gray-400">
-                      {format(activity.date, "d MMMM yyyy", { locale: fr })}
-                    </span>
                   </div>
+                  {prescription.instructions && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {prescription.instructions}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white dark:bg-gray-800">
-      <CardHeader>
-        <CardTitle className="text-gray-900 dark:text-gray-100">
-          Avis patients
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-4">
-          {data.reviews?.length > 0 ? (
-            data.reviews.map((review) => (
-              <li key={review.id} className="border p-4 rounded-md dark:border-gray-700">
-                <div className="flex items-center mb-2">
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {review.patient}
-                  </span>
-                  <div className="flex items-center ml-2">
-                    {Array.from({ length: review.rating }, (_, i) => (
-                      <Star key={i} className="h-4 w-4 text-yellow-500" />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {review.comment}
-                </p>
-              </li>
-            ))
           ) : (
-            <p className="text-gray-500">Aucun avis pour le moment.</p>
+            <p className="text-gray-500 dark:text-gray-400">Aucune prescription récente</p>
           )}
-        </ul>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Section Disponibilités à venir */}
+      <Card className="bg-white dark:bg-gray-800">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-6 w-6 text-purple-500" />
+            <span className="text-gray-900 dark:text-gray-100">Mes disponibilités</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.upcomingAvailabilities?.length > 0 ? (
+            <div className="space-y-3">
+              {data.upcomingAvailabilities.map((availability) => (
+                <div key={availability.id} className="flex items-center justify-between p-3 border rounded-md dark:border-gray-700">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                      {availability.dayName}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {availability.startTime} - {availability.endTime}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    availability.isActive 
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                  }`}>
+                    {availability.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400">
+              Aucune disponibilité programmée
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
 
 <div className="md:col-span-3 grid grid-cols-2 gap-6 mt-6">
         {/* Patients vus */}

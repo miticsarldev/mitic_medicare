@@ -30,4 +30,21 @@ export interface WeeklyPatients {
     weeklyPatients: WeeklyPatients[];
     pendingAppointmentsList: PendingAppointment[];
     reviews: Review[];
+    recentPrescriptions: {
+      id: string;
+      patient: string;
+      medicationName: string;
+      dosage: string;
+      frequency: string;
+      instructions?: string;
+      createdAt: string;
+    }[];
+    upcomingAvailabilities: {
+      id: string;
+      dayOfWeek: number;
+      dayName: string;
+      startTime: string;
+      endTime: string;
+      isActive: boolean;
+    }[];
   }

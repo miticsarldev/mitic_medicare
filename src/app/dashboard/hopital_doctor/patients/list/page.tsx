@@ -86,9 +86,9 @@ export default function PatientsList() {
     <div className="p-6 bg-background min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Liste des Rendez-vous Patients</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Liste des Patients</h1>
           <p className="text-muted-foreground">
-            Gérez et consultez les rendez-vous de vos patients
+            Gérez et la liste de vos patients
           </p>
         </div>
       </div>
@@ -166,8 +166,12 @@ export default function PatientsList() {
                         {new Date(appointment.scheduledAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                        {appointment.reason || 'Non spécifié'}
-                      </td>
+                      {appointment.reason 
+                        ? appointment.reason.length > 50 
+                          ? `${appointment.reason.substring(0, 47)}...` 
+                          : appointment.reason
+                        : 'Non spécifié'}
+                    </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Button
                           size="sm"
