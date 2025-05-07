@@ -67,7 +67,15 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
     return (
         <Card key={patient.id} className="rounded-xl shadow-md overflow-hidden h-fit">
             <CardHeader className="flex flex-row items-center gap-3 bg-primary/10 py-3 px-4">
-                <div className="w-10 h-10 rounded-full bg-primary text-white dark:bg-primary-dark flex items-center justify-center font-bold text-sm">
+                <div
+                    className="
+                                w-10 h-10 rounded-full
+                                 bg-gray-200 text-gray-900
+                                 dark:bg-gray-800 dark:text-gray-100
+                                flex items-center justify-center
+                                font-bold text-sm
+                                "
+                >
                     {initials}
                 </div>
 
