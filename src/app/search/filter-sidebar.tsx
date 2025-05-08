@@ -248,8 +248,8 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
             </AccordionTrigger>
             <AccordionContent className="pt-2 pb-3">
               <div className="space-y-2">
-                {specializations.length > 0 ? (
-                  specializations.map((spec) => (
+                {(specializations?.length ?? 0) > 0 ? (
+                  specializations?.map((spec) => (
                     <div key={spec} className="flex items-center space-x-2">
                       <Checkbox
                         id={`spec-${spec}`}
@@ -286,8 +286,8 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-3">
             <div className="space-y-2">
-              {cities.length > 0 ? (
-                cities.map((city) => (
+              {cities?.length > 0 ? (
+                cities?.map((city) => (
                   <div key={city} className="flex items-center space-x-2">
                     <Checkbox
                       id={`city-${city}`}
