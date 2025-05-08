@@ -11,25 +11,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+type PatientAppointment = {
+  id: string;
+  patientName: string;
+  patientEmail: string;
+  patientPhone: string;
+  bloodType: string;
+  scheduledAt: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  reason: string;
+};
+
 export default function PatientsList() {
-  type Appointment = {
-    id: string;
-    patientName: string;
-    patientEmail: string;
-    patientPhone: string;
-    age: number;
-    bloodType: string;
-    hospitalName: string;
-    hospitalLocation: string;
-    scheduledAt: string;
-    status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
-    type: string;
-    reason: string;
-    notes: string;
-  };
-  
   const router = useRouter();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -41,7 +37,7 @@ export default function PatientsList() {
       try {
         const response = await fetch('/api/hospital_doctor/patient');
         if (!response.ok) {
-          throw new Error('Erreur de chargement des rendez-vous');
+          throw new Error('Erreur de chargement des patients');
         }
         const data = await response.json();
         setAppointments(data);
@@ -58,8 +54,7 @@ export default function PatientsList() {
   const filteredAppointments = appointments.filter((appointment) =>
     (appointment.patientName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (appointment.patientEmail?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (appointment.patientPhone?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (appointment.reason?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    (appointment.patientPhone?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   const totalItems = filteredAppointments.length;
@@ -69,18 +64,10 @@ export default function PatientsList() {
     currentPage * itemsPerPage
   );
 
-  const handleViewMedicalRecord = (patientId: string) => {
-    router.push(`/dashboard/hopital_doctor/patients/medical-records/${patientId}`);
+  const handleViewMedicalRecord = (appointmentId: string) => {
+    router.push(`/dashboard/hopital_doctor/patients/medical-records/${appointmentId}`);
   };
 
-  const formatStatus = (status: string) => {
-    switch(status) {
-      case 'ACCEPTED': return 'Actif';
-      case 'PENDING': return 'En attente';
-      case 'REJECTED': return 'Rejeté';
-      default: return status;
-    }
-  };
 
   return (
     <div className="p-6 bg-background min-h-screen">
@@ -88,7 +75,7 @@ export default function PatientsList() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Liste des Patients</h1>
           <p className="text-muted-foreground">
-            Gérez et la liste de vos patients
+            Gérez la liste de vos patients
           </p>
         </div>
       </div>
@@ -130,17 +117,16 @@ export default function PatientsList() {
               <thead className="text-xs uppercase bg-muted">
                 <tr>
                   <th className="px-6 py-3 text-left">Nom</th>
+                  <th className="px-6 py-3 text-left">Email</th>
                   <th className="px-6 py-3 text-left">Téléphone</th>
-                  <th className="px-6 py-3 text-left">Statut</th>
-                  <th className="px-6 py-3 text-left">Dernier rendez-vous</th>
-                  <th className="px-6 py-3 text-left">Motif</th>
+                  <th className="px-6 py-3 text-left">Groupe sanguin</th>
                   <th className="px-6 py-3 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center">
+                    <td colSpan={7} className="px-6 py-4 text-center">
                       Chargement...
                     </td>
                   </tr>
@@ -151,27 +137,15 @@ export default function PatientsList() {
                         {appointment.patientName}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                        {appointment.patientEmail}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {appointment.patientPhone}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          appointment.status === 'ACCEPTED' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
-                          appointment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
-                          'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                        }`}>
-                          {formatStatus(appointment.status)}
-                        </span>
+                        {appointment.bloodType}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                        {new Date(appointment.scheduledAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
-                      {appointment.reason 
-                        ? appointment.reason.length > 50 
-                          ? `${appointment.reason.substring(0, 47)}...` 
-                          : appointment.reason
-                        : 'Non spécifié'}
-                    </td>
+                      
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Button
                           size="sm"
@@ -185,8 +159,8 @@ export default function PatientsList() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center">
-                      Aucun rendez-vous trouvé
+                    <td colSpan={7} className="px-6 py-4 text-center">
+                      Aucun patient trouvé
                     </td>
                   </tr>
                 )}
@@ -198,7 +172,7 @@ export default function PatientsList() {
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             Affichage de {Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1)} à{' '}
-            {Math.min(totalItems, currentPage * itemsPerPage)} sur {totalItems} rendez-vous
+            {Math.min(totalItems, currentPage * itemsPerPage)} sur {totalItems} patients
           </div>
           <div className="flex items-center space-x-2">
             <Button
