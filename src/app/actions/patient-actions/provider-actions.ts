@@ -40,17 +40,13 @@ export async function getDoctors(): Promise<DoctorWithRelations[]> {
     include: {
       user: true,
       hospital: true,
-      doctorReviews: {
-        where: {
-          patientId,
-        },
-      },
+      reviews: true,
     },
   });
 
   return doctors.map((doctor) => ({
     ...doctor,
-    reviews: doctor.doctorReviews,
+    reviews: doctor.reviews,
   }));
 }
 
@@ -74,7 +70,7 @@ export async function getDoctorById(
         },
       },
       hospital: true,
-      doctorReviews: true,
+      reviews: true,
       department: true,
     },
   });
@@ -83,7 +79,7 @@ export async function getDoctorById(
 
   return {
     ...doctor,
-    reviews: doctor.doctorReviews,
+    reviews: doctor.reviews,
   };
 }
 

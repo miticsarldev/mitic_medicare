@@ -432,6 +432,15 @@ export const getPatientById = async (id: string): Promise<Patient> => {
             },
           },
           attachments: true,
+          prescription: {
+            include: {
+              doctor: {
+                include: {
+                  user: true,
+                },
+              },
+            },
+          },
         },
       },
       prescriptions: {
@@ -444,7 +453,6 @@ export const getPatientById = async (id: string): Promise<Patient> => {
         },
       },
       vitalSigns: true,
-      reviews: true,
     },
   });
 
@@ -457,9 +465,10 @@ export const getPatientById = async (id: string): Promise<Patient> => {
     id: data.id,
     userId: data.userId,
     bloodType: data.bloodType ?? undefined,
-    allergies: typeof data.allergies === "string"
-      ? data.allergies.split(",").map((s) => s.trim())
-      : data.allergies ?? undefined,
+    allergies:
+      typeof data.allergies === "string"
+        ? data.allergies.split(",").map((s) => s.trim())
+        : (data.allergies ?? undefined),
     emergencyContact: data.emergencyContact ?? undefined,
     emergencyPhone: data.emergencyPhone ?? undefined,
     insuranceProvider: data.insuranceProvider ?? undefined,
@@ -508,10 +517,10 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       },
       hospital: a.hospital
         ? {
-          id: a.hospital.id,
-          name: a.hospital.name,
-          city: a.hospital.city,
-        }
+            id: a.hospital.id,
+            name: a.hospital.name,
+            city: a.hospital.city,
+          }
         : undefined,
     })),
 
@@ -538,9 +547,9 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       updatedAt: m.updatedAt,
       hospital: m.hospital
         ? {
-          id: m.hospital.id,
-          name: m.hospital.name,
-        }
+            id: m.hospital.id,
+            name: m.hospital.name,
+          }
         : undefined,
       doctor: {
         id: m.doctor.id,
@@ -593,17 +602,6 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       notes: v.notes ?? undefined,
       recordedAt: v.recordedAt,
       createdAt: v.createdAt,
-    })),
-
-    reviews: data.reviews?.map((r) => ({
-      id: r.id,
-      doctorId: r.doctorId,
-      rating: r.rating,
-      comment: r.comment ?? undefined,
-      isAnonymous: r.isAnonymous,
-      isApproved: r.isApproved,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
     })),
   };
 

@@ -1,4 +1,5 @@
-// app/api/hospital_doctor/hospital/route.ts
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -18,8 +19,8 @@ export async function GET() {
       where: {
         OR: [
           { adminId: session.user.id },
-          { doctors: { some: { userId: session.user.id } } }
-        ]
+          { doctors: { some: { userId: session.user.id } } },
+        ],
       },
       include: {
         departments: {
@@ -30,77 +31,83 @@ export async function GET() {
               select: {
                 user: {
                   select: {
-                    name: true
-                  }
-                }
-              }
-            }
-          }
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
         },
         _count: {
           select: {
             doctors: true,
-            appointments: true
-          }
-        }
-      }
+            appointments: true,
+          },
+        },
+      },
     });
 
     if (!hospital) {
-      return NextResponse.json({ message: "Hôpital non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Hôpital non trouvé" },
+        { status: 404 }
+      );
     }
 
-     const doctor = await prisma.doctor.findUnique({
-          where: { userId: session.user.id },
-          include: {
-            user: {
+    const doctor = await prisma.doctor.findUnique({
+      where: { userId: session.user.id },
+      include: {
+        user: {
+          select: {
+            name: true,
+          },
+        },
+        hospital: {
+          select: {
+            name: true,
+          },
+        },
+        department: {
+          select: {
+            name: true,
+          },
+        },
+        availabilities: {
+          where: { isActive: true },
+          orderBy: { dayOfWeek: "asc" },
+        },
+        appointments: {
+          where: {
+            status: { in: ["PENDING", "CONFIRMED"] },
+            scheduledAt: { gte: new Date() },
+          },
+          select: {
+            id: true,
+            scheduledAt: true,
+            startTime: true,
+            endTime: true,
+            status: true,
+            patient: {
               select: {
-                name: true
-              }
-            },
-            hospital: {
-              select: {
-                name: true
-              }
-            },
-            department: {
-              select: {
-                name: true
-              }
-            },
-            availabilities: {
-              where: { isActive: true },
-              orderBy: { dayOfWeek: 'asc' }
-            },
-            appointments: {
-              where: {
-                status: { in: ['PENDING', 'CONFIRMED'] },
-                scheduledAt: { gte: new Date() }
-              },
-              select: {
-                id: true,
-                scheduledAt: true,
-                startTime: true,
-                endTime: true,
-                status: true,
-                patient: {
+                user: {
                   select: {
-                    user: {
-                      select: {
-                        name: true
-                      }
-                    }
-                  }
-                }
+                    name: true,
+                  },
+                },
               },
-              orderBy: { scheduledAt: 'asc' }
-            }
-          }
-        });
-    
-        if (!doctor) {
-          return NextResponse.json({ message: "Médecin non trouvé" }, { status: 404 });
-        }
+            },
+          },
+          orderBy: { scheduledAt: "asc" },
+        },
+      },
+    });
+
+    if (!doctor) {
+      return NextResponse.json(
+        { message: "Médecin non trouvé" },
+        { status: 404 }
+      );
+    }
 
     // Formater la réponse
     const response = {
@@ -115,12 +122,12 @@ export async function GET() {
       stats: {
         doctors: hospital._count.doctors,
         appointments: hospital._count.appointments,
-        departments: hospital.departments.length
+        departments: hospital.departments.length,
       },
-      departments: hospital.departments.map(dept => ({
+      departments: hospital.departments.map((dept) => ({
         name: dept.name,
         description: dept.description,
-        doctorsCount: dept.doctors.length
+        doctorsCount: dept.doctors.length,
       })),
 
       doctor: {
@@ -130,15 +137,12 @@ export async function GET() {
         department: doctor.department?.name,
         specialization: doctor.specialization,
         availabilities: doctor.availabilities,
-        appointments: doctor.appointments
-      }
+        appointments: doctor.appointments,
+      },
     };
     return NextResponse.json(response);
   } catch (error) {
     console.error("Erreur:", error);
-    return NextResponse.json(
-      { message: "Erreur serveur" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
   }
-} 
+}

@@ -2,7 +2,6 @@ import {
   type Appointment,
   type BloodType,
   type Doctor,
-  type DoctorReview,
   type Hospital,
   type MedicalHistory,
   type MedicalRecord,
@@ -65,7 +64,7 @@ export type DoctorWithRelations = Doctor & {
     profile?: UserProfile | null; // Le profil est optionnel dans user
   };
   hospital?: Hospital | null;
-  reviews: DoctorReview[];
+  reviews: Review[];
 };
 
 // Hospital types

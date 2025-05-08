@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -17,7 +19,10 @@ export async function GET() {
     });
 
     if (!doctor) {
-      return NextResponse.json({ message: "Médecin non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Médecin non trouvé" },
+        { status: 404 }
+      );
     }
 
     const appointments = await prisma.appointment.findMany({
@@ -29,27 +34,27 @@ export async function GET() {
               select: {
                 name: true,
                 email: true,
-                phone: true
-              }
-            }
-          }
+                phone: true,
+              },
+            },
+          },
         },
         hospital: true,
         medicalRecord: {
           include: {
-            prescriptions: {
-              orderBy: { createdAt: 'desc' },
-              take: 1
-            }
-          }
-        }
+            prescription: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
       },
-      orderBy: { scheduledAt: 'desc' }
+      orderBy: { scheduledAt: "desc" },
     });
 
     const formattedAppointments = appointments.map((appointment) => {
       const { patient, medicalRecord } = appointment;
-      
+
       return {
         id: appointment.id,
         patientName: patient.user.name,
@@ -58,7 +63,7 @@ export async function GET() {
         status: appointment.status,
         motif: appointment.reason || "Non spécifié",
         notes: appointment.notes || "Aucune note",
-        prescription: medicalRecord?.prescriptions?.[0] || null
+        prescription: medicalRecord?.prescription?.[0] || null,
       };
     });
 

@@ -80,7 +80,7 @@ export async function getMedicalRecordById(
       },
       hospital: true,
       attachments: true,
-      prescriptions: true,
+      prescription: true,
     },
   });
 

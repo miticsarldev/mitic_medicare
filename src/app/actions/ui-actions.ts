@@ -178,12 +178,8 @@ export async function searchHealthcare(
           },
           hospital: true,
           department: true,
-          doctorReviews: {
-            select: {
-              rating: true,
-            },
-          },
           availabilities: true,
+          reviews: true,
         },
         orderBy,
         skip,
@@ -192,12 +188,10 @@ export async function searchHealthcare(
 
       // Calculate average rating for each doctor
       doctors = doctors.map((doctor) => {
+        const ratings = doctor.reviews.map((r) => r.rating);
         const avgRating =
-          doctor.doctorReviews.length > 0
-            ? doctor.doctorReviews.reduce(
-                (sum: number, review: any) => sum + review.rating,
-                0
-              ) / doctor.doctorReviews.length
+          ratings.length > 0
+            ? ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length
             : 0;
 
         return {
@@ -706,10 +700,7 @@ export async function getTopDoctors(limit: number = 6): Promise<TopDoctor[]> {
           },
         },
       },
-      doctorReviews: {
-        where: {
-          isApproved: true,
-        },
+      reviews: {
         select: {
           rating: true,
         },
@@ -719,7 +710,7 @@ export async function getTopDoctors(limit: number = 6): Promise<TopDoctor[]> {
 
   const doctorsWithRatings = doctors
     .map((doctor) => {
-      const ratings = doctor.doctorReviews.map((r) => r.rating);
+      const ratings = doctor.reviews.map((r) => r.rating);
       const avgRating =
         ratings.length > 0
           ? ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length

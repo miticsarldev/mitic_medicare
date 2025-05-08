@@ -888,7 +888,11 @@ export async function getPatientMedicalRecords(): Promise<GetPatientMedicalRecor
           },
         },
         hospital: true,
-        prescriptions: true,
+        prescriptionOrder: {
+          include: {
+            prescriptions: true,
+          },
+        },
         attachments: true,
       },
       orderBy: {
@@ -912,14 +916,16 @@ export async function getPatientMedicalRecords(): Promise<GetPatientMedicalRecor
       status: record.followUpNeeded ? "active" : "completed",
       type: determineRecordType(record),
       tags: generateTags(record),
-      medications: record.prescriptions.map((prescription) => ({
-        id: prescription.id,
-        name: prescription.medicationName,
-        dosage: prescription.dosage,
-        frequency: prescription.frequency,
-        duration: prescription.duration || "Non spécifié",
-        isActive: prescription.isActive,
-      })),
+      medications: record.prescriptionOrder.flatMap((order) =>
+        order.prescriptions.map((prescription) => ({
+          id: prescription.id,
+          name: prescription.medicationName,
+          dosage: prescription.dosage,
+          frequency: prescription.frequency,
+          duration: prescription.duration || "Non spécifié",
+          isActive: prescription.isActive,
+        }))
+      ),
       documents: record.attachments.map((attachment) => ({
         id: attachment.id,
         name: attachment.fileName,
@@ -984,7 +990,11 @@ export async function getMedicalRecordById(recordId: string) {
           },
         },
         hospital: true,
-        prescriptions: true,
+        prescriptionOrder: {
+          include: {
+            prescriptions: true,
+          },
+        },
         attachments: true,
       },
     });
@@ -1009,14 +1019,16 @@ export async function getMedicalRecordById(recordId: string) {
       status: record.followUpNeeded ? "active" : "completed",
       type: determineRecordType(record),
       tags: generateTags(record),
-      medications: record.prescriptions.map((prescription) => ({
-        id: prescription.id,
-        name: prescription.medicationName,
-        dosage: prescription.dosage,
-        frequency: prescription.frequency,
-        duration: prescription.duration || "Non spécifié",
-        isActive: prescription.isActive,
-      })),
+      medications: record.prescriptionOrder.flatMap((order) =>
+        order.prescriptions.map((prescription) => ({
+          id: prescription.id,
+          name: prescription.medicationName,
+          dosage: prescription.dosage,
+          frequency: prescription.frequency,
+          duration: prescription.duration || "Non spécifié",
+          isActive: prescription.isActive,
+        }))
+      ),
       documents: record.attachments.map((attachment) => ({
         id: attachment.id,
         name: attachment.fileName,
@@ -1587,10 +1599,9 @@ export async function getRecentAppointments() {
     const formattedAppointments = await Promise.all(
       appointments.map(async (appointment) => {
         // Check if there's a DoctorReview for this doctor
-        const review = await prisma.doctorReview.findFirst({
+        const review = await prisma.review.findFirst({
           where: {
             doctorId: appointment.doctorId,
-            patientId: patient.id,
           },
         });
 
@@ -1730,14 +1741,16 @@ export async function submitReview(data: {
 
     if (data.type === "doctor" && data.doctorId) {
       // For doctor reviews, use the DoctorReview model
-      const doctorReview = await prisma.doctorReview.create({
+      const doctorReview = await prisma.review.create({
         data: {
           doctorId: data.doctorId,
-          patientId: patient.id,
           rating: data.rating,
-          comment: data.comment || "",
+          authorId: userId,
+          targetType: "DOCTOR",
+          title: data.title || "Avis sur le médecin",
+          content: data.comment || "",
           isAnonymous: data.isAnonymous,
-          isApproved: false, // Requires approval
+          status: "PENDING",
         },
       });
 
@@ -1775,25 +1788,12 @@ export async function getUserReviews() {
     const session = await getServerSession(authOptions);
     const userId = session?.user.id;
 
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
+    if (!userId) throw new Error("User not authenticated");
 
-    // Get patient data
-    const patient = await prisma.patient.findFirst({
+    const reviews = await prisma.review.findMany({
       where: {
-        userId: userId,
-      },
-    });
-
-    if (!patient) {
-      throw new Error("Patient not found");
-    }
-
-    // Get doctor reviews (DoctorReview model)
-    const doctorReviews = await prisma.doctorReview.findMany({
-      where: {
-        patientId: patient.id,
+        authorId: userId,
+        OR: [{ targetType: "DOCTOR" }, { targetType: "HOSPITAL" }],
       },
       include: {
         doctor: {
@@ -1805,19 +1805,6 @@ export async function getUserReviews() {
             },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    // Get hospital reviews (Review model)
-    const hospitalReviews = await prisma.review.findMany({
-      where: {
-        authorId: userId,
-        targetType: "HOSPITAL",
-      },
-      include: {
         hospital: true,
       },
       orderBy: {
@@ -1825,37 +1812,37 @@ export async function getUserReviews() {
       },
     });
 
-    // Format doctor reviews
-    const formattedDoctorReviews = doctorReviews.map((review) => ({
-      id: review.id,
-      type: "doctor" as const,
-      name: review.doctor.user.name,
-      specialty: review.doctor.specialization,
-      rating: review.rating,
-      date: review.createdAt.toLocaleDateString("fr-FR"),
-      comment: review.comment || "",
-      image:
-        review.doctor.user.profile?.avatarUrl ||
-        "/placeholder.svg?height=40&width=40",
-      status: review.isApproved ? "APPROVED" : "PENDING",
-    }));
-
-    // Format hospital reviews
-    const formattedHospitalReviews = hospitalReviews.map((review) => ({
-      id: review.id,
-      type: "hospital" as const,
-      title: review.title,
-      name: review.hospital?.name || "Établissement",
-      specialty: review.hospital?.status || "Hôpital",
-      rating: review.rating,
-      date: review.createdAt.toLocaleDateString("fr-FR"),
-      comment: review.content,
-      image: review.hospital?.logoUrl || "/placeholder.svg?height=40&width=40",
-      status: review.status,
-    }));
-
-    // Combine both types of reviews
-    return [...formattedDoctorReviews, ...formattedHospitalReviews];
+    return reviews.map((review) => {
+      if (review.targetType === "DOCTOR") {
+        return {
+          id: review.id,
+          type: "doctor" as const,
+          name: review.doctor?.user.name || "Médecin inconnu",
+          specialty: review.doctor?.specialization || "Spécialité inconnue",
+          rating: review.rating,
+          date: review.createdAt.toLocaleDateString("fr-FR"),
+          comment: review.content || "",
+          image:
+            review.doctor?.user.profile?.avatarUrl ||
+            "/placeholder.svg?height=40&width=40",
+          status: review.status,
+        };
+      } else {
+        return {
+          id: review.id,
+          type: "hospital" as const,
+          title: review.title,
+          name: review.hospital?.name || "Établissement",
+          specialty: review.hospital?.status || "Hôpital",
+          rating: review.rating,
+          date: review.createdAt.toLocaleDateString("fr-FR"),
+          comment: review.content,
+          image:
+            review.hospital?.logoUrl || "/placeholder.svg?height=40&width=40",
+          status: review.status,
+        };
+      }
+    });
   } catch (error) {
     console.error("Error fetching user reviews:", error);
     return [];
@@ -1868,41 +1855,8 @@ export async function deleteReview(reviewId: string) {
     const session = await getServerSession(authOptions);
     const userId = session?.user.id;
 
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
+    if (!userId) throw new Error("User not authenticated");
 
-    // Get patient data
-    const patient = await prisma.patient.findFirst({
-      where: {
-        userId: userId,
-      },
-    });
-
-    if (!patient) {
-      throw new Error("Patient not found");
-    }
-
-    // First try to find and delete a DoctorReview
-    const doctorReview = await prisma.doctorReview.findFirst({
-      where: {
-        id: reviewId,
-        patientId: patient.id,
-      },
-    });
-
-    if (doctorReview) {
-      await prisma.doctorReview.delete({
-        where: {
-          id: reviewId,
-        },
-      });
-
-      revalidatePath("/dashboard/patient/reviews/my-feedback");
-      return { success: true };
-    }
-
-    // If not found, try to find and delete a Review
     const review = await prisma.review.findFirst({
       where: {
         id: reviewId,
@@ -1910,31 +1864,22 @@ export async function deleteReview(reviewId: string) {
       },
     });
 
-    if (review) {
-      // Delete review responses first (due to foreign key constraints)
-      await prisma.reviewResponse.deleteMany({
-        where: {
-          reviewId: reviewId,
-        },
-      });
+    if (!review) throw new Error("Review not found or unauthorized");
 
-      // Delete the review
-      await prisma.review.delete({
-        where: {
-          id: reviewId,
-        },
-      });
+    await prisma.review.delete({
+      where: {
+        id: reviewId,
+      },
+    });
 
-      revalidatePath("/dashboard/patient/reviews/my-feedback");
-      return { success: true };
-    }
-
-    throw new Error("Review not found or does not belong to the patient");
+    revalidatePath("/dashboard/patient/reviews/my-feedback");
+    return { success: true };
   } catch (error) {
     console.error("Error deleting review:", error);
     throw new Error("Failed to delete review");
   }
 }
+
 // Doctor-related actions
 export async function getMyDoctors() {
   try {
@@ -1971,9 +1916,10 @@ export async function getMyDoctors() {
             },
             hospital: true,
             department: true,
-            doctorReviews: {
+            reviews: {
               where: {
-                patientId: patient.id,
+                authorId: patient.id,
+                targetType: "DOCTOR",
               },
             },
           },
@@ -1990,23 +1936,26 @@ export async function getMyDoctors() {
 
     // Extract unique doctors from appointments
     const doctorMap = new Map();
-    appointments.forEach((appointment) => {
-      if (!doctorMap.has(appointment.doctorId)) {
-        doctorMap.set(appointment.doctorId, {
-          id: appointment.doctorId,
-          name: appointment.doctor.user.name,
-          specialty: appointment.doctor.specialization,
-          hospital: appointment.doctor.hospital?.name || "Cabinet privé",
-          address:
-            appointment.doctor.hospital?.address || "Adresse non spécifiée",
-          image:
-            appointment.doctor.user.profile?.avatarUrl ||
-            "/placeholder.svg?height=300&width=300",
-          rating: 4.5, // This would come from an aggregation of reviews
-          reviewCount: appointment.doctor.doctorReviews.length,
-          lastVisit: appointment.scheduledAt,
-          isFavorite: favoriteIds.includes(appointment.doctorId),
-          hasReview: appointment.doctor.doctorReviews.length > 0,
+    appointments.forEach(({ doctorId, doctor, scheduledAt }) => {
+      if (!doctorMap.has(doctorId)) {
+        const ratings = doctor.reviews.map((r) => r.rating);
+        const avgRating =
+          ratings.length > 0
+            ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+            : null;
+
+        doctorMap.set(doctorId, {
+          id: doctorId,
+          name: doctor.user.name,
+          specialty: doctor.specialization,
+          hospital: doctor.hospital?.name || "Cabinet privé",
+          address: doctor.hospital?.address || "Adresse non spécifiée",
+          image: doctor.user.profile?.avatarUrl || "/placeholder.svg",
+          rating: avgRating,
+          reviewCount: doctor.reviews.length,
+          lastVisit: scheduledAt,
+          isFavorite: favoriteIds.includes(doctorId),
+          hasReview: doctor.reviews.length > 0,
           nextAppointment: null,
         });
       }
@@ -2112,17 +2061,13 @@ export async function getDoctorDetails(doctorId: string) {
         },
         hospital: true,
         department: true,
-        doctorReviews: {
+        availabilities: true,
+        reviews: {
+          where: { targetType: "DOCTOR" },
           include: {
-            patient: {
-              include: {
-                user: true,
-              },
-            },
+            author: { include: { profile: true } },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
+          orderBy: { createdAt: "desc" },
           take: 5,
         },
       },
@@ -2178,6 +2123,33 @@ export async function getDoctorDetails(doctorId: string) {
       take: 5,
     });
 
+    const ratings = doctor.reviews.map((r) => r.rating);
+    const avgRating =
+      ratings.length > 0
+        ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+        : null;
+
+    const dayNames = [
+      "dimanche",
+      "lundi",
+      "mardi",
+      "mercredi",
+      "jeudi",
+      "jendredi",
+      "samedi",
+    ];
+
+    const availability: Record<string, string> = {};
+    for (let i = 0; i <= 6; i++) {
+      const slots = doctor.availabilities.filter(
+        (a) => a.dayOfWeek === i && a.isActive
+      );
+      availability[dayNames[i]] =
+        slots.length > 0
+          ? slots.map((s) => `${s.startTime} - ${s.endTime}`).join(", ")
+          : "Fermé";
+    }
+
     // Format doctor details
     return {
       id: doctor.id,
@@ -2189,24 +2161,14 @@ export async function getDoctorDetails(doctorId: string) {
       address: doctor.hospital?.address || "Adresse non spécifiée",
       phone: doctor.user.phone || "",
       email: doctor.user.email,
-      image:
-        doctor.user.profile?.avatarUrl ||
-        "/placeholder.svg?height=300&width=300",
-      rating: 4.5, // This would come from an aggregation of reviews
-      reviewCount: doctor.doctorReviews.length,
+      image: doctor.user.profile?.avatarUrl || "/placeholder.svg",
+      rating: avgRating,
+      reviewCount: doctor.reviews.length,
       experience: doctor.experience || "",
       bio: doctor.education || "Aucune biographie disponible",
       education: doctor.education ? [doctor.education] : [],
       languages: ["Français"],
-      availability: {
-        monday: "9h00 - 17h00",
-        tuesday: "9h00 - 17h00",
-        wednesday: "9h00 - 17h00",
-        thursday: "9h00 - 17h00",
-        friday: "9h00 - 17h00",
-        saturday: "Fermé",
-        sunday: "Fermé",
-      },
+      availability: availability,
       isFavorite: isFavorite,
       consultations: pastAppointments.map((appointment) => ({
         id: appointment.id,
@@ -2222,14 +2184,12 @@ export async function getDoctorDetails(doctorId: string) {
         duration: prescription.duration || "1 mois",
       })),
       nextAppointment: upcomingAppointments[0]?.scheduledAt || null,
-      reviews: doctor.doctorReviews.map((review) => ({
+      reviews: doctor.reviews.map((review) => ({
         id: review.id,
-        author: review.isAnonymous
-          ? "Patient anonyme"
-          : review.patient.user.name,
+        author: review.isAnonymous ? "Patient anonyme" : review.author.name,
         date: review.createdAt,
         rating: review.rating,
-        comment: review.comment || "",
+        comment: review.content || "",
       })),
     };
   } catch (error) {
@@ -2243,6 +2203,7 @@ export async function submitDoctorReview(data: {
   rating: number;
   comment: string;
   isAnonymous: boolean;
+  title: string;
 }) {
   try {
     const session = await getServerSession(authOptions);
@@ -2264,36 +2225,39 @@ export async function submitDoctorReview(data: {
     }
 
     // Check if patient has already reviewed this doctor
-    const existingReview = await prisma.doctorReview.findFirst({
+    const existingReview = await prisma.review.findFirst({
       where: {
-        patientId: patient.id,
+        authorId: patient.id,
         doctorId: data.doctorId,
+        targetType: "DOCTOR",
       },
     });
 
     if (existingReview) {
       // Update existing review
-      await prisma.doctorReview.update({
+      await prisma.review.update({
         where: {
           id: existingReview.id,
         },
         data: {
           rating: data.rating,
-          comment: data.comment,
+          content: data.comment,
           isAnonymous: data.isAnonymous,
-          isApproved: false, // Reset approval status
+          status: "PENDING",
         },
       });
     } else {
       // Create new review
-      await prisma.doctorReview.create({
+      await prisma.review.create({
         data: {
           doctorId: data.doctorId,
-          patientId: patient.id,
+          authorId: userId,
           rating: data.rating,
-          comment: data.comment,
+          content: data.comment,
           isAnonymous: data.isAnonymous,
-          isApproved: false,
+          targetType: "DOCTOR",
+          status: "PENDING",
+          title: data.title, // Add a default or dynamic title
         },
       });
     }
@@ -2508,7 +2472,7 @@ export async function getHospitalDetails(hospitalId: string) {
                 profile: true,
               },
             },
-            doctorReviews: true,
+            reviews: true,
           },
           take: 5,
         },
@@ -2575,10 +2539,10 @@ export async function getHospitalDetails(hospitalId: string) {
         specialty: doctor.specialization,
         image: doctor.user.profile?.avatarUrl || "/placeholder.svg",
         rating:
-          doctor.doctorReviews.length > 0
-            ? doctor.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
-              doctor.doctorReviews.length
-            : 0, // This would come from an aggregation of reviews
+          doctor.reviews.length > 0
+            ? doctor.reviews.reduce((sum, r) => sum + r.rating, 0) /
+              doctor.reviews.length
+            : 0,
       })),
     };
   } catch (error) {
@@ -2817,7 +2781,7 @@ export async function searchDoctors(params: {
           user: { include: { profile: true } },
           hospital: true,
           department: true,
-          doctorReviews: {
+          reviews: {
             take: 3,
             orderBy: { createdAt: "desc" },
           },
@@ -2834,11 +2798,11 @@ export async function searchDoctors(params: {
     if (params.sortBy === "rating") {
       doctors.sort((a, b) => {
         const avgA =
-          a.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
-          (a.doctorReviews.length || 1);
+          a.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          (a.reviews.length || 1);
         const avgB =
-          b.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
-          (b.doctorReviews.length || 1);
+          b.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          (b.reviews.length || 1);
         return avgB - avgA;
       });
     }
@@ -2885,11 +2849,11 @@ export async function searchDoctors(params: {
         avatar: doctor.user.profile?.avatarUrl || "/placeholder.svg",
         isIndependant: doctor.isIndependent,
         rating:
-          doctor.doctorReviews.length > 0
-            ? doctor.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
-              doctor.doctorReviews.length
+          doctor.reviews.length > 0
+            ? doctor.reviews.reduce((sum, r) => sum + r.rating, 0) /
+              doctor.reviews.length
             : 0,
-        reviewCount: doctor.doctorReviews.length,
+        reviewCount: doctor.reviews.length,
         experience: doctor.experience || 0,
         consultationFee: doctor.consultationFee?.toNumber() || 0,
         isFavorite: false,
@@ -2897,14 +2861,14 @@ export async function searchDoctors(params: {
           nextAvailable,
           slots,
         },
-        reviews: doctor.doctorReviews.map((review) => ({
+        reviews: doctor.reviews.map((review) => ({
           id: review.id,
           author: review.isAnonymous ? "Patient anonyme" : "Utilisateur",
           date: isValid(review.createdAt)
             ? format(review.createdAt, "d MMMM yyyy", { locale: fr })
             : "Date invalide",
           rating: review.rating,
-          comment: review.comment || "",
+          comment: review.content || "",
         })),
       };
     });
@@ -3060,7 +3024,7 @@ export async function getFavoritesDoctors(params: {
           user: { include: { profile: true } },
           hospital: true,
           department: true,
-          doctorReviews: {
+          reviews: {
             take: 3,
             orderBy: { createdAt: "desc" },
           },
@@ -3078,11 +3042,11 @@ export async function getFavoritesDoctors(params: {
     if (params.sortBy === "rating") {
       doctors.sort((a, b) => {
         const avgA =
-          a.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
-          (a.doctorReviews.length || 1);
+          a.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          (a.reviews.length || 1);
         const avgB =
-          b.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
-          (b.doctorReviews.length || 1);
+          b.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          (b.reviews.length || 1);
         return avgB - avgA;
       });
     }
@@ -3127,11 +3091,11 @@ export async function getFavoritesDoctors(params: {
         avatar: doctor.user.profile?.avatarUrl || "/placeholder.svg",
         isIndependant: doctor.isIndependent,
         rating:
-          doctor.doctorReviews.length > 0
-            ? doctor.doctorReviews.reduce((sum, r) => sum + r.rating, 0) /
-              doctor.doctorReviews.length
+          doctor.reviews.length > 0
+            ? doctor.reviews.reduce((sum, r) => sum + r.rating, 0) /
+              doctor.reviews.length
             : 0,
-        reviewCount: doctor.doctorReviews.length,
+        reviewCount: doctor.reviews.length,
         experience: doctor.experience || 0,
         consultationFee: doctor.consultationFee?.toNumber() || 0,
         isFavorite: true, // All are favorites here
@@ -3139,14 +3103,14 @@ export async function getFavoritesDoctors(params: {
           nextAvailable,
           slots,
         },
-        reviews: doctor.doctorReviews.map((review) => ({
+        reviews: doctor.reviews.map((review) => ({
           id: review.id,
           author: review.isAnonymous ? "Patient anonyme" : "Utilisateur",
           date: isValid(review.createdAt)
             ? format(review.createdAt, "d MMMM yyyy", { locale: fr })
             : "Date invalide",
           rating: review.rating,
-          comment: review.comment || "",
+          comment: review.content || "",
         })),
       };
     });

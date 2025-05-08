@@ -9,11 +9,7 @@ import {
   SubscriberType,
   ReviewStatus,
   ReviewTargetType,
-  ContentStatus,
-  Hospital,
-  Department,
-  Doctor,
-  Patient,
+  HospitalStatus,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
@@ -251,7 +247,10 @@ const departments = [
     name: "Médecine Interne",
     description: "Diagnostic et traitement non chirurgical des maladies",
   },
-  { name: "Ophtalmologie", description: "Traitement des maladies des yeux" },
+  {
+    name: "Ophtalmologie",
+    description: "Traitement des maladies des yeux",
+  },
   {
     name: "Orthopédie",
     description: "Traitement des affections de l'appareil locomoteur",
@@ -260,7 +259,10 @@ const departments = [
     name: "Neurologie",
     description: "Traitement des maladies du système nerveux",
   },
-  { name: "Dermatologie", description: "Traitement des maladies de la peau" },
+  {
+    name: "Dermatologie",
+    description: "Traitement des maladies de la peau",
+  },
   {
     name: "ORL",
     description: "Traitement des maladies de l'oreille, du nez et de la gorge",
@@ -269,10 +271,22 @@ const departments = [
     name: "Urologie",
     description: "Traitement des maladies de l'appareil urinaire",
   },
-  { name: "Pneumologie", description: "Traitement des maladies respiratoires" },
-  { name: "Néphrologie", description: "Traitement des maladies des reins" },
-  { name: "Endocrinologie", description: "Traitement des troubles hormonaux" },
-  { name: "Psychiatrie", description: "Traitement des troubles mentaux" },
+  {
+    name: "Pneumologie",
+    description: "Traitement des maladies respiratoires",
+  },
+  {
+    name: "Néphrologie",
+    description: "Traitement des maladies des reins",
+  },
+  {
+    name: "Endocrinologie",
+    description: "Traitement des troubles hormonaux",
+  },
+  {
+    name: "Psychiatrie",
+    description: "Traitement des troubles mentaux",
+  },
 ];
 
 const specializations = [
@@ -352,134 +366,6 @@ const medications = [
   { name: "Diazépam", dosage: "5mg", frequency: "Au besoin" },
 ];
 
-const blogCategories = [
-  {
-    name: "Santé Publique",
-    slug: "sante-publique",
-    description:
-      "Informations sur les politiques et initiatives de santé publique au Mali",
-  },
-  {
-    name: "Maladies Tropicales",
-    slug: "maladies-tropicales",
-    description: "Informations sur les maladies tropicales courantes au Mali",
-  },
-  {
-    name: "Nutrition",
-    slug: "nutrition",
-    description: "Conseils nutritionnels adaptés au contexte malien",
-  },
-  {
-    name: "Santé Maternelle",
-    slug: "sante-maternelle",
-    description:
-      "Informations sur la santé des femmes enceintes et des nouvelles mères",
-  },
-  {
-    name: "Santé Infantile",
-    slug: "sante-infantile",
-    description: "Informations sur la santé des enfants",
-  },
-  {
-    name: "Médecine Traditionnelle",
-    slug: "medecine-traditionnelle",
-    description:
-      "Informations sur les pratiques médicales traditionnelles au Mali",
-  },
-  {
-    name: "Prévention",
-    slug: "prevention",
-    description: "Conseils pour prévenir les maladies courantes",
-  },
-  {
-    name: "Actualités Médicales",
-    slug: "actualites-medicales",
-    description: "Dernières nouvelles dans le domaine médical au Mali",
-  },
-];
-
-const blogTitles = [
-  "Les défis de la lutte contre le paludisme au Mali",
-  "Comment prévenir la déshydratation pendant la saison chaude",
-  "L'importance de la vaccination des enfants dans les zones rurales",
-  "Nutrition et grossesse : conseils pour les femmes maliennes",
-  "Les plantes médicinales traditionnelles du Mali",
-  "Comprendre et gérer le diabète de type 2 au Mali",
-  "La santé mentale : un sujet tabou à aborder",
-  "Les bienfaits de l'allaitement maternel exclusif",
-  "Comment reconnaître les symptômes du paludisme",
-  "L'hypertension artérielle : un tueur silencieux",
-  "Les méthodes contraceptives disponibles au Mali",
-  "La drépanocytose : comprendre cette maladie génétique",
-  "L'importance du lavage des mains pour prévenir les maladies",
-  "Les dangers de l'automédication",
-  "Comment prévenir les maladies diarrhéiques chez les enfants",
-];
-
-const faqs = [
-  {
-    question: "Comment prendre rendez-vous avec un médecin ?",
-    answer:
-      "Vous pouvez prendre rendez-vous en ligne via notre plateforme, par téléphone au +223 XX XX XX XX, ou directement à l'accueil de l'établissement de santé concerné.",
-    category: "Consultations",
-  },
-  {
-    question:
-      "Quels documents dois-je apporter lors de ma première consultation ?",
-    answer:
-      "Veuillez apporter votre pièce d'identité, votre carnet de santé si vous en avez un, et tout document médical pertinent (résultats d'analyses, ordonnances précédentes, etc.).",
-    category: "Consultations",
-  },
-  {
-    question: "Quels sont les symptômes du paludisme ?",
-    answer:
-      "Les symptômes du paludisme incluent de la fièvre, des frissons, des maux de tête, des douleurs musculaires, de la fatigue, des nausées et des vomissements. Si vous présentez ces symptômes, consultez rapidement un médecin.",
-    category: "Général",
-  },
-  {
-    question: "Comment prévenir le paludisme ?",
-    answer:
-      "Pour prévenir le paludisme, utilisez des moustiquaires imprégnées d'insecticide, portez des vêtements couvrants le soir, utilisez des répulsifs anti-moustiques, et prenez des médicaments prophylactiques si recommandé par votre médecin.",
-    category: "Prévention",
-  },
-  {
-    question: "Quels vaccins sont recommandés pour les enfants au Mali ?",
-    answer:
-      "Au Mali, le Programme Élargi de Vaccination (PEV) recommande les vaccins contre la tuberculose, la poliomyélite, la diphtérie, le tétanos, la coqueluche, l'hépatite B, l'Haemophilus influenzae de type b, la pneumonie, la rougeole, la fièvre jaune, et récemment le vaccin contre le paludisme dans certaines régions.",
-    category: "Vaccination",
-  },
-  {
-    question: "Comment reconnaître une urgence médicale ?",
-    answer:
-      "Une urgence médicale peut se manifester par une douleur thoracique intense, une difficulté à respirer, une perte de conscience, des convulsions, des saignements abondants, ou une fièvre très élevée. Dans ces cas, rendez-vous immédiatement aux urgences.",
-    category: "Urgences",
-  },
-  {
-    question: "Quels sont les signes de déshydratation chez un enfant ?",
-    answer:
-      "Les signes de déshydratation chez un enfant incluent une bouche sèche, l'absence de larmes en pleurant, des yeux enfoncés, une fontanelle déprimée chez les nourrissons, une diminution des urines, et une léthargie inhabituelle.",
-    category: "Pédiatrie",
-  },
-  {
-    question: "Comment conserver correctement les médicaments à domicile ?",
-    answer:
-      "Conservez vos médicaments dans un endroit frais et sec, à l'abri de la lumière directe du soleil et hors de portée des enfants. Certains médicaments nécessitent une conservation au réfrigérateur, vérifiez les instructions sur la notice.",
-    category: "Médicaments",
-  },
-  {
-    question: "Quels aliments sont recommandés pour les femmes enceintes ?",
-    answer:
-      "Les femmes enceintes devraient consommer une alimentation variée et équilibrée, riche en fruits, légumes, céréales complètes, protéines maigres et produits laitiers. Les aliments riches en fer, acide folique et calcium sont particulièrement importants.",
-    category: "Nutrition",
-  },
-  {
-    question: "Comment savoir si mon enfant souffre de malnutrition ?",
-    answer:
-      "Les signes de malnutrition chez un enfant peuvent inclure un retard de croissance, une perte de poids, un manque d'énergie, des cheveux fins et cassants, une peau sèche, des infections fréquentes, et des troubles digestifs. Une consultation médicale est nécessaire pour un diagnostic précis.",
-    category: "Pédiatrie",
-  },
-];
-
 // Méthodes de paiement spécifiques au Mali
 const paymentMethods = [
   "ORANGE_MONEY",
@@ -490,35 +376,47 @@ const paymentMethods = [
   "VIREMENT_BANCAIRE",
 ];
 
+// Type definitions for better TypeScript support
+type HospitalWithAdmin = {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  adminId: string;
+};
+
+type DoctorWithUser = {
+  id: string;
+  userId: string;
+  hospitalId: string | null;
+};
+
+type PatientWithUser = {
+  id: string;
+  userId: string;
+};
+
 async function main() {
   console.log("Starting database seeding...");
   const usedEmails = new Set<string>();
 
   // Clear existing data
   console.log("Clearing existing data...");
-  await prisma.reviewResponse.deleteMany();
-  await prisma.review.deleteMany();
-  await prisma.doctorReview.deleteMany();
-  await prisma.blogComment.deleteMany();
-  await prisma.blogPost.deleteMany();
-  await prisma.blogCategory.deleteMany();
-  await prisma.fAQ.deleteMany();
-  await prisma.subscriptionPayment.deleteMany();
-  await prisma.subscription.deleteMany();
-  await prisma.medicalRecordAttachment.deleteMany();
   await prisma.prescription.deleteMany();
+  await prisma.prescriptionOrder.deleteMany();
+  await prisma.medicalRecordAttachment.deleteMany();
   await prisma.medicalRecord.deleteMany();
-  await prisma.appointmentReminder.deleteMany();
   await prisma.appointment.deleteMany();
   await prisma.vitalSign.deleteMany();
   await prisma.medicalHistory.deleteMany();
   await prisma.doctorAvailability.deleteMany();
-  await prisma.message.deleteMany();
-  await prisma.notification.deleteMany();
+  await prisma.review.deleteMany();
   await prisma.doctor.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.department.deleteMany();
   await prisma.hospital.deleteMany();
+  await prisma.subscriptionPayment.deleteMany();
+  await prisma.subscription.deleteMany();
   await prisma.session.deleteMany();
   await prisma.verificationToken.deleteMany();
   await prisma.account.deleteMany();
@@ -557,23 +455,9 @@ async function main() {
 
   console.log("Super admin created:", superAdmin.email);
 
-  // Create blog categories
-  console.log("Creating blog categories...");
-  const createdBlogCategories = await Promise.all(
-    blogCategories.map((category) =>
-      prisma.blogCategory.create({
-        data: {
-          name: category.name,
-          slug: category.slug,
-          description: category.description,
-        },
-      })
-    )
-  );
-
   // Create hospitals with admin users
   console.log("Creating hospitals and hospital admins...");
-  const createdHospitals: Hospital[] = [];
+  const createdHospitals: HospitalWithAdmin[] = [];
 
   for (const hospital of malianHospitals) {
     let adminEmail: string;
@@ -642,10 +526,17 @@ async function main() {
           ? `https://example.com/logos/${hospital.name.toLowerCase().replace(/[^\w]/g, "")}.png`
           : null,
         isVerified: true,
+        status: HospitalStatus.ACTIVE,
       },
     });
 
-    createdHospitals.push(createdHospital);
+    createdHospitals.push({
+      id: createdHospital.id,
+      name: createdHospital.name,
+      city: createdHospital.city,
+      state: createdHospital.state,
+      adminId: createdHospital.adminId,
+    });
 
     // Create subscription for hospital
     const subscriptionStartDate = randomDate(
@@ -701,7 +592,14 @@ async function main() {
     }
 
     // Create departments for each hospital
-    const hospitalDepartments: Department[] = [];
+    const hospitalDepartments: {
+      id: string;
+      createdAt: Date;
+      hospitalId: string;
+      updatedAt: Date;
+      name: string;
+      description: string | null;
+    }[] = [];
     const numDepartments = randomInt(5, departments.length);
 
     // Randomly select departments for this hospital
@@ -728,7 +626,7 @@ async function main() {
 
   // Create doctors (both hospital and independent)
   console.log("Creating doctors...");
-  const createdDoctors: Doctor[] = [];
+  const createdDoctors: DoctorWithUser[] = [];
 
   // Create hospital doctors (5 per hospital)
   for (const hospital of createdHospitals) {
@@ -802,7 +700,11 @@ async function main() {
         },
       });
 
-      createdDoctors.push(doctor);
+      createdDoctors.push({
+        id: doctor.id,
+        userId: doctor.userId,
+        hospitalId: doctor.hospitalId,
+      });
 
       // Create doctor availabilities
       const daysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // Sunday to Saturday
@@ -818,6 +720,7 @@ async function main() {
             dayOfWeek: day,
             startTime: `${startHour}:00`,
             endTime: `${endHour}:00`,
+            slotDuration: 60,
             isActive: true,
           },
         });
@@ -889,7 +792,11 @@ async function main() {
       },
     });
 
-    createdDoctors.push(doctor);
+    createdDoctors.push({
+      id: doctor.id,
+      userId: doctor.userId,
+      hospitalId: doctor.hospitalId,
+    });
 
     // Create doctor availabilities
     const daysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // Sunday to Saturday
@@ -905,6 +812,7 @@ async function main() {
           dayOfWeek: day,
           startTime: `${startHour}:00`,
           endTime: `${endHour}:00`,
+          slotDuration: 60,
           isActive: true,
         },
       });
@@ -968,7 +876,7 @@ async function main() {
 
   // Create patients
   console.log("Creating patients...");
-  const createdPatients: Patient[] = [];
+  const createdPatients: PatientWithUser[] = [];
 
   // Create exactly 30 patients
   for (let i = 0; i < 30; i++) {
@@ -1039,6 +947,16 @@ async function main() {
           ? `${randomItem(malianFirstNames.male)} ${randomItem(malianLastNames)}`
           : null,
         emergencyPhone: randomBoolean(0.7) ? generateMalianPhoneNumber() : null,
+        emergencyRelation: randomBoolean(0.7)
+          ? randomItem([
+              "Père",
+              "Mère",
+              "Frère",
+              "Sœur",
+              "Conjoint(e)",
+              "Ami(e)",
+            ])
+          : null,
         insuranceProvider: randomBoolean(0.4)
           ? randomItem([
               "INPS",
@@ -1057,7 +975,10 @@ async function main() {
       },
     });
 
-    createdPatients.push(patient);
+    createdPatients.push({
+      id: patient.id,
+      userId: patient.userId,
+    });
 
     // Create medical histories for some patients
     if (randomBoolean(0.7)) {
@@ -1070,6 +991,7 @@ async function main() {
         await prisma.medicalHistory.create({
           data: {
             patientId: patient.id,
+            doctorId: doctor.id,
             title: `Antécédent de ${condition}`,
             condition: condition,
             diagnosedDate: randomDate(new Date(2010, 0, 1), new Date()),
@@ -1127,9 +1049,7 @@ async function main() {
 
     for (let i = 0; i < numAppointments; i++) {
       const doctor = randomItem(createdDoctors);
-      const hospital = doctor.hospitalId
-        ? await prisma.hospital.findUnique({ where: { id: doctor.hospitalId } })
-        : null;
+      const hospitalId = doctor.hospitalId;
 
       const appointmentDate = randomDate(
         new Date(2023, 0, 1),
@@ -1144,7 +1064,7 @@ async function main() {
 
       const isPast = appointmentDateTime < new Date();
 
-      let status;
+      let status: AppointmentStatus;
       if (isPast) {
         status = randomItem([
           AppointmentStatus.COMPLETED,
@@ -1162,8 +1082,9 @@ async function main() {
         data: {
           patientId: patient.id,
           doctorId: doctor.id,
-          hospitalId: hospital ? hospital.id : null,
+          hospitalId: hospitalId,
           scheduledAt: appointmentDateTime,
+          startTime: appointmentDateTime,
           endTime: endDateTime,
           status: status,
           type: randomItem([
@@ -1177,6 +1098,15 @@ async function main() {
           notes: randomBoolean(0.5)
             ? `Patient se plaint de ${randomItem(["douleurs", "fièvre", "fatigue", "maux de tête", "toux"])}`
             : null,
+          completedAt:
+            status === AppointmentStatus.COMPLETED ? endDateTime : null,
+          cancelledAt:
+            status === AppointmentStatus.CANCELED
+              ? new Date(
+                  appointmentDateTime.getTime() -
+                    randomInt(1, 72) * 60 * 60 * 1000
+                )
+              : null,
           cancellationReason:
             status === AppointmentStatus.CANCELED
               ? randomItem([
@@ -1189,25 +1119,6 @@ async function main() {
         },
       });
 
-      // Create appointment reminders
-      if (
-        status === AppointmentStatus.PENDING ||
-        status === AppointmentStatus.CONFIRMED
-      ) {
-        const reminderDate = new Date(appointmentDateTime);
-        reminderDate.setDate(reminderDate.getDate() - 1);
-
-        await prisma.appointmentReminder.create({
-          data: {
-            appointmentId: appointment.id,
-            reminderTime: reminderDate,
-            isSent: reminderDate < new Date(),
-            sentAt: reminderDate < new Date() ? reminderDate : null,
-            type: randomItem(["EMAIL", "SMS", "PUSH"]),
-          },
-        });
-      }
-
       // Create medical records for completed appointments
       if (status === AppointmentStatus.COMPLETED) {
         const medicalRecord = await prisma.medicalRecord.create({
@@ -1215,7 +1126,7 @@ async function main() {
             patientId: patient.id,
             doctorId: doctor.id,
             appointmentId: appointment.id,
-            hospitalId: hospital ? hospital.id : null,
+            hospitalId: hospitalId,
             diagnosis: `Patient diagnostiqué avec ${randomItem(medicalConditions)}`,
             treatment: `Traitement prescrit: ${randomItem(["médicaments", "repos", "exercices", "régime alimentaire", "chirurgie"])}`,
             notes: randomBoolean(0.7)
@@ -1230,6 +1141,17 @@ async function main() {
 
         // Create prescriptions for some medical records
         if (randomBoolean(0.8)) {
+          // Create prescription order
+          const prescriptionOrder = await prisma.prescriptionOrder.create({
+            data: {
+              medicalRecordId: medicalRecord.id,
+              doctorId: doctor.id,
+              patientId: patient.id,
+              issuedAt: new Date(appointmentDateTime),
+              notes: randomBoolean(0.3) ? "Ordonnance standard" : null,
+            },
+          });
+
           const numMedications = randomInt(1, 3);
 
           for (let j = 0; j < numMedications; j++) {
@@ -1239,6 +1161,7 @@ async function main() {
               data: {
                 patientId: patient.id,
                 doctorId: doctor.id,
+                prescriptionOrderId: prescriptionOrder.id,
                 medicalRecordId: medicalRecord.id,
                 medicationName: medication.name,
                 dosage: medication.dosage,
@@ -1282,54 +1205,8 @@ async function main() {
   // Create reviews
   console.log("Creating reviews...");
 
-  // Create doctor reviews
+  // Create reviews for doctors and hospitals
   for (let i = 0; i < 50; i++) {
-    const patient: Patient = randomItem(createdPatients);
-    const doctor: Doctor = randomItem(createdDoctors);
-
-    // Check if this patient already reviewed this doctor
-    const existingReview = await prisma.doctorReview.findUnique({
-      where: {
-        doctorId_patientId: {
-          doctorId: doctor.id,
-          patientId: patient.id,
-        },
-      },
-    });
-
-    if (!existingReview) {
-      const rating = randomInt(1, 5);
-      const isPositive = rating >= 4;
-
-      await prisma.doctorReview.create({
-        data: {
-          doctorId: doctor.id,
-          patientId: patient.id,
-          rating: rating,
-          comment: isPositive
-            ? randomItem([
-                `Excellent médecin, très professionnel et à l'écoute.`,
-                `Le médecin' a pris le temps de bien m'expliquer mon traitement.`,
-                `Je recommande vivement ce médecin pour sa compétence et sa gentillesse.`,
-                `Consultation très satisfaisante, médecin compétent.`,
-                `Très bon suivi médical, je suis très satisfait(e).`,
-              ])
-            : randomItem([
-                `Temps d'attente trop long pour la consultation.`,
-                `Le médecin n'a pas pris suffisamment de temps pour m'écouter.`,
-                `Consultation trop rapide et peu d'explications.`,
-                `Je m'attendais à un meilleur suivi.`,
-                `Difficultés à obtenir un rendez-vous rapidement.`,
-              ]),
-          isAnonymous: randomBoolean(0.3),
-          isApproved: randomBoolean(0.8),
-        },
-      });
-    }
-  }
-
-  // Create general reviews (for doctors, hospitals, and platform)
-  for (let i = 0; i < 100; i++) {
     const patient = randomItem(createdPatients);
     const targetType = randomItem([
       ReviewTargetType.DOCTOR,
@@ -1365,7 +1242,7 @@ async function main() {
           `Problèmes de communication`,
         ]);
 
-    let reviewContent;
+    let reviewContent: string;
 
     if (targetType === ReviewTargetType.DOCTOR) {
       reviewContent = isPositive
@@ -1417,7 +1294,7 @@ async function main() {
           ]);
     }
 
-    const review = await prisma.review.create({
+    await prisma.review.create({
       data: {
         title: reviewTitle,
         content: reviewContent,
@@ -1438,507 +1315,11 @@ async function main() {
         likes: randomInt(0, 50),
         dislikes: randomInt(0, 10),
         reports: randomBoolean(0.1) ? randomInt(1, 5) : 0,
-        createdAt: randomDate(new Date(2023, 0, 1), new Date()),
-      },
-    });
-
-    // Add responses to some reviews
-    if (review.status === ReviewStatus.APPROVED && randomBoolean(0.3)) {
-      let responderId;
-
-      if (targetType === ReviewTargetType.DOCTOR && doctorId) {
-        const doctor = await prisma.doctor.findUnique({
-          where: { id: doctorId },
-          include: { user: true },
-        });
-        responderId = doctor?.userId;
-      } else if (targetType === ReviewTargetType.HOSPITAL && hospitalId) {
-        const hospital = await prisma.hospital.findUnique({
-          where: { id: hospitalId },
-          include: { admin: true },
-        });
-        responderId = hospital?.adminId;
-      } else {
-        responderId = superAdmin.id;
-      }
-
-      if (responderId) {
-        await prisma.reviewResponse.create({
-          data: {
-            reviewId: review.id,
-            authorId: responderId,
-            content: isPositive
-              ? randomItem([
-                  `Merci beaucoup pour votre retour positif. Nous sommes ravis que vous ayez apprécié nos services.`,
-                  `Nous vous remercions pour votre confiance et votre satisfaction nous encourage à maintenir la qualité de nos services.`,
-                  `Votre avis est très important pour nous. Merci d'avoir pris le temps de partager votre expérience positive.`,
-                  `Nous sommes heureux d'avoir pu répondre à vos attentes et nous restons à votre disposition pour vos futurs besoins.`,
-                  `Merci pour ces mots encourageants. C'est un plaisir de vous compter parmi nos patients satisfaits.`,
-                ])
-              : randomItem([
-                  `Nous vous présentons nos excuses pour les désagréments rencontrés. Votre retour nous aidera à améliorer nos services.`,
-                  `Nous prenons note de vos remarques et mettons tout en œuvre pour résoudre les problèmes que vous avez soulevés.`,
-                  `Merci pour votre retour. Nous regrettons que votre expérience n'ait pas été à la hauteur de vos attentes et travaillons à améliorer nos services.`,
-                  `Nous sommes désolés pour cette expérience décevante. N'hésitez pas à nous contacter directement pour que nous puissions résoudre votre problème.`,
-                  `Votre satisfaction est notre priorité. Nous allons examiner les points que vous avez soulevés pour améliorer notre qualité de service.`,
-                ]),
-            isOfficial: true,
-            createdAt: new Date(
-              review.createdAt.getTime() + randomInt(1, 7) * 24 * 60 * 60 * 1000
-            ),
-          },
-        });
-      }
-    }
-  }
-
-  console.log("Created reviews and responses");
-
-  // Create blog posts
-  console.log("Creating blog posts...");
-
-  for (let i = 0; i < blogTitles.length; i++) {
-    const title = blogTitles[i];
-    const slug = title
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^\w\s]/g, "")
-      .replace(/\s+/g, "-");
-
-    // Select a random author (either a doctor or the super admin)
-    const authorId = randomBoolean(0.7)
-      ? (
-          await prisma.doctor.findFirst({
-            select: { userId: true },
-            orderBy: { createdAt: "asc" },
-            skip: randomInt(0, createdDoctors.length - 1),
-          })
-        )?.userId || superAdmin.id
-      : superAdmin.id;
-
-    // Select 1-3 random categories
-    const numCategories = randomInt(1, 3);
-    const shuffledCategories = [...createdBlogCategories].sort(
-      () => 0.5 - Math.random()
-    );
-    const selectedCategories = shuffledCategories.slice(0, numCategories);
-
-    const isPublished = randomBoolean(0.8);
-    const publishedDate = isPublished
-      ? randomDate(new Date(2023, 0, 1), new Date())
-      : null;
-
-    const content = `
-  # ${title}
-  
-  ## Introduction
-  
-  ${randomItem([
-    "La santé est un enjeu majeur au Mali, où de nombreux défis persistent malgré les progrès réalisés ces dernières années.",
-    "Dans le contexte sanitaire malien, il est essentiel de comprendre les spécificités locales pour adapter les approches médicales.",
-    "Les professionnels de santé au Mali font face à des défis uniques qui nécessitent des solutions innovantes et adaptées.",
-    "L'amélioration de l'accès aux soins de santé reste une priorité pour le développement du système sanitaire malien.",
-    "La médecine au Mali combine approches modernes et savoirs traditionnels, créant un système de santé unique.",
-  ])}
-  
-  ## Contexte
-  
-  ${randomItem([
-    "Au Mali, les conditions climatiques et environnementales influencent fortement la prévalence de certaines maladies comme le paludisme.",
-    "Le système de santé malien s'organise en différents niveaux, des centres de santé communautaires aux hôpitaux régionaux et nationaux.",
-    "Les zones rurales du Mali font face à des défis particuliers en matière d'accès aux soins, notamment en raison des distances et du manque d'infrastructures adéquates.",
-    "La formation des professionnels de santé au Mali s'est considérablement améliorée, mais des lacunes persistent dans certaines spécialités.",
-    "Les pratiques de médecine traditionnelle restent très présentes au Mali et coexistent avec la médecine moderne.",
-  ])}
-  
-  ## Points clés
-  
-  * ${randomItem([
-    "Le paludisme reste l'une des principales causes de mortalité au Mali, particulièrement chez les enfants de moins de 5 ans.",
-    "La vaccination des enfants a connu des progrès significatifs, mais la couverture vaccinale reste insuffisante dans certaines régions.",
-    "Les maladies non transmissibles comme l'hypertension et le diabète sont en augmentation dans les zones urbaines du Mali.",
-    "La santé maternelle et infantile demeure une priorité nationale, avec des efforts pour réduire la mortalité.",
-    "L'accès à l'eau potable est un facteur déterminant pour la santé publique au Mali.",
-  ])}
-  
-  * ${randomItem([
-    "La télémédecine offre des perspectives prometteuses pour améliorer l'accès aux soins dans les zones reculées.",
-    "La formation continue des agents de santé communautaires est essentielle pour renforcer le système de santé de proximité.",
-    "L'éducation sanitaire des populations joue un rôle crucial dans la prévention des maladies courantes.",
-    "Les partenariats public-privé peuvent contribuer à améliorer la qualité des soins de santé.",
-    "L'implication des communautés dans la gestion des centres de santé favorise leur appropriation et leur durabilité.",
-  ])}
-  
-  * ${randomItem([
-    "La recherche médicale adaptée au contexte malien est nécessaire pour développer des solutions locales efficaces.",
-    "La coordination entre les différents acteurs de la santé (État, ONG, secteur privé) reste un défi majeur.",
-    "L'amélioration des systèmes d'information sanitaire permet un meilleur suivi épidémiologique et une planification plus efficace.",
-    "La gestion des déchets médicaux constitue un enjeu environnemental et sanitaire important dans les établissements de santé.",
-    "La résilience du système de santé face aux crises (conflits, épidémies, catastrophes naturelles) doit être renforcée.",
-  ])}
-  
-  ## Conclusion
-  
-  ${randomItem([
-    "Les défis sanitaires au Mali nécessitent une approche globale et coordonnée, impliquant tous les acteurs concernés.",
-    "Malgré les obstacles, des avancées significatives ont été réalisées dans le domaine de la santé au Mali ces dernières années.",
-    "L'amélioration durable de la santé des populations maliennes passe par le renforcement du système de santé à tous les niveaux.",
-    "L'innovation et l'adaptation des solutions aux réalités locales sont essentielles pour relever les défis sanitaires au Mali.",
-    "L'engagement politique et communautaire est indispensable pour garantir l'accès universel aux soins de santé au Mali.",
-  ])}
-      `;
-
-    const excerpt = randomItem([
-      "Cet article explore les enjeux et perspectives de la santé au Mali, en mettant l'accent sur les défis actuels et les solutions potentielles.",
-      "Une analyse des problématiques de santé spécifiques au contexte malien et des approches pour y répondre efficacement.",
-      "Découvrez les particularités du système de santé malien et les initiatives prometteuses pour améliorer l'accès aux soins.",
-      "Un regard approfondi sur la situation sanitaire au Mali et les stratégies pour renforcer la résilience du système de santé.",
-      "Cet article présente les avancées et les défis persistants dans le domaine de la santé au Mali, avec des perspectives d'amélioration.",
-    ]);
-
-    const blogPost = await prisma.blogPost.create({
-      data: {
-        title: title,
-        slug: slug,
-        content: content,
-        excerpt: excerpt,
-        authorId: authorId,
-        coverImage: randomBoolean(0.7)
-          ? `https://example.com/images/blog/${slug}.jpg`
-          : null,
-        status: isPublished
-          ? ContentStatus.PUBLISHED
-          : randomItem([ContentStatus.DRAFT, ContentStatus.ARCHIVED]),
-        publishedAt: publishedDate,
-        tags: [
-          randomItem([
-            "Santé",
-            "Médecine",
-            "Bien-être",
-            "Prévention",
-            "Traitement",
-          ]),
-          randomItem([
-            "Mali",
-            "Afrique",
-            "Santé publique",
-            "Système de santé",
-            "Accès aux soins",
-          ]),
-          randomItem([
-            "Recherche",
-            "Innovation",
-            "Technologie",
-            "Tradition",
-            "Communauté",
-          ]),
-        ],
-        viewCount: isPublished ? randomInt(0, 1000) : 0,
-        categories: {
-          connect: selectedCategories.map((category) => ({ id: category.id })),
-        },
-      },
-    });
-
-    // Add comments to some blog posts
-    if (isPublished && randomBoolean(0.7)) {
-      const numComments = randomInt(1, 5);
-
-      for (let j = 0; j < numComments; j++) {
-        const gender = randomBoolean() ? "male" : "female";
-        const firstName = randomItem(malianFirstNames[gender]);
-        const lastName = randomItem(malianLastNames);
-
-        await prisma.blogComment.create({
-          data: {
-            postId: blogPost.id,
-            content: randomItem([
-              "Article très informatif, merci pour ces précisions.",
-              "Je partage entièrement cette analyse. Il est important de sensibiliser davantage sur ce sujet.",
-              "Pourriez-vous développer davantage sur les solutions proposées ?",
-              "Cette problématique est effectivement cruciale pour notre système de santé.",
-              "Merci pour cet éclairage sur un sujet aussi important.",
-              "J'ai personnellement constaté ces défis dans ma région. Votre analyse est pertinente.",
-              "Quelles sont les perspectives d'amélioration à court terme selon vous ?",
-              "Article bien documenté qui met en lumière des enjeux souvent négligés.",
-              "Ces informations sont précieuses pour comprendre les défis sanitaires actuels.",
-              "Je suggère également de considérer l'aspect culturel dans cette analyse.",
-            ]),
-            authorName: `${firstName} ${lastName}`,
-            authorEmail: randomBoolean(0.7)
-              ? generateEmail(firstName, lastName, "gmail.com")
-              : null,
-            isApproved: randomBoolean(0.8),
-            createdAt: new Date(
-              blogPost.createdAt.getTime() +
-                randomInt(1, 30) * 24 * 60 * 60 * 1000
-            ),
-          },
-        });
-      }
-    }
-  }
-
-  console.log("Created blog posts and comments");
-
-  // Create FAQs
-  console.log("Creating FAQs...");
-
-  for (const faq of faqs) {
-    await prisma.fAQ.create({
-      data: {
-        question: faq.question,
-        answer: faq.answer,
-        category: faq.category,
-        order: randomInt(1, 100),
-        authorId: superAdmin.id,
-        status: ContentStatus.PUBLISHED,
       },
     });
   }
 
-  console.log("Created FAQs");
-
-  // Create notifications
-  console.log("Creating notifications...");
-
-  // Create notifications for each patient
-  for (const patient of createdPatients) {
-    // Each patient gets 2-5 notifications
-    const numNotifications = randomInt(2, 5);
-
-    for (let i = 0; i < numNotifications; i++) {
-      const notificationType = randomItem([
-        "APPOINTMENT",
-        "REMINDER",
-        "SYSTEM",
-        "MESSAGE",
-        "REVIEW",
-      ]);
-
-      let title, message;
-
-      switch (notificationType) {
-        case "APPOINTMENT":
-          title = randomItem([
-            "Nouveau rendez-vous",
-            "Rendez-vous confirmé",
-            "Rappel de rendez-vous",
-            "Rendez-vous annulé",
-            "Modification de rendez-vous",
-          ]);
-          message = randomItem([
-            "Votre rendez-vous a été confirmé pour le 15 juin à 10h00.",
-            "Rappel : Vous avez un rendez-vous demain à 14h30.",
-            "Votre rendez-vous du 20 juin a été annulé par le médecin.",
-            "Le Dr. Keita a modifié l'heure de votre rendez-vous du 25 juin.",
-            "Nouveau rendez-vous programmé avec Dr. Traoré le 30 juin à 11h00.",
-          ]);
-          break;
-        case "REMINDER":
-          title = randomItem([
-            "Rappel de médicament",
-            "Rappel de suivi",
-            "Rappel de vaccination",
-            "Rappel d'analyse",
-            "Rappel de paiement",
-          ]);
-          message = randomItem([
-            "N'oubliez pas de prendre votre médicament aujourd'hui.",
-            "Votre suivi médical est prévu dans une semaine.",
-            "Rappel : Vaccination prévue pour votre enfant le 10 juillet.",
-            "Vos analyses de sang sont à faire avant le 20 juillet.",
-            "Rappel : Votre facture de consultation est en attente de paiement.",
-          ]);
-          break;
-        case "SYSTEM":
-          title = randomItem([
-            "Mise à jour du système",
-            "Maintenance prévue",
-            "Nouvelle fonctionnalité",
-            "Information importante",
-            "Modification des conditions",
-          ]);
-          message = randomItem([
-            "Notre plateforme sera en maintenance le 5 juillet de 22h à 00h.",
-            "Une nouvelle fonctionnalité de prise de rendez-vous est disponible.",
-            "Mise à jour de nos conditions d'utilisation. Veuillez les consulter.",
-            "Votre mot de passe a été modifié avec succès.",
-            "Nous avons détecté une connexion inhabituelle à votre compte.",
-          ]);
-          break;
-        case "MESSAGE":
-          title = randomItem([
-            "Nouveau message",
-            "Réponse à votre message",
-            "Message du Dr. Coulibaly",
-            "Message important",
-            "Consultation en ligne",
-          ]);
-          message = randomItem([
-            "Vous avez reçu un nouveau message de votre médecin.",
-            "Le Dr. Diallo a répondu à votre question.",
-            "Message concernant votre dernière consultation.",
-            "Nouveau message concernant vos résultats d'analyses.",
-            "Invitation à une consultation en ligne le 12 juillet.",
-          ]);
-          break;
-        case "REVIEW":
-          title = randomItem([
-            "Nouvel avis",
-            "Avis approuvé",
-            "Réponse à votre avis",
-            "Invitation à donner votre avis",
-            "Avis en attente de modération",
-          ]);
-          message = randomItem([
-            "Votre avis a été publié avec succès.",
-            "Un médecin a répondu à votre avis.",
-            "Merci de donner votre avis sur votre dernière consultation.",
-            "Votre avis est en attente de modération.",
-            "Félicitations ! Votre avis a été mis en avant sur notre plateforme.",
-          ]);
-          break;
-      }
-
-      await prisma.notification.create({
-        data: {
-          userId: patient.userId,
-          title: title,
-          message: message,
-          type: notificationType,
-          isRead: randomBoolean(0.6),
-          createdAt: randomDate(new Date(2023, 0, 1), new Date()),
-        },
-      });
-    }
-  }
-
-  console.log("Created notifications");
-
-  // Create messages
-  console.log("Creating messages...");
-
-  // Create message threads for each patient with at least one doctor
-  for (const patient of createdPatients) {
-    // Each patient has a conversation with 1-2 doctors
-    const numDoctors = randomInt(1, 2);
-    const shuffledDoctors = [...createdDoctors].sort(() => 0.5 - Math.random());
-    const selectedDoctors = shuffledDoctors.slice(0, numDoctors);
-
-    for (const doctor of selectedDoctors) {
-      const numMessages = randomInt(2, 5);
-      const threadStartDate = randomDate(new Date(2023, 0, 1), new Date());
-
-      for (let j = 0; j < numMessages; j++) {
-        const messageDate = new Date(
-          threadStartDate.getTime() + j * randomInt(1, 24) * 60 * 60 * 1000
-        );
-
-        let content;
-
-        if (j === 0) {
-          // First message in thread - from patient
-          content = randomItem([
-            "Bonjour Docteur, j'aimerais prendre rendez-vous pour une consultation.",
-            "Docteur, j'ai des questions concernant mon traitement actuel.",
-            "Bonjour, je ressens des douleurs depuis quelques jours. Pouvez-vous me conseiller ?",
-            "J'ai reçu mes résultats d'analyses. Quand pourrions-nous en discuter ?",
-            "Bonjour, je souhaiterais avoir des informations sur la vaccination de mon enfant.",
-          ]);
-
-          await prisma.message.create({
-            data: {
-              senderId: patient.userId,
-              receiverId: doctor.userId,
-              content: content,
-              isRead: true,
-              readAt: new Date(
-                messageDate.getTime() + randomInt(1, 60) * 60 * 1000
-              ),
-              createdAt: messageDate,
-            },
-          });
-        } else if (j === 1) {
-          // Second message - from doctor
-          content = randomItem([
-            "Bonjour, je peux vous proposer un rendez-vous lundi prochain à 10h ou mardi à 15h.",
-            "Bonjour, continuez le traitement comme prescrit et tenez-moi informé de l'évolution.",
-            "Bonjour, pourriez-vous me décrire plus précisément vos symptômes ? Depuis quand ressentez-vous ces douleurs ?",
-            "Bonjour, vos résultats sont disponibles. Nous pouvons en discuter lors d'une consultation. Quand seriez-vous disponible ?",
-            "Bonjour, je vous recommande de suivre le calendrier vaccinal standard. Quel âge a votre enfant ?",
-          ]);
-
-          await prisma.message.create({
-            data: {
-              senderId: doctor.userId,
-              receiverId: patient.userId,
-              content: content,
-              isRead: randomBoolean(0.8),
-              readAt: randomBoolean(0.8)
-                ? new Date(messageDate.getTime() + randomInt(1, 60) * 60 * 1000)
-                : null,
-              createdAt: messageDate,
-            },
-          });
-        } else {
-          // Follow-up messages - alternating
-          if (j % 2 === 0) {
-            // Patient message
-            content = randomItem([
-              "Merci pour votre réponse. Je préfère le rendez-vous de mardi à 15h.",
-              "J'ai bien noté vos recommandations. Les symptômes persistent, mais sont moins intenses.",
-              "Les douleurs ont commencé il y a environ 3 jours, principalement dans le bas du dos.",
-              "Je serais disponible jeudi après-midi pour discuter de mes résultats.",
-              "Mon enfant a 18 mois. A-t-il besoin de vaccins particuliers à cet âge ?",
-            ]);
-
-            await prisma.message.create({
-              data: {
-                senderId: patient.userId,
-                receiverId: doctor.userId,
-                content: content,
-                isRead: randomBoolean(0.7),
-                readAt: randomBoolean(0.7)
-                  ? new Date(
-                      messageDate.getTime() + randomInt(1, 60) * 60 * 1000
-                    )
-                  : null,
-                createdAt: messageDate,
-              },
-            });
-          } else {
-            // Doctor message
-            content = randomItem([
-              "Parfait, je vous confirme votre rendez-vous mardi à 15h. Apportez vos dernières analyses si vous en avez.",
-              "Continuez le traitement encore 3 jours. Si les symptômes persistent, nous devrons envisager d'autres examens.",
-              "Ces symptômes pourraient indiquer une lombalgie. Je vous conseille du repos et des anti-inflammatoires. Venez me voir si cela ne s'améliore pas d'ici 2 jours.",
-              "Je vous propose jeudi à 16h pour discuter de vos résultats. Cela vous convient-il ?",
-              "À 18 mois, votre enfant devrait recevoir les rappels des vaccins contre la diphtérie, le tétanos, la poliomyélite et la rougeole. Je vous propose un rendez-vous la semaine prochaine.",
-            ]);
-
-            await prisma.message.create({
-              data: {
-                senderId: doctor.userId,
-                receiverId: patient.userId,
-                content: content,
-                isRead: randomBoolean(0.6),
-                readAt: randomBoolean(0.6)
-                  ? new Date(
-                      messageDate.getTime() + randomInt(1, 60) * 60 * 1000
-                    )
-                  : null,
-                createdAt: messageDate,
-              },
-            });
-          }
-        }
-      }
-    }
-  }
-
-  console.log("Created messages");
+  console.log("Created reviews");
 
   console.log("Database seeding completed successfully!");
 }

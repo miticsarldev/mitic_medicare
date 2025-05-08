@@ -74,7 +74,7 @@ export type DoctorProfileWithDetails = Prisma.DoctorGetPayload<{
     };
     hospital: true;
     department: true;
-    doctorReviews: {
+    reviews: {
       orderBy: {
         createdAt: "desc";
       };

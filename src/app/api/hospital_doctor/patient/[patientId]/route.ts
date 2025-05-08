@@ -3,11 +3,14 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request, { params }: { params: { patientId: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { patientId: string } }
+) {
   try {
     const appointment = await prisma.appointment.findUnique({
       where: { id: params.patientId },
-      select: { patientId: true }
+      select: { patientId: true },
     });
 
     const actualPatientId = appointment?.patientId || params.patientId;
@@ -31,23 +34,23 @@ export async function GET(request: Request, { params }: { params: { patientId: s
             id: true,
             name: true,
             email: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         medicalHistories: {
-          orderBy: { diagnosedDate: 'desc' },
+          orderBy: { diagnosedDate: "desc" },
           select: {
             id: true,
             title: true,
             condition: true,
             diagnosedDate: true,
             status: true,
-            details: true
-          }
+            details: true,
+          },
         },
         appointments: {
-          where: { status: 'COMPLETED' },
-          orderBy: { scheduledAt: 'desc' },
+          where: { status: "COMPLETED" },
+          orderBy: { scheduledAt: "desc" },
           select: {
             id: true,
             scheduledAt: true,
@@ -60,32 +63,32 @@ export async function GET(request: Request, { params }: { params: { patientId: s
                 user: {
                   select: {
                     id: true,
-                    name: true
-                  }
-                }
-              }
+                    name: true,
+                  },
+                },
+              },
             },
             medicalRecord: {
               select: {
                 id: true,
                 diagnosis: true,
                 treatment: true,
-                prescriptions: {
+                prescription: {
                   select: {
                     id: true,
                     medicationName: true,
                     dosage: true,
                     frequency: true,
                     duration: true,
-                    instructions: true
-                  }
-                }
-              }
-            }
-          }
+                    instructions: true,
+                  },
+                },
+              },
+            },
+          },
         },
         vitalSigns: {
-          orderBy: { recordedAt: 'desc' },
+          orderBy: { recordedAt: "desc" },
           take: 1,
           select: {
             id: true,
@@ -96,22 +99,22 @@ export async function GET(request: Request, { params }: { params: { patientId: s
             oxygenSaturation: true,
             weight: true,
             height: true,
-            recordedAt: true
-          }
-        }
-      }
+            recordedAt: true,
+          },
+        },
+      },
     });
 
     if (!patient) {
-      return NextResponse.json({ error: "Patient non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Patient non trouvé" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(patient);
   } catch (error) {
     console.error("Erreur lors de la récupération du patient:", error);
-    return NextResponse.json(
-      { error: "Erreur serveur" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

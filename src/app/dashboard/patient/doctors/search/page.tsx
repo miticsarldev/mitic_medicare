@@ -385,6 +385,7 @@ export default function DoctorSearchPage() {
         rating: reviewRating,
         comment: reviewComment,
         isAnonymous,
+        title: "Avis sur le médecin",
       });
 
       toast({

@@ -21,6 +21,7 @@ type AvailabilityFormData = {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  slotDuration: number;
   isActive: boolean;
 };
 
@@ -110,17 +111,6 @@ export async function createAppointment(data: AppointmentFormData) {
         reason: data.reason,
         notes: data.notes,
         status: AppointmentStatus.PENDING,
-      },
-    });
-
-    // Créer un rappel automatique pour le rendez-vous
-    await prisma.appointmentReminder.create({
-      data: {
-        appointmentId: appointment.id,
-        reminderTime: new Date(
-          data.scheduledAt.getTime() - 24 * 60 * 60 * 1000
-        ),
-        type: "EMAIL",
       },
     });
 
@@ -255,6 +245,7 @@ export async function createAvailability(data: AvailabilityFormData) {
         dayOfWeek: data.dayOfWeek,
         startTime: data.startTime,
         endTime: data.endTime,
+        slotDuration: data.slotDuration,
         isActive: data.isActive,
       },
     });

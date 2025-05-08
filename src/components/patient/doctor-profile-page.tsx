@@ -55,7 +55,7 @@ import {
   submitDoctorReview,
 } from "@/app/dashboard/patient/actions";
 import { DoctorProfileComplete } from "@/app/dashboard/patient/types";
-import { DoctorReview } from "@prisma/client";
+import { Review } from "@prisma/client";
 
 export default function DoctorProfile({
   doctor,
@@ -102,11 +102,11 @@ export default function DoctorProfile({
   }, [selectedDate, doctor.id]);
 
   // Calculate average rating
-  const avgRating = doctor.doctorReviews?.length
-    ? doctor.doctorReviews.reduce(
-        (sum: number, review: DoctorReview) => sum + review.rating,
+  const avgRating = doctor.reviews?.length
+    ? doctor.reviews.reduce(
+        (sum: number, review: Review) => sum + review.rating,
         0
-      ) / doctor.doctorReviews.length
+      ) / doctor.reviews.length
     : 0;
 
   // Format experience years
@@ -176,6 +176,7 @@ export default function DoctorProfile({
         rating: reviewRating,
         comment: reviewComment,
         isAnonymous,
+        title: "Avis sur le médecin",
       });
 
       toast({
@@ -271,8 +272,7 @@ export default function DoctorProfile({
                 />
               ))}
               <span className="ml-2 text-sm font-medium">
-                {avgRating.toFixed(1)} ({doctor.doctorReviews?.length || 0}{" "}
-                avis)
+                {avgRating.toFixed(1)} ({doctor.reviews?.length || 0} avis)
               </span>
             </div>
           </div>
@@ -444,14 +444,14 @@ export default function DoctorProfile({
                 <CardHeader>
                   <CardTitle>Avis des patients</CardTitle>
                   <CardDescription>
-                    {doctor.doctorReviews?.length || 0} avis • Note moyenne:{" "}
+                    {doctor.reviews?.length || 0} avis • Note moyenne:{" "}
                     {avgRating.toFixed(1)}/5
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {doctor.doctorReviews && doctor.doctorReviews.length > 0 ? (
+                  {doctor.reviews && doctor.reviews.length > 0 ? (
                     <div className="space-y-4">
-                      {doctor.doctorReviews.map((review: DoctorReview) => (
+                      {doctor.reviews.map((review: Review) => (
                         <div
                           key={review.id}
                           className="pb-6 border-b last:border-0"
@@ -491,7 +491,7 @@ export default function DoctorProfile({
                             </span>
                           </div>
                           <p className="mt-3 text-gray-700 dark:text-gray-300">
-                            {review.comment}
+                            {review.content}
                           </p>
                         </div>
                       ))}
@@ -573,7 +573,7 @@ export default function DoctorProfile({
                 </div>
                 <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                   <p className="text-2xl font-bold text-primary">
-                    {doctor.doctorReviews?.length || 0}
+                    {doctor.reviews?.length || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Avis patients</p>
                 </div>

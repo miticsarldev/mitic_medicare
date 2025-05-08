@@ -311,7 +311,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                                 <SelectItem value="all">
                                   Toutes les spécialités
                                 </SelectItem>
-                                {specializations.map((spec) => (
+                                {specializations?.map((spec) => (
                                   <SelectItem key={spec} value={spec}>
                                     {spec}
                                   </SelectItem>
@@ -331,7 +331,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                                 <SelectItem value="all">
                                   Toutes les villes
                                 </SelectItem>
-                                {cities.map((city) => (
+                                {cities?.map((city) => (
                                   <SelectItem key={city} value={city}>
                                     {city}
                                   </SelectItem>
@@ -364,7 +364,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                                 <SelectItem value="all">
                                   Toutes les villes
                                 </SelectItem>
-                                {cities.map((city) => (
+                                {cities?.map((city) => (
                                   <SelectItem key={city} value={city}>
                                     {city}
                                   </SelectItem>
@@ -403,7 +403,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                           <SelectItem value="all">
                             Toutes les spécialités
                           </SelectItem>
-                          {specializations.map((spec) => (
+                          {specializations?.map((spec) => (
                             <SelectItem key={spec} value={spec}>
                               {spec}
                             </SelectItem>
@@ -416,7 +416,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Toutes les villes</SelectItem>
-                          {cities.map((city) => (
+                          {cities?.map((city) => (
                             <SelectItem key={city} value={city}>
                               {city}
                             </SelectItem>
@@ -443,7 +443,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Toutes les villes</SelectItem>
-                          {cities.map((city) => (
+                          {cities?.map((city) => (
                             <SelectItem key={city} value={city}>
                               {city}
                             </SelectItem>

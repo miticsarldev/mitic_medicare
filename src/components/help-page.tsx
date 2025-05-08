@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ChevronRight,
@@ -9,10 +8,7 @@ import {
   Mail,
   MessageSquare,
   FileQuestion,
-  BookOpen,
   Clock,
-  HelpCircle,
-  ArrowRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -124,7 +120,7 @@ export default function HelpCenterComponent() {
           </motion.div>
 
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8"
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8"
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
@@ -143,13 +139,6 @@ export default function HelpCenterComponent() {
                 description:
                   "Discutez avec notre équipe de support en temps réel",
                 link: "#contact",
-              },
-              {
-                icon: <BookOpen className="h-8 w-8 text-primary" />,
-                title: "Guides d'utilisation",
-                description:
-                  "Apprenez à utiliser toutes les fonctionnalités de la plateforme",
-                link: "#guides",
               },
             ].map((item, index) => (
               <motion.div key={index} custom={index} variants={cardVariants}>
@@ -417,177 +406,10 @@ export default function HelpCenterComponent() {
           </div>
         </div>
       </section>
-
-      {/* Guides Section */}
-      <section
-        id="guides"
-        className="py-16 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 scroll-mt-16"
-      >
-        <div className="container px-4">
-          <motion.div
-            className="text-center mb-12"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={staggerContainer}
-          >
-            <motion.h2 variants={fadeInUp} className="text-3xl font-bold mb-4">
-              Guides d&apos;utilisation
-            </motion.h2>
-            <motion.p
-              variants={fadeInUp}
-              className="text-muted-foreground max-w-2xl mx-auto"
-            >
-              Découvrez comment tirer le meilleur parti de MITIC Care avec nos
-              guides détaillés
-            </motion.p>
-          </motion.div>
-
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
-            variants={staggerContainer}
-          >
-            {[
-              {
-                title: "Guide du patient",
-                description:
-                  "Apprenez à rechercher des médecins, prendre rendez-vous et gérer votre dossier médical",
-                image: "/understanding-healthcare.png",
-                tag: "Patients",
-              },
-              {
-                title: "Guide du médecin",
-                description:
-                  "Gérez efficacement vos rendez-vous, patients et dossiers médicaux",
-                image: "/diverse-doctor-tablet.png",
-                tag: "Médecins",
-              },
-              {
-                title: "Guide de l'administrateur hospitalier",
-                description:
-                  "Optimisez la gestion de votre établissement et de votre personnel médical",
-                image: "/hospital-administrator-workflow.png",
-                tag: "Administrateurs",
-              },
-              {
-                title: "Prise de rendez-vous",
-                description:
-                  "Tout ce que vous devez savoir pour prendre et gérer vos rendez-vous médicaux",
-                image: "/medical-appointment-calendar.png",
-                tag: "Fonctionnalités",
-              },
-              {
-                title: "Dossier médical électronique",
-                description:
-                  "Comment accéder et comprendre votre dossier médical électronique",
-                image: "/digital-health-dashboard.png",
-                tag: "Fonctionnalités",
-              },
-              {
-                title: "Sécurité et confidentialité",
-                description:
-                  "Comprendre comment vos données sont protégées et sécurisées",
-                image: "/secure-health-data.png",
-                tag: "Sécurité",
-              },
-            ].map((guide, index) => (
-              <motion.div
-                key={index}
-                custom={index}
-                variants={cardVariants}
-                whileHover={{ y: -10, transition: { duration: 0.2 } }}
-              >
-                <Card className="overflow-hidden bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow h-full">
-                  <motion.div
-                    className="relative h-48 w-full"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Image
-                      src={guide.image || "/placeholder.svg"}
-                      alt={guide.title}
-                      fill
-                      className="object-cover"
-                    />
-                    <motion.div
-                      className="absolute top-3 left-3"
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{
-                        delay: 0.2 + index * 0.1,
-                        duration: 0.3,
-                        type: "spring",
-                      }}
-                    >
-                      <Badge className="bg-primary/90 hover:bg-primary text-white">
-                        {guide.tag}
-                      </Badge>
-                    </motion.div>
-                  </motion.div>
-                  <CardHeader>
-                    <CardTitle>{guide.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-base text-gray-600 dark:text-gray-300">
-                      {guide.description}
-                    </CardDescription>
-                  </CardContent>
-                  <CardFooter>
-                    <motion.div
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="w-full"
-                    >
-                      <Button variant="outline" className="w-full">
-                        Consulter le guide
-                      </Button>
-                    </motion.div>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          <motion.div
-            className="text-center mt-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            <Link href="#">
-              <motion.div
-                whileHover={{ x: 5 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <Button variant="outline" className="gap-2">
-                  Voir tous les guides{" "}
-                  <motion.div
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Number.POSITIVE_INFINITY,
-                      repeatType: "loop",
-                      ease: "easeInOut",
-                      repeatDelay: 1,
-                    }}
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </motion.div>
-                </Button>
-              </motion.div>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
       {/* Contact Section */}
       <section
         id="contact"
-        className="py-16 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800"
+        className="py-16 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 scroll-mt-16"
       >
         <div className="container px-4">
           <div className="max-w-5xl mx-auto">
@@ -614,7 +436,7 @@ export default function HelpCenterComponent() {
             </motion.div>
 
             <motion.div
-              className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.1 }}
@@ -634,13 +456,6 @@ export default function HelpCenterComponent() {
                   description:
                     "Envoyez-nous un email et nous vous répondrons dans les 24 heures",
                   info: "support@miticsarlml.com",
-                },
-                {
-                  icon: <MessageSquare className="h-6 w-6 text-primary" />,
-                  title: "Chat en direct",
-                  description:
-                    "Discutez en temps réel avec un membre de notre équipe de support",
-                  button: "Démarrer un chat",
                 },
               ].map((contact, index) => (
                 <motion.div key={index} custom={index} variants={cardVariants}>
@@ -667,16 +482,6 @@ export default function HelpCenterComponent() {
                         <p className="text-lg font-medium text-primary">
                           {contact.info}
                         </p>
-                      )}
-                      {contact.button && (
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <Button className="bg-primary hover:bg-primary/90">
-                            {contact.button}
-                          </Button>
-                        </motion.div>
                       )}
                     </CardContent>
                   </Card>
@@ -856,43 +661,6 @@ export default function HelpCenterComponent() {
                         <span className="font-medium">+223 70 00 00 00</span>
                       </motion.div>
                     </motion.div>
-                  </motion.div>
-
-                  <motion.div
-                    className="mt-6 bg-primary/10 rounded-xl p-6 border border-primary/20"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
-                    whileHover={{ scale: 1.03 }}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="mt-1">
-                        <HelpCircle className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold mb-2">
-                          Vous êtes un professionnel de santé ?
-                        </h4>
-                        <p className="text-muted-foreground mb-4">
-                          Nous proposons un support dédié pour les médecins et
-                          les établissements de santé.
-                        </p>
-                        <Link href="#">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <Button
-                              variant="outline"
-                              className="border-primary text-primary hover:bg-primary/10"
-                            >
-                              Support professionnel
-                            </Button>
-                          </motion.div>
-                        </Link>
-                      </div>
-                    </div>
                   </motion.div>
                 </motion.div>
               </div>

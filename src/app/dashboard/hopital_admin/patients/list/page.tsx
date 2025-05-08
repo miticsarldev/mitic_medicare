@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,12 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { PatientCard } from "./patientCard";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
@@ -63,7 +68,7 @@ type PaginationControlsProps = {
 
 const GENDER_OPTIONS = [
   { value: "MALE", label: "Homme" },
-  { value: "FEMALE", label: "Femme" }
+  { value: "FEMALE", label: "Femme" },
 ];
 
 const ITEMS_PER_PAGE = 6;
@@ -92,7 +97,7 @@ export default function PatientList() {
       toast({
         title: "Erreur",
         description: "Échec du chargement des patients",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -104,8 +109,10 @@ export default function PatientList() {
   }, [fetchPatients]);
 
   const toggleGender = useCallback((gender: string) => {
-    setGenderFilter(prev =>
-      prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
+    setGenderFilter((prev) =>
+      prev.includes(gender)
+        ? prev.filter((g) => g !== gender)
+        : [...prev, gender]
     );
   }, []);
 
@@ -117,10 +124,14 @@ export default function PatientList() {
   }, []);
 
   const filteredPatients = useMemo(() => {
-    return patients.filter(patient => {
-      const matchesSearch = patient.name.toLowerCase().includes(search.toLowerCase());
-      const matchesGender = genderFilter.length === 0 || genderFilter.includes(patient.gender);
-      const matchesAppointments = patient.numberOfAppointments >= minAppointments;
+    return patients.filter((patient) => {
+      const matchesSearch = patient.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      const matchesGender =
+        genderFilter.length === 0 || genderFilter.includes(patient.gender);
+      const matchesAppointments =
+        patient.numberOfAppointments >= minAppointments;
       return matchesSearch && matchesGender && matchesAppointments;
     });
   }, [patients, search, genderFilter, minAppointments]);
@@ -138,14 +149,15 @@ export default function PatientList() {
 
   const FilterPanel = React.memo(function FilterPanelComponent({
     isMobile = false,
-    onApply
+    onApply,
   }: {
     isMobile?: boolean;
     onApply?: () => void;
   }) {
     const [localSearch, setLocalSearch] = useState(search);
     const [localGenderFilter, setLocalGenderFilter] = useState(genderFilter);
-    const [localMinAppointments, setLocalMinAppointments] = useState(minAppointments);
+    const [localMinAppointments, setLocalMinAppointments] =
+      useState(minAppointments);
 
     useEffect(() => {
       if (isMobile) {
@@ -153,11 +165,13 @@ export default function PatientList() {
         setLocalGenderFilter(genderFilter);
         setLocalMinAppointments(minAppointments);
       }
-    }, [search, genderFilter, minAppointments]);
+    }, [isMobile]);
 
     const handleToggleGender = (gender: string) => {
-      setLocalGenderFilter(prev =>
-        prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]
+      setLocalGenderFilter((prev) =>
+        prev.includes(gender)
+          ? prev.filter((g) => g !== gender)
+          : [...prev, gender]
       );
     };
 
@@ -206,7 +220,9 @@ export default function PatientList() {
                         : toggleGender(gender.value)
                     }
                   />
-                  <Label htmlFor={`gender-${gender.value}`}>{gender.label}</Label>
+                  <Label htmlFor={`gender-${gender.value}`}>
+                    {gender.label}
+                  </Label>
                 </div>
               ))}
             </div>
@@ -229,7 +245,6 @@ export default function PatientList() {
                   setMinAppointments(value);
                 }
               }}
-
             />
           </div>
 
@@ -260,11 +275,7 @@ export default function PatientList() {
               </Button>
             </div>
           ) : (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={resetFilters}
-            >
+            <Button variant="outline" className="w-full" onClick={resetFilters}>
               Réinitialiser
             </Button>
           )}
@@ -274,7 +285,8 @@ export default function PatientList() {
   });
 
   const ActiveFilters = React.memo(function ActiveFiltersComponent() {
-    if (!search && genderFilter.length === 0 && minAppointments === 0) return null;
+    if (!search && genderFilter.length === 0 && minAppointments === 0)
+      return null;
 
     return (
       <div className="flex flex-wrap gap-2">
@@ -288,9 +300,14 @@ export default function PatientList() {
           </Badge>
         )}
         {genderFilter.map((gender) => {
-          const genderLabel = GENDER_OPTIONS.find(g => g.value === gender)?.label || gender;
+          const genderLabel =
+            GENDER_OPTIONS.find((g) => g.value === gender)?.label || gender;
           return (
-            <Badge key={gender} variant="outline" className="flex items-center gap-1">
+            <Badge
+              key={gender}
+              variant="outline"
+              className="flex items-center gap-1"
+            >
               {genderLabel}
               <X
                 className="w-3 h-3 cursor-pointer"
@@ -338,11 +355,7 @@ export default function PatientList() {
     return (
       <div className="flex flex-col items-center justify-center p-8 border rounded-lg">
         <p className="text-muted-foreground mb-2">Aucun patient trouvé</p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={resetFilters}
-        >
+        <Button variant="outline" size="sm" onClick={resetFilters}>
           Réinitialiser les filtres
         </Button>
       </div>
@@ -385,7 +398,7 @@ export default function PatientList() {
           variant="outline"
           size="sm"
           disabled={currentPage === 1}
-          onClick={() => setCurrentPage(p => p - 1)}
+          onClick={() => setCurrentPage((p) => p - 1)}
         >
           Précédent
         </Button>
@@ -411,7 +424,7 @@ export default function PatientList() {
           variant="outline"
           size="sm"
           disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage(p => p + 1)}
+          onClick={() => setCurrentPage((p) => p + 1)}
         >
           Suivant
         </Button>
@@ -453,10 +466,7 @@ export default function PatientList() {
             <DialogHeader>
               <DialogTitle>Filtres</DialogTitle>
             </DialogHeader>
-            <FilterPanel
-              isMobile
-              onApply={() => setShowMobileFilters(false)}
-            />
+            <FilterPanel isMobile onApply={() => setShowMobileFilters(false)} />
           </DialogContent>
         </Dialog>
 
@@ -469,7 +479,7 @@ export default function PatientList() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedPatients.map(patient => (
+              {paginatedPatients.map((patient) => (
                 <PatientCard key={patient.id} patient={patient} />
               ))}
             </div>

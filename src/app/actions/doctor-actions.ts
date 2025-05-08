@@ -6,8 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { SubscriptionPlan, UserRole } from "@prisma/client";
 import { Availability } from "@/types/doctor";
-import { format } from "date-fns"
-
+import { format } from "date-fns";
 
 export async function createDoctor(formData: FormData) {
   try {
@@ -95,7 +94,7 @@ export async function getDoctorById(id: string) {
       },
       hospital: true,
       department: true,
-      doctorReviews: {
+      reviews: {
         orderBy: {
           createdAt: "desc",
         },
@@ -321,16 +320,27 @@ export async function assignDoctorToHospital(
   }
 }
 
-const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const dayNames = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 function formatAvailabilities(availabilities: Availability[]) {
-  const groupedByDay = availabilities.reduce((acc, curr) => {
-    if (!curr.isActive) return acc;
-    const day = dayNames[curr.dayOfWeek];
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(`${curr.startTime} - ${curr.endTime}`);
-    return acc;
-  }, {} as Record<string, string[]>);
+  const groupedByDay = availabilities.reduce(
+    (acc, curr) => {
+      if (!curr.isActive) return acc;
+      const day = dayNames[curr.dayOfWeek];
+      if (!acc[day]) acc[day] = [];
+      acc[day].push(`${curr.startTime} - ${curr.endTime}`);
+      return acc;
+    },
+    {} as Record<string, string[]>
+  );
 
   return Object.entries(groupedByDay).map(([day, slots]) => ({
     day,
@@ -435,7 +445,9 @@ export async function getDoctorDetailsById(id: string) {
 
     // Calculer la note moyenne
     const totalRatings = doctor.reviews.reduce((sum, r) => sum + r.rating, 0);
-    const averageRating = doctor.reviews.length ? totalRatings / doctor.reviews.length : 0;
+    const averageRating = doctor.reviews.length
+      ? totalRatings / doctor.reviews.length
+      : 0;
 
     const formattedSchedule = formatAvailabilities(availabilities);
 
@@ -473,17 +485,20 @@ export async function getDoctorDetailsById(id: string) {
 }
 
 //methode pour retourner les heures de travaille d'un médecin
-export async function getDoctorSlotsWithTakenStatus(doctorId: string, date?: Date) {
+export async function getDoctorSlotsWithTakenStatus(
+  doctorId: string,
+  date?: Date
+) {
   const timeToDate = (baseDate: Date, time: string) => {
-    const [hours, minutes] = time.split(":").map(Number)
-    const d = new Date(baseDate)
-    d.setHours(hours, minutes, 0, 0)
-    return d
-  }
+    const [hours, minutes] = time.split(":").map(Number);
+    const d = new Date(baseDate);
+    d.setHours(hours, minutes, 0, 0);
+    return d;
+  };
 
   // --- CAS 1 : Une date est fournie (comportement inchangé) ---
   if (date) {
-    const dayOfWeek = date.getDay() // 0 = dimanche ... 6 = samedi
+    const dayOfWeek = date.getDay(); // 0 = dimanche ... 6 = samedi
 
     const availability = await prisma.doctorAvailability.findFirst({
       where: {
@@ -491,28 +506,28 @@ export async function getDoctorSlotsWithTakenStatus(doctorId: string, date?: Dat
         dayOfWeek,
         isActive: true,
       },
-    })
+    });
 
     if (!availability) {
       return {
         all: [],
         taken: [],
-      }
+      };
     }
 
-    const slots: string[] = []
-    let current = timeToDate(date, availability.startTime)
-    const end = timeToDate(date, availability.endTime)
+    const slots: string[] = [];
+    let current = timeToDate(date, availability.startTime);
+    const end = timeToDate(date, availability.endTime);
 
     while (current < end) {
-      slots.push(format(current, "HH:mm"))
-      current = new Date(current.getTime() + 60 * 60 * 1000) // +1h
+      slots.push(format(current, "HH:mm"));
+      current = new Date(current.getTime() + 60 * 60 * 1000); // +1h
     }
 
-    const startOfDay = new Date(date)
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(date)
-    endOfDay.setHours(23, 59, 59, 999)
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
 
     const appointments = await prisma.appointment.findMany({
       where: {
@@ -528,32 +543,42 @@ export async function getDoctorSlotsWithTakenStatus(doctorId: string, date?: Dat
       select: {
         scheduledAt: true,
       },
-    })
+    });
 
-    const taken = appointments.map((a) => format(new Date(a.scheduledAt), "HH:mm"))
+    const taken = appointments.map((a) =>
+      format(new Date(a.scheduledAt), "HH:mm")
+    );
 
     return {
       all: slots,
       taken,
-    }
+    };
   }
 
   // --- CAS 2 : Aucune date fournie → retourner toute la semaine ---
-  const today = new Date()
-  const currentDay = today.getDay()
-  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+  const today = new Date();
+  const currentDay = today.getDay();
+  const days = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
 
   // Obtenir le lundi de la semaine courante
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - ((currentDay + 6) % 7))
-  monday.setHours(0, 0, 0, 0)
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((currentDay + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
 
-  const result: Record<string, { all: string[]; taken: string[] }> = {}
+  const result: Record<string, { all: string[]; taken: string[] }> = {};
 
   for (let i = 0; i < 7; i++) {
-    const dayDate = new Date(monday)
-    dayDate.setDate(monday.getDate() + i)
-    const dayOfWeek = dayDate.getDay()
+    const dayDate = new Date(monday);
+    dayDate.setDate(monday.getDate() + i);
+    const dayOfWeek = dayDate.getDay();
 
     const availability = await prisma.doctorAvailability.findFirst({
       where: {
@@ -561,26 +586,26 @@ export async function getDoctorSlotsWithTakenStatus(doctorId: string, date?: Dat
         dayOfWeek,
         isActive: true,
       },
-    })
+    });
 
     if (!availability) {
-      result[days[dayOfWeek]] = { all: [], taken: [] }
-      continue
+      result[days[dayOfWeek]] = { all: [], taken: [] };
+      continue;
     }
 
-    const slots: string[] = []
-    let current = timeToDate(dayDate, availability.startTime)
-    const end = timeToDate(dayDate, availability.endTime)
+    const slots: string[] = [];
+    let current = timeToDate(dayDate, availability.startTime);
+    const end = timeToDate(dayDate, availability.endTime);
 
     while (current < end) {
-      slots.push(format(current, "HH:mm"))
-      current = new Date(current.getTime() + 60 * 60 * 1000)
+      slots.push(format(current, "HH:mm"));
+      current = new Date(current.getTime() + 60 * 60 * 1000);
     }
 
-    const startOfDay = new Date(dayDate)
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(dayDate)
-    endOfDay.setHours(23, 59, 59, 999)
+    const startOfDay = new Date(dayDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(dayDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
     const appointments = await prisma.appointment.findMany({
       where: {
@@ -596,24 +621,26 @@ export async function getDoctorSlotsWithTakenStatus(doctorId: string, date?: Dat
       select: {
         scheduledAt: true,
       },
-    })
+    });
 
-    const taken = appointments.map((a) => format(new Date(a.scheduledAt), "HH:mm"))
+    const taken = appointments.map((a) =>
+      format(new Date(a.scheduledAt), "HH:mm")
+    );
 
     result[days[dayOfWeek]] = {
       all: slots,
       taken,
-    }
+    };
   }
 
-  return result
+  return result;
 }
 
 // Lister toutes les disponibilités d'un médecin
 export async function getDoctorAvailabilities(doctorId: string) {
   return await prisma.doctorAvailability.findMany({
     where: { doctorId },
-    orderBy: { dayOfWeek: 'asc' },
+    orderBy: { dayOfWeek: "asc" },
   });
 }
 
@@ -637,42 +664,6 @@ export async function upsertDoctorAvailability(availability: {
   }
 }
 
-
-// Mettre à jour plusieurs disponibilités en une transaction
-export async function upsertManyDoctorAvailabilities(
-  doctorId: string,
-  availabilities: {
-    dayOfWeek: number;
-    startTime: string;
-    endTime: string;
-    isActive: boolean;
-  }[]
-) {
-  return await prisma.$transaction(
-    availabilities.map((avail) =>
-      prisma.doctorAvailability.upsert({
-        where: {
-          doctorId_dayOfWeek_startTime_endTime: {
-            doctorId,
-            dayOfWeek: avail.dayOfWeek,
-            startTime: avail.startTime,
-            endTime: avail.endTime,
-          },
-        },
-        update: {
-          isActive: avail.isActive,
-          startTime: avail.startTime,
-          endTime: avail.endTime,
-        },
-        create: {
-          doctorId,
-          ...avail,
-        },
-      })
-    )
-  );
-}
-
 // Supprimer une disponibilité
 export async function deleteDoctorAvailability(id: string) {
   return await prisma.doctorAvailability.delete({
@@ -686,4 +677,3 @@ export async function deleteAllDoctorAvailabilities(doctorId: string) {
     where: { doctorId },
   });
 }
-

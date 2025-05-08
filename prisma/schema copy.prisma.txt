@@ -28,6 +28,70 @@ enum UserGenre {
     FEMALE
 }
 
+enum AppointmentStatus {
+    PENDING
+    CONFIRMED
+    COMPLETED
+    CANCELED
+    NO_SHOW
+}
+
+enum BloodType {
+    A_POSITIVE
+    A_NEGATIVE
+    B_POSITIVE
+    B_NEGATIVE
+    AB_POSITIVE
+    AB_NEGATIVE
+    O_POSITIVE
+    O_NEGATIVE
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    INACTIVE
+    TRIAL
+    EXPIRED
+}
+
+enum SubscriptionPlan {
+    FREE
+    BASIC
+    STANDARD
+    PREMIUM
+    ENTERPRISE
+}
+
+enum SubscriberType {
+    DOCTOR
+    HOSPITAL
+}
+
+enum ReviewStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum ReviewTargetType {
+    DOCTOR
+    HOSPITAL
+    PLATFORM
+}
+
+enum ContentStatus {
+    DRAFT
+    PUBLISHED
+    ARCHIVED
+}
+
+enum HospitalStatus {
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+    PENDING
+}
+
 // ======== AUTHENTICATION & USER MODELS ========
 
 model User {
@@ -52,6 +116,11 @@ model User {
     doctor            Doctor?
     patient           Patient?
     medicalHistories  MedicalHistory[]
+    notifications     Notification[]
+    sentMessages      Message[]        @relation("MessageSender")
+    receivedMessages  Message[]        @relation("MessageReceiver")
+    blogPosts         BlogPost[]
+    faqs              FAQ[]
     reviews           Review[]         @relation("ReviewAuthor")
     favoriteDoctors   Doctor[]         @relation("UserFavorites")
     favoriteHospitals Hospital[]       @relation("UserFavoriteHospitals")
@@ -109,44 +178,6 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
-// ======== Patient MODELS ========
-enum BloodType {
-    A_POSITIVE
-    A_NEGATIVE
-    B_POSITIVE
-    B_NEGATIVE
-    AB_POSITIVE
-    AB_NEGATIVE
-    O_POSITIVE
-    O_NEGATIVE
-}
-
-model Patient {
-    id                String     @id @default(cuid())
-    userId            String     @unique
-    user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-    bloodType         BloodType?
-    allergies         String?
-    emergencyContact  String?
-    emergencyPhone    String?
-    emergencyRelation String?
-    insuranceProvider String?
-    insuranceNumber   String?
-    medicalNotes      String?
-    createdAt         DateTime   @default(now())
-    updatedAt         DateTime   @updatedAt
-
-    // Relations
-    appointments      Appointment[]
-    medicalHistories  MedicalHistory[]
-    medicalRecords    MedicalRecord[]
-    prescriptions     Prescription[]
-    vitalSigns        VitalSign[]
-    PrescriptionOrder PrescriptionOrder[]
-
-    @@index([userId])
-}
-
 // ======== DOCTOR MODELS ========
 model Doctor {
     id               String      @id @default(cuid())
@@ -184,27 +215,20 @@ model Doctor {
 }
 
 model DoctorAvailability {
-    id           String   @id @default(cuid())
-    doctorId     String
-    doctor       Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-    dayOfWeek    Int // 0-6 for Sunday-Saturday
-    startTime    String // Format: "HH:MM" in 24-hour format
-    endTime      String // Format: "HH:MM" in 24-hour format
-    slotDuration Int // en minutes (ex: 60)
-    isActive     Boolean  @default(true)
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
+    id        String   @id @default(cuid())
+    doctorId  String
+    doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+    dayOfWeek Int // 0-6 for Sunday-Saturday
+    startTime String // Format: "HH:MM" in 24-hour format
+    endTime   String // Format: "HH:MM" in 24-hour format
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     @@unique([doctorId, dayOfWeek, startTime, endTime])
 }
 
 // ======== CORE HEALTHCARE MODELS ========
-enum HospitalStatus {
-    ACTIVE
-    INACTIVE
-    SUSPENDED
-    PENDING
-}
 
 model Hospital {
     id          String         @id @default(cuid())
@@ -248,17 +272,37 @@ model Department {
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
+    // Relations
     doctors Doctor[]
 
     @@unique([hospitalId, name])
 }
 
-enum AppointmentStatus {
-    PENDING
-    CONFIRMED
-    COMPLETED
-    CANCELED
-    NO_SHOW
+model Patient {
+    id                String     @id @default(cuid())
+    userId            String     @unique
+    user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    bloodType         BloodType?
+    allergies         String?
+    emergencyContact  String?
+    emergencyPhone    String?
+    emergencyRelation String?
+    insuranceProvider String?
+    insuranceNumber   String?
+    medicalNotes      String?
+    createdAt         DateTime   @default(now())
+    updatedAt         DateTime   @updatedAt
+
+    // Relations
+    appointments        Appointment[]
+    medicalHistories    MedicalHistory[]
+    medicalRecords      MedicalRecord[]
+    prescriptions       Prescription[]
+    vitalSigns          VitalSign[]
+    InsuranceEnrollment InsuranceEnrollment[]
+    PrescriptionOrder   PrescriptionOrder[]
+
+    @@index([userId])
 }
 
 model Appointment {
@@ -283,6 +327,7 @@ model Appointment {
     updatedAt          DateTime          @updatedAt
 
     // Relations
+    reminders     AppointmentReminder[]
     medicalRecord MedicalRecord?
 
     @@index([patientId])
@@ -291,9 +336,23 @@ model Appointment {
     @@index([status])
 }
 
+model AppointmentReminder {
+    id            String      @id @default(cuid())
+    appointmentId String
+    appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+    reminderTime  DateTime
+    isSent        Boolean     @default(false)
+    sentAt        DateTime?
+    type          String // "EMAIL", "SMS", "PUSH"
+    createdAt     DateTime    @default(now())
+
+    @@index([appointmentId])
+    @@index([reminderTime])
+    @@index([isSent])
+}
+
 // ======== MEDICAL RECORDS MODELS ========
 // Historique médical du patient (diabète, hypertension, etc.)
-// Historique du patient sur le long terme (maladies chroniques, allergies, conditions passées ou continues)
 model MedicalHistory {
     id            String    @id @default(cuid())
     patientId     String
@@ -316,7 +375,6 @@ model MedicalHistory {
 }
 
 // Résultat d’une consultation, lié à un Appointment
-// Résultat d’une consultation ponctuelle (liée à un rendez-vous)
 model MedicalRecord {
     id             String       @id @default(cuid())
     patientId      String
@@ -337,8 +395,7 @@ model MedicalRecord {
 
     // Relations
     attachments       MedicalRecordAttachment[]
-    prescriptionOrder PrescriptionOrder[]
-    prescription      Prescription[]
+    PrescriptionOrder PrescriptionOrder[]
 
     @@index([patientId])
     @@index([doctorId])
@@ -380,7 +437,6 @@ model Prescription {
     prescriptionOrderId String?
     prescriptionOrder   PrescriptionOrder? @relation(fields: [prescriptionOrderId], references: [id])
     medicalRecordId     String?
-    medicalRecord       MedicalRecord?     @relation(fields: [medicalRecordId], references: [id])
 
     @@index([patientId])
     @@index([doctorId])
@@ -425,26 +481,6 @@ model VitalSign {
 
 // ======== SUBSCRIPTION MODEL ========
 
-enum SubscriptionStatus {
-    ACTIVE
-    INACTIVE
-    TRIAL
-    EXPIRED
-}
-
-enum SubscriptionPlan {
-    FREE
-    BASIC
-    STANDARD
-    PREMIUM
-    ENTERPRISE
-}
-
-enum SubscriberType {
-    DOCTOR
-    HOSPITAL
-}
-
 model Subscription {
     id             String             @id @default(cuid())
     subscriberType SubscriberType
@@ -486,18 +522,108 @@ model SubscriptionPayment {
     @@index([paymentDate])
 }
 
-// ======== REVIEW MODELS ========
-enum ReviewStatus {
-    PENDING
-    APPROVED
-    REJECTED
+model Notification {
+    id        String   @id @default(cuid())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    title     String
+    message   String   @db.Text
+    type      String // "APPOINTMENT", "REMINDER", "SYSTEM", etc.
+    isRead    Boolean  @default(false)
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([isRead])
+    @@index([createdAt])
 }
 
-enum ReviewTargetType {
-    DOCTOR
-    HOSPITAL
-    PLATFORM
+model Message {
+    id         String    @id @default(cuid())
+    senderId   String
+    sender     User      @relation("MessageSender", fields: [senderId], references: [id])
+    receiverId String
+    receiver   User      @relation("MessageReceiver", fields: [receiverId], references: [id])
+    content    String    @db.Text
+    isRead     Boolean   @default(false)
+    readAt     DateTime?
+    createdAt  DateTime  @default(now())
+
+    @@index([senderId])
+    @@index([receiverId])
+    @@index([isRead])
+    @@index([createdAt])
 }
+
+// ======== CONTENT MODELS ========
+model BlogPost {
+    id          String         @id @default(cuid())
+    title       String
+    slug        String         @unique
+    content     String         @db.Text
+    excerpt     String?        @db.Text
+    authorId    String
+    author      User           @relation(fields: [authorId], references: [id])
+    coverImage  String?
+    status      ContentStatus  @default(DRAFT)
+    publishedAt DateTime?
+    tags        String[]
+    categories  BlogCategory[]
+    viewCount   Int            @default(0)
+    createdAt   DateTime       @default(now())
+    updatedAt   DateTime       @updatedAt
+    comments    BlogComment[]
+
+    @@index([authorId])
+    @@index([status])
+    @@index([publishedAt])
+    @@index([slug])
+}
+
+model BlogCategory {
+    id          String     @id @default(cuid())
+    name        String     @unique
+    slug        String     @unique
+    description String?    @db.Text
+    posts       BlogPost[]
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+
+    @@index([slug])
+}
+
+model BlogComment {
+    id          String   @id @default(cuid())
+    content     String   @db.Text
+    postId      String
+    post        BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+    authorName  String
+    authorEmail String?
+    isApproved  Boolean  @default(false)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@index([postId])
+    @@index([isApproved])
+}
+
+model FAQ {
+    id        String        @id @default(cuid())
+    question  String
+    answer    String        @db.Text
+    category  String
+    order     Int           @default(0)
+    authorId  String
+    author    User          @relation(fields: [authorId], references: [id])
+    status    ContentStatus @default(PUBLISHED)
+    createdAt DateTime      @default(now())
+    updatedAt DateTime      @updatedAt
+
+    @@index([category])
+    @@index([order])
+    @@index([status])
+}
+
+// ======== REVIEW MODELS ========
 
 model Review {
     id          String           @id @default(cuid())
@@ -527,4 +653,48 @@ model Review {
     @@index([rating])
     @@index([isFeatured])
     @@index([createdAt])
+}
+
+model InsuranceProvider {
+    id          String   @id @default(cuid())
+    name        String   @unique
+    code        String   @unique @db.VarChar(20) // Code court ou identifiant officiel
+    phone       String?  @db.VarChar(20)
+    email       String?  @db.VarChar(255)
+    address     String?  @db.VarChar(255)
+    country     String?
+    logoUrl     String?
+    website     String?
+    description String?  @db.Text
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    patients InsuranceEnrollment[]
+
+    @@index([name])
+    @@index([code])
+}
+
+model InsuranceEnrollment {
+    id                  String    @id @default(cuid())
+    patientId           String
+    insuranceProviderId String
+    insuranceNumber     String    @db.VarChar(50)
+    startDate           DateTime
+    endDate             DateTime?
+    isActive            Boolean   @default(true)
+    coverageDetails     String?   @db.Text
+    createdAt           DateTime  @default(now())
+    updatedAt           DateTime  @updatedAt
+
+    // Relations
+    patient           Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+    insuranceProvider InsuranceProvider @relation(fields: [insuranceProviderId], references: [id], onDelete: Cascade)
+
+    @@unique([insuranceProviderId, insuranceNumber])
+    @@index([patientId])
+    @@index([insuranceProviderId])
+    @@index([isActive])
 }

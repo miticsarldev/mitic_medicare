@@ -119,16 +119,20 @@ export async function GET(req: Request) {
     });
 
     // Avis du médecin
-    const reviews = await prisma.doctorReview.findMany({
-      where: { doctorId: doctorId, isApproved: true },
+    const reviews = await prisma.review.findMany({
+      where: {
+        doctorId,
+        targetType: "DOCTOR", // Optional but ensures the review is about a doctor
+        status: "APPROVED", // Optional: only approved reviews
+      },
       include: {
-        patient: {
-          include: {
-            user: { select: { name: true } },
-          },
+        author: {
+          select: { name: true },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
     const url = new URL(req.url);
@@ -225,26 +229,26 @@ export async function GET(req: Request) {
     const [recentPrescriptions, upcomingAvailabilities] = await Promise.all([
       prisma.prescription.findMany({
         where: { doctorId },
-        orderBy: { createdAt: 'desc' },
-        take: 4, 
+        orderBy: { createdAt: "desc" },
+        take: 4,
         include: {
           patient: {
             include: {
               user: {
-                select: { name: true }
-              }
-            }
-          }
-        }
+                select: { name: true },
+              },
+            },
+          },
+        },
       }),
       prisma.doctorAvailability.findMany({
-        where: { 
+        where: {
           doctorId,
-          dayOfWeek: { gte: new Date().getDay() }, 
-          isActive: true
+          dayOfWeek: { gte: new Date().getDay() },
+          isActive: true,
         },
-        orderBy: { dayOfWeek: 'asc' }
-      })
+        orderBy: { dayOfWeek: "asc" },
+      }),
     ]);
 
     return NextResponse.json({
@@ -264,9 +268,9 @@ export async function GET(req: Request) {
       })),
       reviews: reviews.map((review) => ({
         id: review.id,
-        patient: review.isAnonymous ? "Anonyme" : review.patient.user.name,
+        patient: review.isAnonymous ? "Anonyme" : review.author.name,
         rating: review.rating,
-        comment: review.comment,
+        comment: review.content,
         createdAt: review.createdAt.toISOString(),
       })),
       filter,
@@ -281,23 +285,31 @@ export async function GET(req: Request) {
         { reason: "Autres", count: reasonCounts.Autres },
       ],
       appointmentTypeStats,
-      recentPrescriptions: recentPrescriptions.map(prescription => ({
+      recentPrescriptions: recentPrescriptions.map((prescription) => ({
         id: prescription.id,
         patient: prescription.patient.user.name,
         medicationName: prescription.medicationName,
         dosage: prescription.dosage,
         frequency: prescription.frequency,
         instructions: prescription.instructions,
-        createdAt: prescription.createdAt.toISOString()
+        createdAt: prescription.createdAt.toISOString(),
       })),
-      upcomingAvailabilities: upcomingAvailabilities.map(availability => ({
+      upcomingAvailabilities: upcomingAvailabilities.map((availability) => ({
         id: availability.id,
         dayOfWeek: availability.dayOfWeek,
-        dayName: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][availability.dayOfWeek],
+        dayName: [
+          "Dimanche",
+          "Lundi",
+          "Mardi",
+          "Mercredi",
+          "Jeudi",
+          "Vendredi",
+          "Samedi",
+        ][availability.dayOfWeek],
         startTime: availability.startTime,
         endTime: availability.endTime,
-        isActive: availability.isActive
-      }))
+        isActive: availability.isActive,
+      })),
     });
   } catch (error) {
     console.error("Erreur:", error);
