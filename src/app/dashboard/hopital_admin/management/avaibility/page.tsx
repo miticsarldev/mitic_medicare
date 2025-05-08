@@ -215,111 +215,140 @@ export default function DoctorAvailabilityPage() {
 
     return (
         <div className="p-4 space-y-4 mx-auto">
-            <Card>
-                <CardHeader className="pb-2">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <CardTitle className="text-xl font-bold">Disponibilités des médecins</CardTitle>
-                        <div className="w-full sm:w-72">
-                            <Select
-                                value={selectedDoctor || ""}
-                                onValueChange={setSelectedDoctor}
-                                disabled={isLoading.doctors}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Sélectionner un médecin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {doctors.map(doctor => (
-                                        <SelectItem key={doctor.id} value={doctor.id}>
-                                            {doctor.name} ({doctor.specialization})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+
+            {/* affichage de skeleton lors du chargement */}
+            {isLoading.doctors || isLoading.availabilities ? (
+                <div className="space-y-4 mb-4">
+                    {/* Titre + Select */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-pulse">
+                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-60"></div>
+                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full sm:w-72"></div>
+                    </div>
+
+                    {/* Bouton ajouter */}
+                    <div className="flex justify-end animate-pulse">
+                        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    </div>
+
+                    {/* Tableau simulé */}
+                    <div className="border rounded-lg overflow-hidden animate-pulse">
+                        <div className="grid grid-cols-7 gap-2 p-4">
+                            {DAYS.map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className="h-32 bg-gray-100 dark:bg-gray-800 rounded"
+                                ></div>
+                            ))}
                         </div>
                     </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {selectedDoctor && (
-                        <>
-                            <div className="flex justify-end">
-                                <Button
-                                    onClick={() => {
-                                        resetForm();
-                                        setOpenDialog(true);
-                                    }}
-                                    size="sm"
+                </div>
+            ) : (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <CardTitle className="text-xl font-bold">Disponibilités des médecins</CardTitle>
+                            <div className="w-full sm:w-72">
+                                <Select
+                                    value={selectedDoctor || ""}
+                                    onValueChange={setSelectedDoctor}
+                                    disabled={isLoading.doctors}
                                 >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Ajouter une disponibilité
-                                </Button>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Sélectionner un médecin" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {doctors.map(doctor => (
+                                            <SelectItem key={doctor.id} value={doctor.id}>
+                                                {doctor.name} ({doctor.specialization})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
+                        </div>
+                    </CardHeader>
 
-                            <div className="border rounded-lg overflow-hidden">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            {DAYS.map(day => (
-                                                <TableHead key={day.id} className="text-center p-2">
-                                                    {day.name}
-                                                </TableHead>
-                                            ))}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        <TableRow>
-                                            {DAYS.map(day => {
-                                                const dayAvailabilities = getAvailabilityForDay(day.id);
-                                                return (
-                                                    <TableCell key={day.id} className="p-2 align-top h-40">
-                                                        {dayAvailabilities.length > 0 ? (
-                                                            <div className="space-y-1">
-                                                                {dayAvailabilities.map(avail => (
-                                                                    <div
-                                                                        key={avail.id}
-                                                                        className="group p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-100 dark:border-green-800 flex justify-between items-center hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                                                                    >
-                                                                        <span className="text-sm font-medium">
-                                                                            {avail.startTime} - {avail.endTime}
-                                                                        </span>
-                                                                        <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-6 w-6"
-                                                                                onClick={() => handleEdit(avail)}
-                                                                            >
-                                                                                <Pencil className="h-3 w-3 text-blue-500" />
-                                                                            </Button>
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-6 w-6"
-                                                                                onClick={() => handleDelete(avail.id)}
-                                                                            >
-                                                                                <Trash2 className="h-3 w-3 text-red-500" />
-                                                                            </Button>
+                    <CardContent className="space-y-4">
+                        {selectedDoctor && (
+                            <>
+                                <div className="flex justify-end">
+                                    <Button
+                                        onClick={() => {
+                                            resetForm();
+                                            setOpenDialog(true);
+                                        }}
+                                        size="sm"
+                                    >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Ajouter une disponibilité
+                                    </Button>
+                                </div>
+
+                                <div className="border rounded-lg overflow-hidden">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                {DAYS.map(day => (
+                                                    <TableHead key={day.id} className="text-center p-2">
+                                                        {day.name}
+                                                    </TableHead>
+                                                ))}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            <TableRow>
+                                                {DAYS.map(day => {
+                                                    const dayAvailabilities = getAvailabilityForDay(day.id);
+                                                    return (
+                                                        <TableCell key={day.id} className="p-2 align-top h-40">
+                                                            {dayAvailabilities.length > 0 ? (
+                                                                <div className="space-y-1">
+                                                                    {dayAvailabilities.map(avail => (
+                                                                        <div
+                                                                            key={avail.id}
+                                                                            className="group p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-100 dark:border-green-800 flex justify-between items-center hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                                                                        >
+                                                                            <span className="text-sm font-medium">
+                                                                                {avail.startTime} - {avail.endTime}
+                                                                            </span>
+                                                                            <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-6 w-6"
+                                                                                    onClick={() => handleEdit(avail)}
+                                                                                >
+                                                                                    <Pencil className="h-3 w-3 text-blue-500" />
+                                                                                </Button>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-6 w-6"
+                                                                                    onClick={() => handleDelete(avail.id)}
+                                                                                >
+                                                                                    <Trash2 className="h-3 w-3 text-red-500" />
+                                                                                </Button>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm text-muted-foreground text-center pt-4">
-                                                                Aucune disponibilité
-                                                            </p>
-                                                        )}
-                                                    </TableCell>
-                                                );
-                                            })}
-                                        </TableRow>
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
-
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-sm text-muted-foreground text-center pt-4">
+                                                                    Aucune disponibilité
+                                                                </p>
+                                                            )}
+                                                        </TableCell>
+                                                    );
+                                                })}
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
             <Dialog open={openDialog} onOpenChange={(open) => {
                 if (!open) {
                     setEditingAvailability(null);

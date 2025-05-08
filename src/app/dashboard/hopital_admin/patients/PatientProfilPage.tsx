@@ -69,7 +69,7 @@ type MedicalHistory = {
 };
 
 //type vital signs
-type vitalSign = { 
+type vitalSign = {
     id: string;
     temperature?: number;
     heartRate?: number;
@@ -82,7 +82,7 @@ type vitalSign = {
     notes?: string;
     recordedAt: Date;
     createdAt: Date;
-  } 
+}
 
 
 export default function PatientProfilePage({ patient }: { patient: Patient }) {
@@ -311,25 +311,27 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                             <h2 className="text-lg font-semibold text-foreground">Signes vitaux</h2>
                                         </div>
                                         <div className="border-b mb-4"></div>
-                                        {vitalSigns?.length ? (
-                                            <div className="space-y-3 text-sm text-muted-foreground">
-                                                {vitalSigns.map((vs) => (
-                                                    <Card key={vs.id} className="p-4 border bg-muted/50">
-                                                        <div>Température : {vs.temperature} °C</div>
-                                                        <div>Pression artérielle : {vs.bloodPressureDiastolic}</div>
-                                                        <div>Fréquence respiratoire : {vs.respiratoryRate} /min</div>
-                                                        <div>Oxygénation : {vs.oxygenSaturation} %</div>
-                                                        <div>Poids : {vs.weight} kg</div>
-                                                        <div>Taille : {vs.height} cm</div>
-                                                        <div>Fréquence cardiaque : {vs.heartRate} bpm</div>
-                                                        <div>Autres Infos : {vs.notes}</div>
-                                                        <div className="text-xs mt-2">Relevé le : {new Date(vs.createdAt).toLocaleDateString()}</div>
-                                                    </Card>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-sm text-muted-foreground text-center py-10">Aucun relevé trouvé.</div>
-                                        )}
+                                        <div className="max-h-[300px] overflow-y-auto space-y-4 pr-2">
+                                            {vitalSigns?.length ? (
+                                                <div className="space-y-3 text-sm text-muted-foreground">
+                                                    {vitalSigns.map((vs) => (
+                                                        <Card key={vs.id} className="p-4 border bg-muted/50">
+                                                            <div>Température : {vs.temperature} °C</div>
+                                                            <div>Pression artérielle : {vs.bloodPressureDiastolic}</div>
+                                                            <div>Fréquence respiratoire : {vs.respiratoryRate} /min</div>
+                                                            <div>Oxygénation : {vs.oxygenSaturation} %</div>
+                                                            <div>Poids : {vs.weight} kg</div>
+                                                            <div>Taille : {vs.height} cm</div>
+                                                            <div>Fréquence cardiaque : {vs.heartRate} bpm</div>
+                                                            <div>Autres Infos : {vs.notes}</div>
+                                                            <div className="text-xs mt-2">Relevé le : {new Date(vs.createdAt).toLocaleDateString()}</div>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm text-muted-foreground text-center py-10">Aucun relevé trouvé.</div>
+                                            )}
+                                        </div>
                                     </CardContent>
                                 </TabsContent>
 
@@ -338,7 +340,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                     <CardContent className="pt-6 space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h2 className="text-lg font-semibold text-foreground">Historique médical</h2>
-                                            <CreateMedicalHistoryModal patientId={patient.id} addHistorique={addMedicalHistory}/>
+                                            <CreateMedicalHistoryModal patientId={patient.id} addHistorique={addMedicalHistory} />
                                         </div>
                                         <div className="border-b mb-4"></div>
                                         {medicalHistories?.length ? (
@@ -381,7 +383,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 className="rounded-md border"
                             />
                             <div className="mt-4 w-full">
-                                <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} appointmentDate={selectedDate}/>
+                                <CreateAppointmentModal patientId={patient.id} addAppointment={addAppointment} appointmentDate={selectedDate} />
                             </div>
                         </CardContent>
                     </Card>
