@@ -13,7 +13,6 @@ import {
   FolderHeart,
   MessageSquare,
   UserCheck,
-  UserPlus,
   Stethoscope,
 } from "lucide-react";
 
@@ -323,11 +322,6 @@ export const hospitalAdminNavItems = [
         url: "/dashboard/hopital_admin/doctors/list",
       },
       {
-        title: "Ajouter un Docteur",
-        url: "/dashboard/hopital_admin/doctors/add",
-        icon: UserPlus,
-      },
-      {
         title: "Planning des Docteurs",
         url: "/dashboard/hopital_admin/doctors/schedule",
       },
@@ -386,36 +380,28 @@ export const hospitalAdminNavItems = [
         url: "/dashboard/hopital_admin/management/services",
       },
       {
-        title: "Commentaires & Avis",
-        url: "/dashboard/hopital_admin/management/reviews",
+        title: "Gestion des Disponibilités",
+        url: "/dashboard/hopital_admin/management/avaibility",
       },
     ],
   },
-  // {
-  //   title: "Paramètres & Sécurité",
-  //   icon: Settings,
-  //   url: "/dashboard/hopital_admin/settings",
-  //   items: [
-  //     { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
-  //     {
-  //       title: "Sécurité & Confidentialité",
-  //       url: "/dashboard/hopital_admin/settings/security",
-  //     },
-  //     {
-  //       title: "Utilisateurs & Accès",
-  //       url: "/dashboard/hopital_admin/settings/access",
-  //     },
-  //   ],
-  // },
+  {
+    title: "Paramètres & Sécurité",
+    icon: Settings,
+    url: "/dashboard/hopital_admin/settings",
+    items: [
+      { title: "Mon Profil", url: "/dashboard/hopital_admin/settings/profile" },
+      {
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/hopital_admin/settings/security",
+      },
+    ],
+  },
   {
     title: "Assistance & Aide",
     icon: LifeBuoy,
     url: "/dashboard/hopital_admin/support",
     items: [
-      {
-        title: "Centre d'Aide",
-        url: "/dashboard/hopital_admin/support/help-center",
-      },
       { title: "FAQs", url: "/dashboard/hopital_admin/support/faq" },
       {
         title: "Support Technique",
@@ -437,7 +423,7 @@ export const hospitalDoctorNavItems = [
         title: "Aperçu",
         url: "/dashboard/hopital_doctor/overview",
         icon: ClipboardList,
-      },     
+      },
     ],
   },
   {

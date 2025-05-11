@@ -60,10 +60,19 @@ interface Patient {
   };
 }
 
+interface PaginationData {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 type PaginationControlsProps = {
   currentPage: number;
   totalPages: number;
-  setCurrentPage: (page: number | ((prev: number) => number)) => void;
+  onPageChange: (page: number) => void;
 };
 
 const GENDER_OPTIONS = [
@@ -81,16 +90,38 @@ export default function PatientList() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationData>({
+    currentPage: 1,
+    pageSize: ITEMS_PER_PAGE,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
 
-  const fetchPatients = useCallback(async () => {
+  const fetchPatients = useCallback(async (page: number = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/hospital_admin/patients/list");
+      const url = new URL("/api/hospital_admin/patients/list", window.location.origin);
+      url.searchParams.set("page", page.toString());
+      url.searchParams.set("pageSize", ITEMS_PER_PAGE.toString());
+
+      const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to fetch patients");
       const data = await res.json();
+      
       setPatients(data.patients);
+      if (data.pagination) {
+        setPagination({
+          currentPage: data.pagination.currentPage,
+          pageSize: data.pagination.pageSize,
+          totalItems: data.pagination.totalItems,
+          totalPages: data.pagination.totalPages,
+          hasNextPage: data.pagination.hasNextPage,
+          hasPreviousPage: data.pagination.hasPreviousPage,
+        });
+      }
     } catch (err) {
       console.error("Error loading patients", err);
       setError("Impossible de charger les patients");
@@ -120,7 +151,6 @@ export default function PatientList() {
     setSearch("");
     setGenderFilter([]);
     setMinAppointments(0);
-    setCurrentPage(1);
   }, []);
 
   const filteredPatients = useMemo(() => {
@@ -136,16 +166,10 @@ export default function PatientList() {
     });
   }, [patients, search, genderFilter, minAppointments]);
 
-  const paginatedPatients = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredPatients.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredPatients, currentPage]);
-
-  const totalPages = Math.ceil(filteredPatients.length / ITEMS_PER_PAGE);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filteredPatients.length]);
+  const handlePageChange = useCallback((page: number) => {
+    if (page < 1 || page > pagination.totalPages) return;
+    fetchPatients(page);
+  }, [fetchPatients, pagination.totalPages]);
 
   const FilterPanel = React.memo(function FilterPanelComponent({
     isMobile = false,
@@ -365,7 +389,7 @@ export default function PatientList() {
   const PaginationControls = React.memo(function PaginationControlsComponent({
     currentPage,
     totalPages,
-    setCurrentPage,
+    onPageChange,
   }: PaginationControlsProps) {
     const visiblePages = useMemo(() => {
       const pages: (number | string)[] = [];
@@ -398,7 +422,7 @@ export default function PatientList() {
           variant="outline"
           size="sm"
           disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
+          onClick={() => onPageChange(currentPage - 1)}
         >
           Précédent
         </Button>
@@ -413,7 +437,7 @@ export default function PatientList() {
               key={page}
               size="sm"
               variant={currentPage === page ? "default" : "outline"}
-              onClick={() => setCurrentPage(page as number)}
+              onClick={() => onPageChange(page as number)}
             >
               {page}
             </Button>
@@ -424,7 +448,7 @@ export default function PatientList() {
           variant="outline"
           size="sm"
           disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
+          onClick={() => onPageChange(currentPage + 1)}
         >
           Suivant
         </Button>
@@ -436,7 +460,7 @@ export default function PatientList() {
     return (
       <div className="p-6 flex flex-col items-center justify-center space-y-4">
         <p className="text-red-500">{error}</p>
-        <Button variant="outline" onClick={fetchPatients}>
+        <Button variant="outline" onClick={() => fetchPatients(pagination.currentPage)}>
           Réessayer
         </Button>
       </div>
@@ -479,14 +503,14 @@ export default function PatientList() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedPatients.map((patient) => (
+              {filteredPatients.map((patient) => (
                 <PatientCard key={patient.id} patient={patient} />
               ))}
             </div>
             <PaginationControls
-              currentPage={currentPage}
-              totalPages={totalPages}
-              setCurrentPage={setCurrentPage}
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
             />
           </>
         )}

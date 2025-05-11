@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useMemo, useCallback } from "react"
 import {
     Card, CardContent, CardHeader, CardTitle,
 } from "@/components/ui/card"
@@ -17,13 +17,15 @@ import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import frLocale from "@fullcalendar/core/locales/fr"
 import { format, isWithinInterval, parseISO } from "date-fns"
-import { CalendarDays, ClipboardList, User } from "lucide-react"
+import { CalendarDays, User, Stethoscope, Mail, Phone, Clock } from "lucide-react"
 import { DateRange } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-
+import { toast } from "@/hooks/use-toast"
+import { AppointmentStatus } from "@prisma/client"
+import { EventClickArg } from '@fullcalendar/core'
 
 interface Doctor {
     id: string
@@ -46,39 +48,60 @@ interface Patient {
 interface Appointment {
     id: string
     scheduledAt: string
-    status: string
+    status: AppointmentStatus
     reason: string
     type: string
     doctor: Doctor
     patient: Patient
 }
 
+const STATUS_COLORS = {
+    CONFIRMED: "bg-green-200 text-green-900 dark:bg-green-800/30 dark:text-green-300",
+    PENDING: "bg-yellow-200 text-yellow-900 dark:bg-yellow-800/30 dark:text-yellow-300",
+    CANCELLED: "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300",
+    COMPLETED: "bg-blue-200 text-blue-900 dark:bg-blue-800/30 dark:text-blue-300",
+} as const
+
+const STATUS_TRANSLATIONS = {
+    CONFIRMED: "Confirmé",
+    CANCELLED: "Annulé",
+    PENDING: "En attente",
+    COMPLETED: "Terminé",
+} as const
+
 export default function AppointmentCalendarView() {
     const [appointments, setAppointments] = useState<Appointment[]>([])
-    const [filtered, setFiltered] = useState<Appointment[]>([])
     const [selectedDoctor, setSelectedDoctor] = useState<string>("all")
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
     const [dateRange, setDateRange] = useState<DateRange | undefined>()
     const [loading, setLoading] = useState(true)
+    const [calendarView, setCalendarView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridWeek')
 
-    useEffect(() => {
-        const fetchAppointments = async () => {
-            setLoading(true)
-            try {
-                const res = await fetch("/api/hospital_admin/appointment/list")
-                const data = await res.json()
-                setAppointments(data.appointments || [])
-                setFiltered(data.appointments || [])
-            } catch (err) {
-                console.error("Erreur lors du chargement des rendez-vous :", err)
-            } finally {
-                setLoading(false)
-            }
+    const fetchAppointments = useCallback(async () => {
+        setLoading(true)
+        try {
+            const res = await fetch("/api/hospital_admin/appointment/list")
+            if (!res.ok) throw new Error("Failed to fetch appointments")
+
+            const data = await res.json()
+            setAppointments(data.appointments || [])
+        } catch (err) {
+            console.error("Error loading appointments:", err)
+            toast({
+                title: "Erreur",
+                description: "Impossible de charger les rendez-vous",
+                variant: "destructive",
+            })
+        } finally {
+            setLoading(false)
         }
-        fetchAppointments()
     }, [])
 
     useEffect(() => {
+        fetchAppointments()
+    }, [fetchAppointments])
+
+    const filteredAppointments = useMemo(() => {
         let result = [...appointments]
 
         if (selectedDoctor !== "all") {
@@ -94,62 +117,56 @@ export default function AppointmentCalendarView() {
             )
         }
 
-        setFiltered(result)
+        return result
     }, [selectedDoctor, dateRange, appointments])
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "CONFIRMED":
-                return "bg-green-200 text-green-900 dark:bg-green-800/30 dark:text-green-300"
-            case "PENDING":
-                return "bg-yellow-200 text-yellow-900 dark:bg-yellow-800/30 dark:text-yellow-300"
-            case "CANCELLED":
-                return "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300"
-            case "COMPLETED":
-                return "bg-blue-200 text-blue-900 dark:bg-blue-800/30 dark:text-blue-300"
-            default:
-                return "bg-gray-200 text-gray-900 dark:bg-gray-700/40 dark:text-gray-300"
-        }
-    }
+    const doctorOptions = useMemo(() => {
+        const doctorsMap = new Map<string, Doctor>()
+        appointments.forEach((a) => {
+            if (!doctorsMap.has(a.doctor.id)) {
+                doctorsMap.set(a.doctor.id, a.doctor)
+            }
+        })
+        return Array.from(doctorsMap.values())
+    }, [appointments])
 
-    //methode pour mettre le status en francais
-    const translateStatus = (status: string) => {
-        switch (status) {
-            case "CONFIRMED":
-                return "Confirmé";
-            case "CANCELED":
-                return "Annulé";
-            case "PENDING":
-                return "En attente";
-            case "COMPLETED":
-                return "Terminé";
-            default:
-                return status;
+    const handleEventClick = useCallback((info: EventClickArg) => {
+        const appt = info.event.extendedProps.appointment as Appointment
+        setSelectedAppointment(appt)
+    }, [])
+
+    const handleViewChange = useCallback((view: string) => {
+        if (view === 'dayGridMonth' || view === 'timeGridWeek' || view === 'timeGridDay') {
+            setCalendarView(view)
         }
-    };
+    }, [])
 
     return (
         <div className="p-4 space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl font-bold">Agenda des rendez-vous</CardTitle>
+            <Card className="shadow-sm">
+                <CardHeader className="border-b">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <CardTitle className="text-2xl font-bold">Agenda des rendez-vous</CardTitle>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => fetchAppointments()}>
+                                Actualiser
+                            </Button>
+                        </div>
+                    </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="flex flex-wrap gap-4">
+                <CardContent className="pt-6 space-y-6">
+                    <div className="flex flex-wrap gap-4 items-center">
                         <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
                             <SelectTrigger className="w-[250px]">
                                 <SelectValue placeholder="Filtrer par médecin" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Tous les médecins</SelectItem>
-                                {Array.from(new Set(appointments.map((a) => a.doctor.id))).map((id) => {
-                                    const doctor = appointments.find((a) => a.doctor.id === id)?.doctor
-                                    return (
-                                        <SelectItem key={id} value={id}>
-                                            {doctor?.name}
-                                        </SelectItem>
-                                    )
-                                })}
+                                {doctorOptions.map((doctor) => (
+                                    <SelectItem key={doctor.id} value={doctor.id}>
+                                        {doctor.name} ({doctor.specialization})
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
 
@@ -159,7 +176,7 @@ export default function AppointmentCalendarView() {
                                     <CalendarDays className="mr-2 h-4 w-4" />
                                     {dateRange?.from && dateRange?.to
                                         ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
-                                        : "Filtrer par date"}
+                                        : "Période spécifique"}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -169,6 +186,16 @@ export default function AppointmentCalendarView() {
                                     onSelect={setDateRange}
                                     numberOfMonths={2}
                                 />
+                                <div className="p-2 border-t">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={() => setDateRange(undefined)}
+                                    >
+                                        Effacer la sélection
+                                    </Button>
+                                </div>
                             </PopoverContent>
                         </Popover>
                     </div>
@@ -176,25 +203,23 @@ export default function AppointmentCalendarView() {
                     {loading ? (
                         <div className="grid gap-4">
                             <Skeleton className="h-10 w-1/3" />
-                            <Skeleton className="h-[500px] w-full rounded-md" />
+                            <Skeleton className="h-[600px] w-full rounded-md" />
                         </div>
                     ) : (
-                        <div className="rounded-lg border shadow-sm p-2 bg-background dark:bg-muted">
+                        <div className="rounded-lg border bg-card shadow-sm">
                             <FullCalendar
                                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                                initialView="timeGridWeek"
+                                initialView={calendarView}
                                 locale={frLocale}
-                                events={filtered.map((appt) => ({
+                                events={filteredAppointments.map((appt) => ({
                                     id: appt.id,
                                     title: `${appt.patient.name}`,
                                     start: appt.scheduledAt,
                                     extendedProps: { appointment: appt },
+                                    className: STATUS_COLORS[appt.status],
                                 }))}
-                                eventClick={(info) => {
-                                    const appt = info.event.extendedProps.appointment as Appointment
-                                    setSelectedAppointment(appt)
-                                }}
-                                height="auto"
+                                eventClick={handleEventClick}
+                                height={700}
                                 slotMinTime="07:00:00"
                                 slotMaxTime="20:00:00"
                                 headerToolbar={{
@@ -202,43 +227,76 @@ export default function AppointmentCalendarView() {
                                     center: 'title',
                                     end: 'dayGridMonth,timeGridWeek,timeGridDay',
                                 }}
-                                eventClassNames="text-sm font-medium text-gray-800 dark:text-gray-100"
-                                dayHeaderClassNames="bg-muted text-muted-foreground text-sm"
-                                dayCellClassNames="bg-muted/50 dark:bg-muted/30"
+                                views={{
+                                    dayGridMonth: { buttonText: 'Mois' },
+                                    timeGridWeek: { buttonText: 'Semaine' },
+                                    timeGridDay: { buttonText: 'Jour' },
+                                }}
+                                buttonText={{
+                                    today: 'Aujourd\'hui',
+                                }}
+                                eventClassNames="cursor-pointer hover:opacity-90 transition-opacity"
+                                dayHeaderClassNames="bg-muted text-muted-foreground font-medium"
+                                dayCellClassNames="hover:bg-muted/50"
+                                viewDidMount={(info) => handleViewChange(info.view.type)}
+                                nowIndicator
                             />
                         </div>
                     )}
-
                 </CardContent>
             </Card>
 
             <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle>Détails du rendez-vous</DialogTitle>
                     </DialogHeader>
                     {selectedAppointment && (
-                        <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                                <User className="w-4 h-4" /> {selectedAppointment.patient.name}
+                        <div className="grid gap-4">
+                            <div className="space-y-2">
+                                <h3 className="font-medium flex items-center gap-2">
+                                    <User className="w-4 h-4" />
+                                    Informations patient
+                                </h3>
+                                <div className="pl-6 space-y-1 text-sm">
+                                    <p><strong>Nom :</strong> {selectedAppointment.patient.name}</p>
+                                    <p className="flex items-center gap-1">
+                                        <Mail className="w-4 h-4" />
+                                        {selectedAppointment.patient.email}
+                                    </p>
+                                    <p className="flex items-center gap-1">
+                                        <Phone className="w-4 h-4" />
+                                        {selectedAppointment.patient.phone}
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <ClipboardList className="w-4 h-4" /> {selectedAppointment.reason}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <CalendarDays className="w-4 h-4" /> {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                Statut : <Badge className={getStatusColor(selectedAppointment.status)}>{translateStatus(selectedAppointment.status)}</Badge>
-                            </div>
-                            <div className="text-muted-foreground mt-2">
-                                <strong>Médecin :</strong> {selectedAppointment.doctor.name} ({selectedAppointment.doctor.specialization})
-                            </div>
-                            <div className="text-muted-foreground">
-                                <strong>Email :</strong> {selectedAppointment.patient.email}
-                            </div>
-                            <div className="text-muted-foreground">
-                                <strong>Téléphone :</strong> {selectedAppointment.patient.phone}
+
+                            <div className="space-y-2">
+                                <h3 className="font-medium flex items-center gap-2">
+                                    <Stethoscope className="w-4 h-4" />
+                                    Informations consultation
+                                </h3>
+                                <div className="pl-6 space-y-1 text-sm">
+                                    <p className="flex items-center gap-1">
+                                        <Clock className="w-4 h-4" />
+                                        {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}
+                                    </p>
+                                    <p>
+                                        <strong>Motif :</strong> {selectedAppointment.reason}
+                                    </p>
+                                    <p>
+                                        <strong>Type :</strong> {selectedAppointment.type}
+                                    </p>
+                                    <p>
+                                        <strong>Médecin :</strong> {selectedAppointment.doctor.name} ({selectedAppointment.doctor.specialization})
+                                    </p>
+                                    <p className="flex items-center gap-2">
+                                        <strong>Statut :</strong>
+                                        <Badge className={STATUS_COLORS[selectedAppointment.status]}>
+                                            {STATUS_TRANSLATIONS[selectedAppointment.status]}
+                                        </Badge>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     )}

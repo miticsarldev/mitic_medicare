@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState, useMemo } from "react"
 import {
   Card,
   CardContent,
@@ -32,12 +32,10 @@ import {
 } from "lucide-react"
 import { format, isSameDay } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast"
 import TimeSlotSelector from "../TimeSlotSelector"
 
-
-
-type Appointment = {
+interface Appointment {
   id: string
   scheduledAt: string
   status: string
@@ -54,34 +52,67 @@ type Appointment = {
   }
 }
 
+interface PaginationData {
+  currentPage: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+}
+
 const ITEMS_PER_PAGE = 6
 
 export default function PendingAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [filtered, setFiltered] = useState<Appointment[]>([])
   const [doctorFilter, setDoctorFilter] = useState<string>("")
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [actionType, setActionType] = useState<"CONFIRM" | "CANCEL" | "RESCHEDULE" | null>(null)
   const [newDate, setNewDate] = useState<Date | null>(null)
-  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginationData>({
+    currentPage: 1,
+    pageSize: ITEMS_PER_PAGE,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  })
 
-
-  const fetchAppointments = useCallback(async () => {
+  const fetchAppointments = useCallback(async (page: number = 1) => {
     setLoading(true)
     try {
-      const res = await fetch("/api/hospital_admin/appointment/list")
+      const url = new URL("/api/hospital_admin/appointment/list", window.location.origin)
+      url.searchParams.set("page", page.toString())
+      url.searchParams.set("pageSize", ITEMS_PER_PAGE.toString())
+      url.searchParams.set("status", "PENDING")
 
-      if (!res.ok) throw new Error("Erreur lors du chargement des rendez-vous")
-
+      const res = await fetch(url.toString())
       const data = await res.json()
-      const pending = (data.appointments || []).filter((a: Appointment) => a.status === "PENDING")
 
-      setAppointments(pending)
-      setFiltered(pending)
+      if (!res.ok) throw new Error(data.error || "Erreur lors du chargement des rendez-vous")
+
+      const pendingAppointments = data.appointments || []
+      setAppointments(pendingAppointments)
+      
+      if (data.pagination) {
+        setPagination({
+          currentPage: data.pagination.currentPage,
+          pageSize: data.pagination.pageSize,
+          totalItems: data.pagination.totalItems,
+          totalPages: data.pagination.totalPages,
+          hasNextPage: data.pagination.hasNextPage,
+          hasPreviousPage: data.pagination.hasPreviousPage,
+        })
+      }
     } catch (error) {
       console.error("Erreur :", error)
+      toast({
+        title: "Erreur",
+        description: "Échec du chargement des rendez-vous",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -91,8 +122,8 @@ export default function PendingAppointments() {
     fetchAppointments()
   }, [fetchAppointments])
 
-  useEffect(() => {
-    let filtered = appointments
+  const filteredAppointments = useMemo(() => {
+    let filtered = [...appointments]
 
     if (doctorFilter && doctorFilter !== "all") {
       filtered = filtered.filter((a) => a.doctor.id === doctorFilter)
@@ -102,16 +133,18 @@ export default function PendingAppointments() {
       filtered = filtered.filter((a) => isSameDay(new Date(a.scheduledAt), selectedDate))
     }
 
-    setFiltered(filtered)
-    setPage(1)
-  }, [doctorFilter, selectedDate, appointments])
+    return filtered
+  }, [appointments, doctorFilter, selectedDate])
 
-  const doctorOptions = Array.from(
-    new Map(appointments.map((a) => [a.doctor.id, a.doctor])).values()
+  const doctorOptions = useMemo(() => 
+    Array.from(new Map(appointments.map((a) => [a.doctor.id, a.doctor])).values()),
+    [appointments]
   )
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
-  const currentItems = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+  const handlePageChange = useCallback((newPage: number) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return
+    fetchAppointments(newPage)
+  }, [fetchAppointments, pagination.totalPages])
 
   const handleAction = async () => {
     if (!selectedAppointment || !actionType) return
@@ -144,24 +177,28 @@ export default function PendingAppointments() {
             ? "Le rendez-vous a bien été confirmé."
             : actionType === "CANCEL"
               ? "Le rendez-vous a bien été annulé."
-              : `Le rendez-vous a été déplacé au ${newDate ? newDate.toLocaleString() : "nouvelle date"}.`,
+              : `Le rendez-vous a été déplacé au ${newDate ? format(newDate, "PPP 'à' HH:mm") : "nouvelle date"}.`,
       })
 
       setSelectedAppointment(null)
       setActionType(null)
       setNewDate(null)
-
-      fetchAppointments()
+      fetchAppointments(pagination.currentPage)
 
     } catch (err) {
       console.error(err)
       toast({
         title: "Erreur ❗",
         description: "Une erreur est survenue lors du traitement du rendez-vous.",
+        variant: "destructive",
       })
     }
   }
 
+  const resetFilters = useCallback(() => {
+    setDoctorFilter("")
+    setSelectedDate(null)
+  }, [])
 
   return (
     <div className="p-4 space-y-6">
@@ -173,7 +210,11 @@ export default function PendingAppointments() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
           <div>
-            <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+            <Select 
+              value={doctorFilter} 
+              onValueChange={setDoctorFilter}
+              disabled={loading}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Filtrer par médecin" />
               </SelectTrigger>
@@ -199,15 +240,23 @@ export default function PendingAppointments() {
                 setSelectedDate(value ? new Date(value) : null)
               }}
               placeholder="Filtrer par date"
+              disabled={loading}
             />
           </div>
 
+          <Button
+            variant="outline"
+            onClick={resetFilters}
+            disabled={loading}
+          >
+            Réinitialiser les filtres
+          </Button>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
-          Array.from({ length: 6 }).map((_, idx) => (
+          Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
             <Card key={idx} className="animate-pulse space-y-2 p-4">
               <div className="h-4 bg-muted rounded w-1/2 mb-2" />
               <div className="h-4 bg-muted rounded w-2/3" />
@@ -220,12 +269,12 @@ export default function PendingAppointments() {
               </div>
             </Card>
           ))
-        ) : currentItems.length === 0 ? (
+        ) : filteredAppointments.length === 0 ? (
           <p className="col-span-full text-center text-muted-foreground">
             Aucun rendez-vous en attente.
           </p>
         ) : (
-          currentItems.map((appt) => (
+          filteredAppointments.map((appt) => (
             <Card key={appt.id} className="hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -246,9 +295,35 @@ export default function PendingAppointments() {
                   <AlertCircle className="w-4 h-4" /> {appt.type}
                 </div>
                 <div className="flex gap-2 pt-2 flex-wrap">
-                  <Button size="sm" onClick={() => { setSelectedAppointment(appt); setActionType("CONFIRM") }}>Valider</Button>
-                  <Button variant="destructive" size="sm" onClick={() => { setSelectedAppointment(appt); setActionType("CANCEL") }}>Annuler</Button>
-                  <Button variant="outline" size="sm" onClick={() => { setSelectedAppointment(appt); setActionType("RESCHEDULE") }}>Reprogrammer</Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => { 
+                      setSelectedAppointment(appt); 
+                      setActionType("CONFIRM") 
+                    }}
+                  >
+                    Valider
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={() => { 
+                      setSelectedAppointment(appt); 
+                      setActionType("CANCEL") 
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => { 
+                      setSelectedAppointment(appt); 
+                      setActionType("RESCHEDULE") 
+                    }}
+                  >
+                    Reprogrammer
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -256,20 +331,40 @@ export default function PendingAppointments() {
         )}
       </div>
 
-
-      {filtered.length > 0 && (
+      {pagination.totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <span className="text-sm text-muted-foreground">
-            Page {page} sur {totalPages}
+            Page {pagination.currentPage} sur {pagination.totalPages} • {pagination.totalItems} rendez-vous
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Précédent</Button>
-            <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Suivant</Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              disabled={!pagination.hasPreviousPage || loading}
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+            >
+              Précédent
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              disabled={!pagination.hasNextPage || loading}
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+            >
+              Suivant
+            </Button>
           </div>
         </div>
       )}
 
-      <Dialog open={!!selectedAppointment} onOpenChange={() => { setSelectedAppointment(null); setActionType(null); setNewDate(null) }}>
+      <Dialog 
+        open={!!selectedAppointment} 
+        onOpenChange={() => { 
+          setSelectedAppointment(null); 
+          setActionType(null); 
+          setNewDate(null) 
+        }}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
@@ -306,9 +401,7 @@ export default function PendingAppointments() {
                   newDate={newDate}
                   setNewDate={setNewDate}
                 />
-
               )}
-
             </div>
           ) : (
             <p className="text-muted-foreground">
@@ -324,7 +417,9 @@ export default function PendingAppointments() {
           )}
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setSelectedAppointment(null)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setSelectedAppointment(null)}>
+              Annuler
+            </Button>
             <Button
               variant={actionType === "CANCEL" ? "destructive" : "default"}
               disabled={actionType === "RESCHEDULE" && !newDate}
@@ -335,7 +430,6 @@ export default function PendingAppointments() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   )
 }

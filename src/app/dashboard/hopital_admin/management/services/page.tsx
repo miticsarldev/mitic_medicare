@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useMemo } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import {
   Table,
   TableHeader,
@@ -31,14 +31,29 @@ interface Department {
   doctorCount: number
 }
 
-const ITEMS_PER_PAGE = 10
+interface PaginationData {
+  currentPage: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+}
+
+const DEFAULT_PAGE_SIZE = 10
 
 export default function DepartmentsTable() {
   const [departments, setDepartments] = useState<Department[]>([])
-  const [filtered, setFiltered] = useState<Department[]>([])
   const [search, setSearch] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginationData>({
+    currentPage: 1,
+    pageSize: DEFAULT_PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  })
+  const [isLoading, setIsLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
 
   // State pour les modals
@@ -47,42 +62,61 @@ export default function DepartmentsTable() {
   const [currentDepartment, setCurrentDepartment] = useState<Department | null>(null)
   const [formData, setFormData] = useState({ name: "", description: "" })
 
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      setLoading(true)
-      try {
-        const res = await fetch("/api/hospital_admin/department")
-        if (!res.ok) throw new Error("Échec du chargement des départements")
-        const data = await res.json()
-        setDepartments(data.departments || [])
-      } catch (error) {
-        console.error("Erreur:", error)
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les départements",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
+  const fetchDepartments = useCallback(async (page: number = 1, searchQuery: string = "") => {
+    setIsLoading(true)
+    try {
+      const url = new URL("/api/hospital_admin/department", window.location.origin)
+      url.searchParams.set("page", page.toString())
+      url.searchParams.set("pageSize", pagination.pageSize.toString())
+      if (searchQuery) {
+        url.searchParams.set("search", searchQuery)
       }
+
+      const res = await fetch(url.toString())
+      if (!res.ok) throw new Error("Échec du chargement des départements")
+      
+      const data = await res.json()
+      setDepartments(data.departments || [])
+      
+      if (data.pagination) {
+        setPagination({
+          currentPage: data.pagination.currentPage,
+          pageSize: data.pagination.pageSize,
+          totalItems: data.pagination.totalItems,
+          totalPages: data.pagination.totalPages,
+          hasNextPage: data.pagination.hasNextPage,
+          hasPreviousPage: data.pagination.hasPreviousPage,
+        })
+      }
+    } catch (error) {
+      console.error("Erreur:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les départements",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
     }
-    fetchDepartments()
-  }, [])
+  }, [pagination.pageSize])
 
   useEffect(() => {
-    const result = departments.filter((dep) =>
-      dep.name.toLowerCase().includes(search.toLowerCase())
-    )
-    setFiltered(result)
-    setCurrentPage(1)
-  }, [search, departments])
+    fetchDepartments()
+  }, [fetchDepartments])
 
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return filtered.slice(start, start + ITEMS_PER_PAGE)
-  }, [filtered, currentPage])
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return
+    fetchDepartments(newPage, search)
+  }
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  // Délai pour la recherche avec reset à la première page
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDepartments(1, search)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [search, fetchDepartments])
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -106,17 +140,14 @@ export default function DepartmentsTable() {
       })
       setOpenAddModal(false)
       setFormData({ name: "", description: "" })
-      // Rafraîchir les données sans recharger la page
-      const updatedData = await fetch("/api/hospital_admin/department")
-      const newData = await updatedData.json()
-      setDepartments(newData.departments || [])
+      fetchDepartments(1, search) // Retour à la première page après ajout
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de l'ajout",
         variant: "destructive"
       })
-        console.error("Erreur:", error)
+      console.error("Erreur:", error)
     } finally {
       setProcessing(false)
     }
@@ -141,17 +172,14 @@ export default function DepartmentsTable() {
       setOpenEditModal(false)
       setCurrentDepartment(null)
       setFormData({ name: "", description: "" })
-      // Rafraîchir les données
-      const updatedData = await fetch("/api/hospital_admin/department")
-      const newData = await updatedData.json()
-      setDepartments(newData.departments || [])
+      fetchDepartments(pagination.currentPage, search)
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la modification",
         variant: "destructive"
       })
-        console.error("Erreur:", error)
+      console.error("Erreur:", error)
     } finally {
       setProcessing(false)
     }
@@ -171,17 +199,18 @@ export default function DepartmentsTable() {
         title: "Succès",
         description: "Département supprimé avec succès",
       })
-      // Rafraîchir les données
-      const updatedData = await fetch("/api/hospital_admin/department")
-      const newData = await updatedData.json()
-      setDepartments(newData.departments || [])
+      // Réajuster la pagination si nécessaire
+      const newPage = departments.length === 1 && pagination.currentPage > 1 
+        ? pagination.currentPage - 1 
+        : pagination.currentPage
+      fetchDepartments(newPage, search)
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la suppression",
         variant: "destructive"
       })
-        console.error("Erreur:", error)
+      console.error("Erreur:", error)
     } finally {
       setProcessing(false)
     }
@@ -201,7 +230,7 @@ export default function DepartmentsTable() {
             <CardTitle className="text-2xl font-bold">Gestion des départements</CardTitle>
             <Dialog open={openAddModal} onOpenChange={setOpenAddModal}>
               <DialogTrigger asChild>
-                <Button>
+                <Button disabled={isLoading}>
                   <PlusCircle className="w-4 h-4 mr-2" />
                   Nouveau département
                 </Button>
@@ -258,6 +287,7 @@ export default function DepartmentsTable() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -273,17 +303,17 @@ export default function DepartmentsTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Chargement des départements...</span>
+                        <span>Chargement en cours...</span>
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : paginated.length > 0 ? (
-                  paginated.map((dep) => (
+                ) : departments.length > 0 ? (
+                  departments.map((dep) => (
                     <TableRow key={dep.id}>
                       <TableCell className="font-medium">{dep.name}</TableCell>
                       <TableCell>{dep.description || <span className="text-muted-foreground">Aucune description</span>}</TableCell>
@@ -294,7 +324,7 @@ export default function DepartmentsTable() {
                             size="sm" 
                             variant="outline" 
                             onClick={() => openEditModalForDepartment(dep)}
-                            disabled={processing}
+                            disabled={processing || isLoading}
                           >
                             Modifier
                           </Button>
@@ -302,7 +332,7 @@ export default function DepartmentsTable() {
                             size="sm" 
                             variant="destructive" 
                             onClick={() => handleDeleteDepartment(dep.id)}
-                            disabled={processing}
+                            disabled={processing || isLoading}
                           >
                             Supprimer
                           </Button>
@@ -321,29 +351,29 @@ export default function DepartmentsTable() {
             </Table>
           </div>
 
-          {totalPages > 1 && (
+          {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between px-2 pt-4">
               <div className="text-sm text-muted-foreground">
-                {filtered.length} département{filtered.length > 1 ? 's' : ''} au total
+                {pagination.totalItems} département{pagination.totalItems > 1 ? 's' : ''} au total
               </div>
               <div className="flex items-center space-x-6 lg:space-x-8">
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === 1 || loading}
-                    onClick={() => setCurrentPage((p) => p - 1)}
+                    disabled={!pagination.hasPreviousPage || isLoading}
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
                   >
                     Précédent
                   </Button>
                   <span className="text-sm font-medium">
-                    Page {currentPage} sur {totalPages}
+                    Page {pagination.currentPage} sur {pagination.totalPages}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={currentPage === totalPages || loading}
-                    onClick={() => setCurrentPage((p) => p + 1)}
+                    disabled={!pagination.hasNextPage || isLoading}
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
                   >
                     Suivant
                   </Button>
