@@ -181,7 +181,7 @@ export function CareGiver() {
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               <span className="text-gray-700 dark:text-gray-300 font-medium">
-                Utilisé par plus de 410 000 soignants en France
+                Utilisé par plus de 410 000 soignants
               </span>
             </div>
 
