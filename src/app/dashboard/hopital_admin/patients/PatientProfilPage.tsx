@@ -117,7 +117,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                         <div className="flex flex-wrap justify-center items-center gap-2 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                                 <User2 className="h-4 w-4" />
-                                <span>{patient.user.profile?.genre || "Genre non renseigné"}</span>
+                                <span>{patient.user.profile?.genre === "MALE" ? "Masculin" : patient.user.profile?.genre === "FEMALE" ? "Feminin" : "Genre non renseigné"}</span>
                             </div>
                             {patient.bloodType && (
                                 <Badge variant="secondary" className="ml-2">
@@ -220,7 +220,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                                 <div className="flex items-center gap-2"><Notebook className="w-4 h-4" /> Assurance : {patient.insuranceProvider || 'Non renseignée'}</div>
                                                 <div className="flex items-center gap-2"><Star className="w-4 h-4" /> Numéro : {patient.insuranceNumber || 'Non renseigné'}</div>
                                                 <div className="flex items-center gap-2"><Calendar1 className="w-4 h-4" /> Date de naissance : {patient.dateOfBirth?.toLocaleDateString() || 'Non renseignée'}</div>
-                                                <div className="flex items-center gap-2"><User className="w-4 h-4" /> Genre : {patient.user.profile?.genre || 'Non renseigné'}</div>
+                                                <div className="flex items-center gap-2"><User className="w-4 h-4" /> Genre : {patient.user.profile?.genre === "MALE" ? "Masculin" : patient.user.profile?.genre === "FEMALE" ? "Feminin" : "Genre non renseigné"}</div>
                                             </div>
                                         </div>
                                     </CardContent>

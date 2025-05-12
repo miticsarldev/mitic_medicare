@@ -5,12 +5,27 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
+const DEFAULT_PAGE_SIZE = 10;
+
+export async function GET(request: Request) {
     try {
         const session = await getServerSession(authOptions);
 
         if (!session || !session.user || session.user.role !== "HOSPITAL_ADMIN") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Récupérer les paramètres de pagination
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const pageSize = parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString(), 10);
+
+        // Valider les paramètres
+        if (isNaN(page) || page < 1 || isNaN(pageSize) || pageSize < 1) {
+            return NextResponse.json(
+                { error: "Invalid pagination parameters" },
+                { status: 400 }
+            );
         }
 
         const hospital = await prisma.hospital.findUnique({
@@ -23,68 +38,83 @@ export async function GET() {
         }
 
         const hospitalId = hospital.id;
+        const skip = (page - 1) * pageSize;
 
-        const patientsWithAppointments = await prisma.patient.findMany({
-            where: {
-                appointments: {
-                    some: {
-                        hospitalId: hospitalId,
-                    },
-                },
-            },
-            select: {
-                id: true,
-                allergies: true,
-                medicalNotes: true,
-                user: {
-                    select: {
-                        name: true,
-                        email: true,
-                        phone: true,
-                        profile: {
-                            select: {
-                                genre: true,
-                                address: true,
-                                city: true,
-                                state: true,
-                                zipCode: true,
-                            },
+        // Récupérer les données avec pagination
+        const [patientsWithAppointments, totalCount] = await Promise.all([
+            prisma.patient.findMany({
+                where: {
+                    appointments: {
+                        some: {
+                            hospitalId: hospitalId,
                         },
                     },
                 },
-                appointments: {
-                    where: { hospitalId },
-                    orderBy: { scheduledAt: "desc" },
-                    select: {
-                        id: true,
-                        scheduledAt: true,
-                        status: true,
-                        reason: true,
-                        doctor: {
-                            select: {
-                                id: true,
-                                specialization: true,
-                                user: {
-                                    select: {
-                                        name: true,
-                                        email: true,
+                skip,
+                take: pageSize,
+                select: {
+                    id: true,
+                    allergies: true,
+                    medicalNotes: true,
+                    user: {
+                        select: {
+                            name: true,
+                            email: true,
+                            phone: true,
+                            profile: {
+                                select: {
+                                    genre: true,
+                                    address: true,
+                                    city: true,
+                                    state: true,
+                                    zipCode: true,
+                                },
+                            },
+                        },
+                    },
+                    appointments: {
+                        where: { hospitalId },
+                        orderBy: { scheduledAt: "desc" },
+                        select: {
+                            id: true,
+                            scheduledAt: true,
+                            status: true,
+                            reason: true,
+                            doctor: {
+                                select: {
+                                    id: true,
+                                    specialization: true,
+                                    user: {
+                                        select: {
+                                            name: true,
+                                            email: true,
+                                        },
                                     },
                                 },
                             },
                         },
                     },
-                },
-                medicalRecords: {
-                    where: { hospitalId },
-                    select: {
-                        id: true,
-                        diagnosis: true,
-                        treatment: true,
-                        createdAt: true,
+                    medicalRecords: {
+                        where: { hospitalId },
+                        select: {
+                            id: true,
+                            diagnosis: true,
+                            treatment: true,
+                            createdAt: true,
+                        },
                     },
                 },
-            },
-        });
+            }),
+            prisma.patient.count({
+                where: {
+                    appointments: {
+                        some: {
+                            hospitalId: hospitalId,
+                        },
+                    },
+                },
+            }),
+        ]);
 
         const patientsFormatted = patientsWithAppointments.map((patient) => {
             const appointments = patient.appointments.map((appt) => ({
@@ -124,7 +154,20 @@ export async function GET() {
             };
         });
 
-        return NextResponse.json({ patients: patientsFormatted });
+        // Calculer les métadonnées de pagination
+        const totalPages = Math.ceil(totalCount / pageSize);
+
+        return NextResponse.json({
+            patients: patientsFormatted,
+            pagination: {
+                currentPage: page,
+                pageSize: pageSize,
+                totalItems: totalCount,
+                totalPages: totalPages,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1,
+            }
+        });
     } catch (error) {
         console.error("Error fetching patients:", error);
         return NextResponse.json(

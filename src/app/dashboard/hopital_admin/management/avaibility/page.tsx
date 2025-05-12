@@ -9,9 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { deleteDoctorAvailability, getDoctorAvailabilities, upsertDoctorAvailability } from "@/app/actions/doctor-actions";
+import { deleteDoctorAvailability, getDoctorAvailabilities, upsertDoctorAvailability, updateSlotDurationForAllAvailabilities } from "@/app/actions/doctor-actions";
 import { toast } from "@/hooks/use-toast";
-
 
 type Doctor = {
     id: string;
@@ -24,11 +23,13 @@ type Availability = {
     dayOfWeek: number;
     startTime: string;
     endTime: string;
+    slotDuration: number;
     isActive: boolean;
     doctorId: string;
 };
 
 const DAYS = [
+    { id: 0, name: "Dimanche" },
     { id: 1, name: "Lundi" },
     { id: 2, name: "Mardi" },
     { id: 3, name: "Mercredi" },
@@ -42,18 +43,26 @@ export default function DoctorAvailabilityPage() {
     const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
     const [availabilities, setAvailabilities] = useState<Availability[]>([]);
     const [openDialog, setOpenDialog] = useState(false);
+    const [openSlotDialog, setOpenSlotDialog] = useState(false);
     const [editingAvailability, setEditingAvailability] = useState<Availability | null>(null);
+    const [globalSlotDuration, setGlobalSlotDuration] = useState<number>(30);
     const [formData, setFormData] = useState({
         dayOfWeek: 1,
         startTime: "09:00",
         endTime: "17:00",
+        slotDuration: 30,
         isActive: true,
     });
     const [isLoading, setIsLoading] = useState({
         doctors: true,
         availabilities: false,
         form: false,
+        slots: false,
     });
+    const [deleteConfirmation, setDeleteConfirmation] = useState<{
+        open: boolean;
+        availabilityId: string | null;
+    }>({ open: false, availabilityId: null });
 
     const loadDoctors = useCallback(async () => {
         try {
@@ -80,6 +89,10 @@ export default function DoctorAvailabilityPage() {
         try {
             const data = await getDoctorAvailabilities(doctorId);
             setAvailabilities(data);
+            // Si des disponibilités existent, on prend la durée de créneau de la première
+            if (data.length > 0) {
+                setGlobalSlotDuration(data[0].slotDuration);
+            }
         } catch (error) {
             toast({
                 title: "Erreur",
@@ -149,21 +162,51 @@ export default function DoctorAvailabilityPage() {
         }
     };
 
+    const handleUpdateSlotDuration = async () => {
+        if (!selectedDoctor) return;
+
+        setIsLoading(prev => ({ ...prev, slots: true }));
+        try {
+            await updateSlotDurationForAllAvailabilities(selectedDoctor, globalSlotDuration);
+            await loadAvailabilities(selectedDoctor);
+            toast({
+                title: "Succès",
+                description: "Durée des créneaux mise à jour pour toutes les disponibilités",
+            });
+            setOpenSlotDialog(false);
+        } catch (error) {
+            toast({
+                title: "Erreur",
+                description: "Échec de la mise à jour de la durée des créneaux",
+                variant: "destructive"
+            });
+            console.error("Erreur lors de la mise à jour de la durée des créneaux :", error);
+        } finally {
+            setIsLoading(prev => ({ ...prev, slots: false }));
+        }
+    };
+
     const handleEdit = (availability: Availability) => {
         setEditingAvailability(availability);
         setFormData({
             dayOfWeek: availability.dayOfWeek,
             startTime: availability.startTime,
             endTime: availability.endTime,
+            slotDuration: availability.slotDuration,
             isActive: availability.isActive,
         });
         setOpenDialog(true);
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Êtes-vous sûr de vouloir supprimer cette disponibilité ?")) return;
+        setDeleteConfirmation({ open: true, availabilityId: id });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmation.availabilityId) return;
+
         try {
-            await deleteDoctorAvailability(id);
+            await deleteDoctorAvailability(deleteConfirmation.availabilityId);
             toast({
                 title: "Succès",
                 description: "Disponibilité supprimée avec succès",
@@ -178,6 +221,8 @@ export default function DoctorAvailabilityPage() {
                 variant: "destructive"
             });
             console.error("Erreur lors de la suppression de la disponibilité :", error);
+        } finally {
+            setDeleteConfirmation({ open: false, availabilityId: null });
         }
     };
 
@@ -194,6 +239,7 @@ export default function DoctorAvailabilityPage() {
             dayOfWeek: 1,
             startTime: "09:00",
             endTime: "17:00",
+            slotDuration: globalSlotDuration,
             isActive: true,
         });
         setEditingAvailability(null);
@@ -205,20 +251,23 @@ export default function DoctorAvailabilityPage() {
 
     const handleDayChange = (dayId: number) => {
         const usedDays = getUsedDays();
-        if (editingAvailability || !usedDays.includes(dayId)) {
+        if (editingAvailability) {
+            // Permet de changer le jour si on est en mode édition
+            setFormData({ ...formData, dayOfWeek: dayId });
+        } else if (!usedDays.includes(dayId)) {
+            // Permet de choisir un jour seulement s'il n'est pas déjà utilisé
             setFormData({ ...formData, dayOfWeek: dayId });
         } else {
             toast({
-                title: "Jour déjà utilisé",
-                description: "Ce jour a déjà un créneau. Modifiez le créneau existant.",
-                variant: "default"
+                title: "Jour indisponible",
+                description: "Ce jour a déjà une disponibilité. Veuillez modifier la disponibilité existante.",
+                variant: "destructive"
             });
         }
     };
 
     return (
         <div className="p-4 space-y-4 mx-auto">
-
             {/* affichage de skeleton lors du chargement */}
             {isLoading.doctors || isLoading.availabilities ? (
                 <div className="space-y-4 mb-4">
@@ -274,7 +323,7 @@ export default function DoctorAvailabilityPage() {
                     <CardContent className="space-y-4">
                         {selectedDoctor && (
                             <>
-                                <div className="flex justify-end">
+                                <div className="flex justify-between items-center">
                                     <Button
                                         onClick={() => {
                                             resetForm();
@@ -284,6 +333,14 @@ export default function DoctorAvailabilityPage() {
                                     >
                                         <Plus className="mr-2 h-4 w-4" />
                                         Ajouter une disponibilité
+                                    </Button>
+                                    <Button
+                                        onClick={() => setOpenSlotDialog(true)}
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Modifier durée des créneaux
                                     </Button>
                                 </div>
 
@@ -305,35 +362,44 @@ export default function DoctorAvailabilityPage() {
                                                     return (
                                                         <TableCell key={day.id} className="p-2 align-top h-40">
                                                             {dayAvailabilities.length > 0 ? (
-                                                                <div className="space-y-1">
-                                                                    {dayAvailabilities.map(avail => (
-                                                                        <div
-                                                                            key={avail.id}
-                                                                            className="group p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-100 dark:border-green-800 flex justify-between items-center hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                                                                        >
-                                                                            <span className="text-sm font-medium">
-                                                                                {avail.startTime} - {avail.endTime}
-                                                                            </span>
-                                                                            <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="icon"
-                                                                                    className="h-6 w-6"
-                                                                                    onClick={() => handleEdit(avail)}
-                                                                                >
-                                                                                    <Pencil className="h-3 w-3 text-blue-500" />
-                                                                                </Button>
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="icon"
-                                                                                    className="h-6 w-6"
-                                                                                    onClick={() => handleDelete(avail.id)}
-                                                                                >
-                                                                                    <Trash2 className="h-3 w-3 text-red-500" />
-                                                                                </Button>
+                                                                <div className="space-y-2">
+                                                                    {dayAvailabilities.map(avail => {
+
+                                                                        return (
+                                                                            <div
+                                                                                key={avail.id}
+                                                                                className="group p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-100 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                                                                            >
+                                                                                <div className="flex justify-between items-center mb-1">
+                                                                                    <span className="text-sm font-medium">
+                                                                                        {avail.startTime} - {avail.endTime}
+                                                                                    </span>
+                                                                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-6 w-6"
+                                                                                            onClick={() => handleEdit(avail)}
+                                                                                        >
+                                                                                            <Pencil className="h-3 w-3 text-blue-500" />
+                                                                                        </Button>
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-6 w-6"
+                                                                                            onClick={() => handleDelete(avail.id)}
+                                                                                        >
+                                                                                            <Trash2 className="h-3 w-3 text-red-500" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="text-xs text-muted-foreground mb-1">
+                                                                                    Créneaux de {avail.slotDuration} min
+                                                                                </div>
+
                                                                             </div>
-                                                                        </div>
-                                                                    ))}
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             ) : (
                                                                 <p className="text-sm text-muted-foreground text-center pt-4">
@@ -352,6 +418,8 @@ export default function DoctorAvailabilityPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Dialog pour ajouter/modifier une disponibilité */}
             <Dialog open={openDialog} onOpenChange={(open) => {
                 if (!open) {
                     setEditingAvailability(null);
@@ -418,6 +486,18 @@ export default function DoctorAvailabilityPage() {
                             </div>
                         </div>
 
+                        <div className="space-y-2">
+                            <Label>Durée des créneaux (minutes)</Label>
+                            <Input
+                                type="number"
+                                min="5"
+                                max="120"
+                                step="5"
+                                value={formData.slotDuration}
+                                onChange={e => setFormData({ ...formData, slotDuration: parseInt(e.target.value) || 30 })}
+                            />
+                        </div>
+
                         <div className="flex items-center space-x-2 pt-2">
                             <Switch
                                 id="isActive"
@@ -447,6 +527,78 @@ export default function DoctorAvailabilityPage() {
                                     Enregistrement...
                                 </>
                             ) : editingAvailability ? "Modifier" : "Ajouter"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog pour modifier la durée des créneaux */}
+            <Dialog open={openSlotDialog} onOpenChange={setOpenSlotDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Modifier la durée des créneaux</DialogTitle>
+                        <DialogDescription>
+                            Cette modification s&apos;appliquera à toutes les disponibilités existantes pour ce médecin.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Nouvelle durée des créneaux (minutes)</Label>
+                            <Input
+                                type="number"
+                                min="5"
+                                max="120"
+                                step="5"
+                                value={globalSlotDuration}
+                                onChange={e => setGlobalSlotDuration(parseInt(e.target.value) || 30)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setOpenSlotDialog(false)}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={handleUpdateSlotDuration}
+                            disabled={isLoading.slots}
+                        >
+                            {isLoading.slots ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Enregistrement...
+                                </>
+                            ) : "Mettre à jour"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={deleteConfirmation.open}
+                onOpenChange={(open) => setDeleteConfirmation(prev => ({ ...prev, open }))}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Confirmer la suppression</DialogTitle>
+                        <DialogDescription>
+                            Êtes-vous sûr de vouloir supprimer cette disponibilité ? Cette action est irréversible.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirmation({ open: false, availabilityId: null })}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                        >
+                            Confirmer la suppression
                         </Button>
                     </DialogFooter>
                 </DialogContent>

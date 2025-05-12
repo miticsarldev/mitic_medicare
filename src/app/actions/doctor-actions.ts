@@ -496,9 +496,9 @@ export async function getDoctorSlotsWithTakenStatus(
     return d;
   };
 
-  // --- CAS 1 : Une date est fournie (comportement inchangé) ---
+  // CAS 1 : une seule date est fournie
   if (date) {
-    const dayOfWeek = date.getDay(); // 0 = dimanche ... 6 = samedi
+    const dayOfWeek = date.getDay();
 
     const availability = await prisma.doctorAvailability.findFirst({
       where: {
@@ -509,19 +509,18 @@ export async function getDoctorSlotsWithTakenStatus(
     });
 
     if (!availability) {
-      return {
-        all: [],
-        taken: [],
-      };
+      return { all: [], taken: [] };
     }
 
     const slots: string[] = [];
     let current = timeToDate(date, availability.startTime);
     const end = timeToDate(date, availability.endTime);
 
+    const durationMs = availability.slotDuration * 60 * 1000;
+
     while (current < end) {
       slots.push(format(current, "HH:mm"));
-      current = new Date(current.getTime() + 60 * 60 * 1000); // +1h
+      current = new Date(current.getTime() + durationMs);
     }
 
     const startOfDay = new Date(date);
@@ -555,7 +554,7 @@ export async function getDoctorSlotsWithTakenStatus(
     };
   }
 
-  // --- CAS 2 : Aucune date fournie → retourner toute la semaine ---
+  // CAS 2 : aucune date → toute la semaine
   const today = new Date();
   const currentDay = today.getDay();
   const days = [
@@ -568,7 +567,6 @@ export async function getDoctorSlotsWithTakenStatus(
     "saturday",
   ];
 
-  // Obtenir le lundi de la semaine courante
   const monday = new Date(today);
   monday.setDate(today.getDate() - ((currentDay + 6) % 7));
   monday.setHours(0, 0, 0, 0);
@@ -597,9 +595,11 @@ export async function getDoctorSlotsWithTakenStatus(
     let current = timeToDate(dayDate, availability.startTime);
     const end = timeToDate(dayDate, availability.endTime);
 
+    const durationMs = availability.slotDuration * 60 * 1000;
+
     while (current < end) {
       slots.push(format(current, "HH:mm"));
-      current = new Date(current.getTime() + 60 * 60 * 1000);
+      current = new Date(current.getTime() + durationMs);
     }
 
     const startOfDay = new Date(dayDate);
@@ -636,6 +636,7 @@ export async function getDoctorSlotsWithTakenStatus(
   return result;
 }
 
+
 // Lister toutes les disponibilités d'un médecin
 export async function getDoctorAvailabilities(doctorId: string) {
   return await prisma.doctorAvailability.findMany({
@@ -644,25 +645,31 @@ export async function getDoctorAvailabilities(doctorId: string) {
   });
 }
 
-// Créer ou mettre à jour une disponibilité
 export async function upsertDoctorAvailability(availability: {
   id?: string;
   doctorId: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  slotDuration: number;
   isActive: boolean;
 }) {
   const { id, ...data } = availability;
 
   if (id) {
-    // Mise à jour si l'ID est fourni
+    // Mise à jour
     return await prisma.doctorAvailability.update({
       where: { id },
       data,
     });
+  } else {
+    // Création
+    return await prisma.doctorAvailability.create({
+      data,
+    });
   }
 }
+
 
 // Supprimer une disponibilité
 export async function deleteDoctorAvailability(id: string) {
@@ -671,9 +678,9 @@ export async function deleteDoctorAvailability(id: string) {
   });
 }
 
-// Supprimer toutes les disponibilités d'un médecin
-export async function deleteAllDoctorAvailabilities(doctorId: string) {
-  return await prisma.doctorAvailability.deleteMany({
+export async function updateSlotDurationForAllAvailabilities(doctorId: string, slotDuration: number) {
+  return await prisma.doctorAvailability.updateMany({
     where: { doctorId },
+    data: { slotDuration },
   });
 }
