@@ -1,22 +1,74 @@
+// app/api/hospital_doctor/patient/[appointmentId]/vital-signes/route.ts
+
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  request: Request,
-  { params }: { params: { patientId: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { patientId: string } }) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  const appointmentId = params.patientId;
+
+  const { temperature, heartRate, bloodPressureSystolic, bloodPressureDiastolic, oxygenSaturation, weight, height } = await request.json();
+
   try {
+    // 1. Récupérer le rendez-vous pour avoir le patientId
     const appointment = await prisma.appointment.findUnique({
-      where: { id: params.patientId },
-      select: { patientId: true },
+      where: { id: appointmentId },
+      select: { patientId: true }
     });
 
-    const actualPatientId = appointment?.patientId || params.patientId;
+    if (!appointment) {
+      return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
+    }
 
-    const patient = await prisma.patient.findUnique({
-      where: { id: actualPatientId },
+    const patientId = appointment.patientId;
+
+    // 2. Mettre à jour ou créer les signes vitaux
+    const existingVitalSign = await prisma.vitalSign.findFirst({
+      where: { patientId }
+    });
+
+    if (existingVitalSign) {
+      await prisma.vitalSign.update({
+        where: { id: existingVitalSign.id },
+        data: {
+          temperature,
+          heartRate,
+          bloodPressureSystolic,
+          bloodPressureDiastolic,
+          oxygenSaturation,
+          weight,
+          height,
+          recordedAt: new Date(),
+        }
+      });
+    } else {
+      await prisma.vitalSign.create({
+        data: {
+          patientId,
+          temperature,
+          heartRate,
+          bloodPressureSystolic,
+          bloodPressureDiastolic,
+          oxygenSaturation,
+          weight,
+          height,
+          recordedAt: new Date(),
+        }
+      });
+    }
+
+    // 3. Renvoyer les données complètes du patient (comme dans le GET)
+    const updatedPatient = await prisma.patient.findUnique({
+      where: { id: patientId },
       select: {
         id: true,
         bloodType: true,
@@ -27,8 +79,6 @@ export async function GET(
         insuranceProvider: true,
         insuranceNumber: true,
         medicalNotes: true,
-        createdAt: true,
-        updatedAt: true,
         user: {
           select: {
             id: true,
@@ -105,16 +155,9 @@ export async function GET(
       },
     });
 
-    if (!patient) {
-      return NextResponse.json(
-        { error: "Patient non trouvé" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(patient);
+    return NextResponse.json(updatedPatient);
   } catch (error) {
-    console.error("Erreur lors de la récupération du patient:", error);
+    console.error("Erreur mise à jour signes vitaux :", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus, User2 } from "lucide-react";
@@ -99,6 +99,14 @@ export default function PatientMedicalRecord() {
   const [duration, setDuration] = useState("");
   const [instructions, setInstructions] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isVitalModalOpen, setIsVitalModalOpen] = useState(false);
+  const [temperature, setTemperature] = useState<number | undefined>();
+  const [heartRate, setHeartRate] = useState<number | undefined>();
+  const [bloodPressureSystolic, setBPsys] = useState<number | undefined>();
+  const [bloodPressureDiastolic, setBPdia] = useState<number | undefined>();
+  const [oxygenSaturation, setOxy] = useState<number | undefined>();
+  const [weight, setWeight] = useState<number | undefined>();
+  const [height, setHeight] = useState<number | undefined>();
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -123,54 +131,38 @@ export default function PatientMedicalRecord() {
     fetchPatientData();
   }, [patientId]);
 
-  if (loading) return <div>Chargement...</div>;
-  if (error) return <div>Erreur: {error}</div>;
-  if (!patient) return <div>Patient non trouvé</div>;
-
-  // Formater les données pour l'affichage
   const formatDate = (date: Date) => new Date(date).toLocaleDateString();
   const formatBloodType = (type?: string) => type ? type.replace('_', ' ') : 'Non spécifié';
 
-  // Filtrer les consultations complétées
-  const completedAppointments = patient.appointments
-    .filter(app => app.status === 'COMPLETED')
-    .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+  const completedAppointments = Array.isArray(patient?.appointments)
+  ? patient.appointments
+      .filter(app => app.status === 'COMPLETED')
+      .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime())
+  : [];
 
-  // Récupérer toutes les prescriptions
   const prescriptions = completedAppointments
     .flatMap(app => app.medicalRecord?.prescriptions || [])
     .filter(pres => pres);
 
-  // Récupérer les signes vitaux
-  const latestVitalSigns = patient.vitalSigns.length > 0 
-    ? patient.vitalSigns.reduce((latest, current) => 
-        new Date(current.recordedAt) > new Date(latest.recordedAt) ? current : latest
-      )
-    : null;
+  const latestVitalSigns = useMemo(() => {
+    if (!patient?.vitalSigns || patient.vitalSigns.length === 0) return null;
+    return patient.vitalSigns.reduce((latest, current) =>
+      new Date(current.recordedAt) > new Date(latest.recordedAt) ? current : latest
+    );
+  }, [patient?.vitalSigns]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          condition,
-          details,
-          diagnosedDate: diagnosedDate || undefined,
-          status: 'ACTIVE'
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, condition, details, diagnosedDate: diagnosedDate || undefined, status: 'ACTIVE' })
       });
-
       if (response.ok) {
         const updatedPatient = await response.json();
         setPatient(updatedPatient);
         setIsModalOpen(false);
-        // Réinitialiser les champs...
       }
     } catch (err) {
       console.error("Erreur lors de l'ajout de l'historique", err);
@@ -179,43 +171,80 @@ export default function PatientMedicalRecord() {
 
   const handlePrescriptionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       const lastAppointment = completedAppointments[0];
       const medicalRecordId = lastAppointment?.medicalRecord?.id;
-  
-      const response = await fetch(`/api/hospital_doctor/patient/${patient.id}/prescription`, {
+      const response = await fetch(`/api/hospital_doctor/patient/${patient?.id}/prescription`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          medicalRecordId,
-          medicationName,
-          dosage,
-          frequency,
-          duration: duration || undefined,
-          instructions: instructions || undefined,
-          startDate
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ medicalRecordId, medicationName, dosage, frequency, duration: duration || undefined, instructions: instructions || undefined, startDate })
       });
-  
       if (response.ok) {
         const updatedPatient = await response.json();
         setPatient(updatedPatient);
         setIsPrescriptionModalOpen(false);
-        // Réinitialiser les champs
-        setMedicationName('');
-        setDosage('');
-        setFrequency('');
-        setDuration('');
-        setInstructions('');
+        setMedicationName(''); setDosage(''); setFrequency(''); setDuration(''); setInstructions('');
         setStartDate(new Date().toISOString().split('T')[0]);
       }
     } catch (err) {
       console.error("Erreur lors de l'ajout de la prescription", err);
     }
   };
+
+const handleVitalSignsSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const response = await fetch(`/api/hospital_doctor/patient/${patientId}/vital-signs`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        temperature: temperature || null,
+        heartRate: heartRate || null,
+        bloodPressureSystolic: bloodPressureSystolic || null,
+        bloodPressureDiastolic: bloodPressureDiastolic || null,
+        oxygenSaturation: oxygenSaturation || null,
+        weight: weight || null,
+        height: height || null
+      })
+    });
+
+    if (response.ok) {
+      const updatedPatient = await response.json();
+      setPatient(updatedPatient);
+      setIsVitalModalOpen(false);
+    } else {
+      const errorData = await response.json();
+      console.error("Erreur lors de la mise à jour:", errorData.error);
+    }
+  } catch (err) {
+    console.error("Erreur réseau lors de la mise à jour des signes vitaux", err);
+  }
+};
+
+
+  useEffect(() => {
+    if (latestVitalSigns) {
+      setTemperature(latestVitalSigns.temperature);
+      setHeartRate(latestVitalSigns.heartRate);
+      setBPsys(latestVitalSigns.bloodPressureSystolic);
+      setBPdia(latestVitalSigns.bloodPressureDiastolic);
+      setOxy(latestVitalSigns.oxygenSaturation);
+      setWeight(latestVitalSigns.weight);
+      setHeight(latestVitalSigns.height);
+    } else {
+      setTemperature(undefined);
+      setHeartRate(undefined);
+      setBPsys(undefined);
+      setBPdia(undefined);
+      setOxy(undefined);
+      setWeight(undefined);
+      setHeight(undefined);
+    }
+  }, [latestVitalSigns, isVitalModalOpen]);
+
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>Erreur: {error}</div>;
+  if (!patient) return <div>Patient non trouvé</div>;
 
   return (
     <div className="p-6 space-y-6 bg-gray-100 dark:bg-gray-900 min-h-screen">
@@ -226,7 +255,9 @@ export default function PatientMedicalRecord() {
             <CardTitle className="flex items-center gap-4">
               <User className="w-8 h-8 text-blue-500" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{patient.user.name}</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {patient.user?.name || "Nom inconnu"}
+                </h1>                
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Date de naissance: {formatDate(patient.dateOfBirth)} | Groupe sanguin : {formatBloodType(patient.bloodType)}
                 </p>
@@ -293,11 +324,15 @@ export default function PatientMedicalRecord() {
             <div className="space-y-2">
               <div className="flex items-start gap-3">
                 <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Email:</span>
-                <p className="text-sm text-gray-900 dark:text-gray-100">{patient.user.email}</p>
+                <p className="text-sm text-gray-900 dark:text-gray-100">
+                  {patient.user?.email || "Email inconnu"}
+                </p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Téléphone:</span>
-                <p className="text-sm text-gray-900 dark:text-gray-100">{patient.user.phone}</p>
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                {patient.user?.phone || "phone inconnu"}
+              </p> 
               </div>
             </div>
           </div>
@@ -385,7 +420,7 @@ export default function PatientMedicalRecord() {
               </div>
             </CardHeader>
             <CardContent>
-              {patient.medicalHistories.length > 0 ? (
+              {patient.medicalHistories?.length > 0 ? (
                 <ul className="space-y-3">
                   {patient.medicalHistories.map((history) => (
                     <li key={history.id} className="flex items-center gap-4 p-3 border rounded-md dark:border-gray-700">
@@ -414,63 +449,73 @@ export default function PatientMedicalRecord() {
         </TabsContent>
 
         {/* Contenu de l'onglet Signes vitaux */}
-        <TabsContent value="vital-signs">
-          {latestVitalSigns ? (
-            <Card className="bg-white dark:bg-gray-800 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                  <Activity className="w-6 h-6 text-orange-500" />
-                  Signes vitaux récents
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {latestVitalSigns.temperature && (
-                    <div className="border rounded-md p-3">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
-                      <p className="font-medium">{latestVitalSigns.temperature}°C</p>
-                    </div>
-                  )}
-                  {latestVitalSigns.bloodPressureSystolic && latestVitalSigns.bloodPressureDiastolic && (
-                    <div className="border rounded-md p-3">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
-                      <p className="font-medium">
-                        {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
-                      </p>
-                    </div>
-                  )}
-                  {latestVitalSigns.heartRate && (
-                    <div className="border rounded-md p-3">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
-                      <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
-                    </div>
-                  )}
-                  {latestVitalSigns.oxygenSaturation && (
-                    <div className="border rounded-md p-3">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
-                      <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Mesuré le: {formatDate(latestVitalSigns.recordedAt)}
+<TabsContent value="vital-signs">
+  <Card className="bg-white dark:bg-gray-800 shadow-sm">
+    <CardHeader>
+      <div className="flex items-center justify-between">
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+          <Activity className="w-6 h-6 text-orange-500" />
+          Signes vitaux
+        </CardTitle>
+        <Button onClick={() => setIsVitalModalOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> 
+          {latestVitalSigns ? 'Modifier' : 'Ajouter'}
+        </Button>
+      </div>
+    </CardHeader>
+    <CardContent>
+      {latestVitalSigns ? (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {latestVitalSigns.temperature !== undefined && (
+              <div className="border rounded-md p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
+                <p className="font-medium">{latestVitalSigns.temperature}°C</p>
+              </div>
+            )}
+            {latestVitalSigns.bloodPressureSystolic !== undefined && latestVitalSigns.bloodPressureDiastolic !== undefined && (
+              <div className="border rounded-md p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
+                <p className="font-medium">
+                  {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
                 </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-white dark:bg-gray-800 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                  <Activity className="w-6 h-6 text-orange-500" />
-                  Signes vitaux
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500 dark:text-gray-400">Aucun signe vital enregistré</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+              </div>
+            )}
+            {latestVitalSigns.heartRate !== undefined && (
+              <div className="border rounded-md p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
+                <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
+              </div>
+            )}
+            {latestVitalSigns.oxygenSaturation !== undefined && (
+              <div className="border rounded-md p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
+                <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
+              </div>
+            )}
+            {latestVitalSigns.weight !== undefined && (
+              <div className="border rounded-md p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Poids</p>
+                <p className="font-medium">{latestVitalSigns.weight} kg</p>
+              </div>
+            )}
+            {latestVitalSigns.height !== undefined && (
+              <div className="border rounded-md p-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Taille</p>
+                <p className="font-medium">{latestVitalSigns.height} cm</p>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            Mesuré le: {formatDate(latestVitalSigns.recordedAt)}
+          </p>
+        </>
+      ) : (
+        <p className="text-gray-500 dark:text-gray-400">Aucun signe vital enregistré</p>
+      )}
+    </CardContent>
+  </Card>
+</TabsContent>
 
         {/* Contenu de l'onglet Prescriptions */}
         <TabsContent value="prescriptions">
@@ -629,6 +674,103 @@ export default function PatientMedicalRecord() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Modal pour enregistrer les signes vitaux */}
+<Dialog open={isVitalModalOpen} onOpenChange={setIsVitalModalOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Enregistrer les signes vitaux</DialogTitle>
+      <DialogDescription>
+        Renseignez les dernières mesures du patient.
+      </DialogDescription>
+    </DialogHeader>
+    <form onSubmit={handleVitalSignsSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="temperature">Température (°C)</Label>
+          <Input
+            id="temperature"
+            type="number"
+            value={temperature || ''}
+            onChange={(e) => setTemperature(e.target.value ? parseFloat(e.target.value) : undefined)}
+            placeholder="Ex: 36.6"
+            step="0.1"
+          />
+        </div>
+        <div>
+          <Label htmlFor="heartRate">Rythme cardiaque (bpm)</Label>
+          <Input
+            id="heartRate"
+            type="number"
+            value={heartRate || ''}
+            onChange={(e) => setHeartRate(e.target.value ? parseInt(e.target.value) : undefined)}
+            placeholder="Ex: 72"
+          />
+        </div>
+        <div>
+          <Label htmlFor="bloodPressureSystolic">Pression art. systolique (mmHg)</Label>
+          <Input
+            id="bloodPressureSystolic"
+            type="number"
+            value={bloodPressureSystolic || ''}
+            onChange={(e) => setBPsys(e.target.value ? parseInt(e.target.value) : undefined)}
+            placeholder="Ex: 120"
+          />
+        </div>
+        <div>
+          <Label htmlFor="bloodPressureDiastolic">Pression art. diastolique (mmHg)</Label>
+          <Input
+            id="bloodPressureDiastolic"
+            type="number"
+            value={bloodPressureDiastolic || ''}
+            onChange={(e) => setBPdia(e.target.value ? parseInt(e.target.value) : undefined)}
+            placeholder="Ex: 80"
+          />
+        </div>
+        <div>
+          <Label htmlFor="oxygenSaturation">Saturation O₂ (%)</Label>
+          <Input
+            id="oxygenSaturation"
+            type="number"
+            value={oxygenSaturation || ''}
+            onChange={(e) => setOxy(e.target.value ? parseInt(e.target.value) : undefined)}
+            placeholder="Ex: 98"
+            min="0"
+            max="100"
+          />
+        </div>
+        <div>
+          <Label htmlFor="weight">Poids (kg)</Label>
+          <Input
+            id="weight"
+            type="number"
+            value={weight || ''}
+            onChange={(e) => setWeight(e.target.value ? parseFloat(e.target.value) : undefined)}
+            placeholder="Ex: 70.5"
+            step="0.1"
+          />
+        </div>
+        <div>
+          <Label htmlFor="height">Taille (cm)</Label>
+          <Input
+            id="height"
+            type="number"
+            value={height || ''}
+            onChange={(e) => setHeight(e.target.value ? parseFloat(e.target.value) : undefined)}
+            placeholder="Ex: 175"
+            step="0.1"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setIsVitalModalOpen(false)}>
+          Annuler
+        </Button>
+        <Button type="submit">Enregistrer</Button>
+      </div>
+    </form>
+  </DialogContent>
+</Dialog>
 
       {/* Modal pour ajouter une prescription */}
       <Dialog open={isPrescriptionModalOpen} onOpenChange={setIsPrescriptionModalOpen}>

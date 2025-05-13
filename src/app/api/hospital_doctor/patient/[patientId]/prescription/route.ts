@@ -45,7 +45,7 @@ export async function POST(
         appointments: {
           include: {
             doctor: { include: { user: true } },
-            medicalRecord: { include: { prescription: true } },
+            medicalRecord: { include: { prescriptions: true } },
           },
         },
         vitalSigns: true,
