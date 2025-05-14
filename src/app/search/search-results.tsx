@@ -24,9 +24,9 @@ export function SearchResults({ results, type }: SearchResultsProps) {
   };
 
   if (
-    (type === "doctor" && results.doctors.length === 0) ||
-    (type === "hospital" && results.hospitals.length === 0) ||
-    (type === "department" && results.departments.length === 0)
+    (type === "doctor" && results.doctors?.length === 0) ||
+    (type === "hospital" && results.hospitals?.length === 0) ||
+    (type === "department" && results.departments?.length === 0)
   ) {
     return (
       <div className="text-center py-12">
@@ -87,7 +87,7 @@ export function SearchResults({ results, type }: SearchResultsProps) {
                       ))}
                       <span className="ml-1 text-sm">
                         {doctor.avgRating.toFixed(1)} (
-                        {doctor.doctorReviews.length})
+                        {doctor.doctorReviews?.length})
                       </span>
                     </div>
 
@@ -164,7 +164,7 @@ export function SearchResults({ results, type }: SearchResultsProps) {
                         className="flex items-center gap-1"
                       >
                         <Building className="h-3 w-3" />{" "}
-                        {hospital.departments.length} Départements
+                        {hospital.departments?.length} Départements
                       </Badge>
                     </div>
                   </div>

@@ -98,7 +98,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.8 }}
             >
-              <Link href="#findoctors">
+              <Link href="/search">
                 <Button
                   size="lg"
                   className="gap-2 bg-primary hover:bg-primary/90 flex items-center justify-center transition-all duration-300 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:translate-y-[-2px]"

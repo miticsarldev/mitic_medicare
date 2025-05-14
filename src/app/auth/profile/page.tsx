@@ -118,7 +118,7 @@ export default function ProfilePage() {
                   placeholder="Ancien le mot de passe"
                   value={ancienPassword}
                   onChange={(e) => setAncienPassword(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2 pr-4 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-3 py-2 pr-4 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   type="button"

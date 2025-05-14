@@ -54,9 +54,9 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
   const totalPages = Math.ceil(results.totalCount / itemsPerPage);
 
   if (
-    (type === "doctor" && results.doctors.length === 0) ||
-    (type === "hospital" && results.hospitals.length === 0) ||
-    (type === "department" && results.departments.length === 0)
+    (type === "doctor" && results?.doctors?.length === 0) ||
+    (type === "hospital" && results?.hospitals?.length === 0) ||
+    (type === "department" && results?.departments?.length === 0)
   ) {
     return (
       <motion.div
@@ -153,7 +153,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                               ))}
                               <span className="ml-1 text-sm">
                                 {doctor.avgRating.toFixed(1)} (
-                                {doctor.doctorReviews.length})
+                                {doctor.doctorReviews?.length})
                               </span>
                             </div>
                           </div>
@@ -276,14 +276,14 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                               className="flex items-center gap-1"
                             >
                               <Users className="h-3 w-3" />{" "}
-                              {hospital.doctors.length} Médecins
+                              {hospital.doctors?.length} Médecins
                             </Badge>
                             <Badge
                               variant="outline"
                               className="flex items-center gap-1"
                             >
                               <Building className="h-3 w-3" />{" "}
-                              {hospital.departments.length} Départements
+                              {hospital.departments?.length} Départements
                             </Badge>
                           </div>
                         </div>
@@ -348,7 +348,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                               className="flex items-center gap-1"
                             >
                               <Users className="h-3 w-3" />{" "}
-                              {department.doctors.length} Médecins
+                              {department?.doctors?.length} Médecins
                             </Badge>
                           </div>
                         </div>

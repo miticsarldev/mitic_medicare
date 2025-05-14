@@ -2,7 +2,12 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { SearchResult, TopDoctor } from "@/types/ui-actions.types";
+import {
+  DepartmentWithDetails,
+  HospitalWithDetails,
+  SearchResult,
+  TopDoctor,
+} from "@/types/ui-actions.types";
 
 export type SearchFilters = {
   type: "doctor" | "hospital" | "department";
@@ -197,6 +202,7 @@ export async function searchHealthcare(
         return {
           ...doctor,
           avgRating,
+          experience: doctor.experience ?? undefined,
         };
       });
 
@@ -734,4 +740,340 @@ export async function getTopDoctors(limit: number = 6): Promise<TopDoctor[]> {
     .slice(0, limit);
 
   return doctorsWithRatings;
+}
+
+export async function getHospitalById(
+  id: string
+): Promise<HospitalWithDetails | null> {
+  try {
+    const hospital = await prisma.hospital.findUnique({
+      where: { id },
+      include: {
+        admin: {
+          include: {
+            profile: true,
+          },
+        },
+        departments: {
+          include: {
+            doctors: {
+              include: {
+                user: {
+                  include: {
+                    profile: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        doctors: {
+          include: {
+            user: {
+              include: {
+                profile: true,
+              },
+            },
+            department: true,
+            reviews: {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    profile: {
+                      select: {
+                        avatarUrl: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        reviews: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
+          },
+          where: {
+            status: "APPROVED",
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      },
+    });
+
+    if (!hospital) return null;
+
+    const doctorsWithRating = hospital.doctors.map((doctor) => {
+      const totalRating = doctor.reviews.reduce(
+        (sum, review) => sum + review.rating,
+        0
+      );
+      const avgRating =
+        doctor.reviews.length > 0 ? totalRating / doctor.reviews.length : 0;
+
+      return {
+        id: doctor.id,
+        specialization: doctor.specialization,
+        licenseNumber: doctor.licenseNumber,
+        experience: doctor.experience ?? undefined,
+        education: doctor.education ?? undefined,
+        isVerified: doctor.isVerified,
+        consultationFee: doctor.consultationFee
+          ? Number(doctor.consultationFee)
+          : undefined,
+        user: {
+          id: doctor.user.id,
+          name: doctor.user.name,
+          email: doctor.user.email,
+          profile: doctor.user.profile
+            ? {
+                address: doctor.user.profile.address ?? undefined,
+                city: doctor.user.profile.city ?? undefined,
+                state: doctor.user.profile.state ?? undefined,
+                zipCode: doctor.user.profile.zipCode ?? undefined,
+                country: doctor.user.profile.country ?? undefined,
+                bio: doctor.user.profile.bio ?? undefined,
+                avatarUrl: doctor.user.profile.avatarUrl ?? undefined,
+                genre: doctor.user.profile.genre ?? undefined,
+              }
+            : undefined,
+        },
+        department: doctor.department
+          ? {
+              id: doctor.department.id,
+              name: doctor.department.name,
+            }
+          : undefined,
+        reviews: doctor.reviews.map((r) => ({
+          id: r.id,
+          title: r.title,
+          content: r.content,
+          rating: r.rating,
+          likes: r.likes,
+          dislikes: r.dislikes,
+          createdAt: r.createdAt,
+          author: {
+            id: r.author.id,
+            name: r.author.name,
+            profile: r.author.profile?.avatarUrl
+              ? { avatarUrl: r.author.profile.avatarUrl }
+              : undefined,
+          },
+        })),
+        avgRating,
+      };
+    });
+
+    const totalRating = hospital.reviews.reduce(
+      (sum, review) => sum + review.rating,
+      0
+    );
+    const avgRating =
+      hospital.reviews.length > 0 ? totalRating / hospital.reviews.length : 0;
+
+    return {
+      id: hospital.id,
+      name: hospital.name,
+      //   admin: hospital.admin,
+      admin: {
+        ...hospital.admin,
+        profile: hospital.admin.profile
+          ? {
+              address: hospital.admin.profile.address ?? undefined,
+              city: hospital.admin.profile.city ?? undefined,
+              state: hospital.admin.profile.state ?? undefined,
+              zipCode: hospital.admin.profile.zipCode ?? undefined,
+              country: hospital.admin.profile.country ?? undefined,
+              bio: hospital.admin.profile.bio ?? undefined,
+              avatarUrl: hospital.admin.profile.avatarUrl ?? undefined,
+              genre: hospital.admin.profile.genre ?? undefined,
+            }
+          : undefined,
+      },
+      address: hospital.address,
+      city: hospital.city,
+      state: hospital.state,
+      zipCode: hospital.zipCode,
+      country: hospital.country,
+      phone: hospital.phone,
+      email: hospital.email,
+      website: hospital.website ?? undefined,
+      description: hospital.description ?? undefined,
+      logoUrl: hospital.logoUrl ?? undefined,
+      isVerified: hospital.isVerified,
+      status: hospital.status,
+      createdAt: hospital.createdAt,
+      updatedAt: hospital.updatedAt,
+      doctors: doctorsWithRating,
+      departments: hospital.departments.map((d) => ({
+        id: d.id,
+        name: d.name,
+        description: d.description ?? undefined,
+        doctors: d.doctors.map((doc) => ({
+          id: doc.id,
+          user: {
+            id: doc.user.id,
+            name: doc.user.name,
+            email: doc.user.email,
+            profile: doc.user.profile
+              ? {
+                  address: doc.user.profile.address ?? undefined,
+                  city: doc.user.profile.city ?? undefined,
+                  state: doc.user.profile.state ?? undefined,
+                  zipCode: doc.user.profile.zipCode ?? undefined,
+                  country: doc.user.profile.country ?? undefined,
+                  bio: doc.user.profile.bio ?? undefined,
+                  avatarUrl: doc.user.profile.avatarUrl ?? undefined,
+                  genre: doc.user.profile.genre ?? undefined,
+                }
+              : undefined,
+          },
+        })),
+      })),
+      reviews: hospital.reviews.map((r) => ({
+        id: r.id,
+        title: r.title,
+        content: r.content,
+        rating: r.rating,
+        likes: r.likes,
+        dislikes: r.dislikes,
+        createdAt: r.createdAt,
+        author: {
+          id: r.author.id,
+          name: r.author.name,
+          profile: r.author.profile?.avatarUrl
+            ? { avatarUrl: r.author.profile.avatarUrl }
+            : undefined,
+        },
+      })),
+      avgRating,
+    };
+  } catch (error) {
+    console.error("Error fetching hospital:", error);
+    return null;
+  }
+}
+
+export async function getDepartmentById(
+  id: string
+): Promise<DepartmentWithDetails | null> {
+  try {
+    const department = await prisma.department.findUnique({
+      where: { id },
+      include: {
+        hospital: true,
+        doctors: {
+          include: {
+            user: {
+              include: {
+                profile: true,
+              },
+            },
+            reviews: {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    profile: {
+                      select: {
+                        avatarUrl: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!department) return null;
+
+    const doctorsWithRating = department.doctors.map((doctor) => {
+      const totalRating = doctor.reviews.reduce(
+        (sum, review) => sum + review.rating,
+        0
+      );
+      const avgRating =
+        doctor.reviews.length > 0 ? totalRating / doctor.reviews.length : 0;
+
+      return {
+        id: doctor.id,
+        specialization: doctor.specialization,
+        licenseNumber: doctor.licenseNumber,
+        experience: doctor.experience ?? undefined,
+        education: doctor.education ?? undefined,
+        isVerified: doctor.isVerified,
+        consultationFee: doctor.consultationFee
+          ? Number(doctor.consultationFee)
+          : undefined,
+        user: {
+          id: doctor.user.id,
+          name: doctor.user.name,
+          email: doctor.user.email,
+          phone: doctor.user.phone,
+          profile: doctor.user.profile
+            ? {
+                address: doctor.user.profile.address ?? undefined,
+                city: doctor.user.profile.city ?? undefined,
+                state: doctor.user.profile.state ?? undefined,
+                zipCode: doctor.user.profile.zipCode ?? undefined,
+                country: doctor.user.profile.country ?? undefined,
+                bio: doctor.user.profile.bio ?? undefined,
+                avatarUrl: doctor.user.profile.avatarUrl ?? undefined,
+                genre: doctor.user.profile.genre ?? undefined,
+              }
+            : undefined,
+        },
+        reviews: doctor.reviews.map((r) => ({
+          id: r.id,
+          title: r.title,
+          content: r.content,
+          rating: r.rating,
+          createdAt: r.createdAt,
+          author: {
+            id: r.author.id,
+            name: r.author.name,
+            profile: r.author.profile?.avatarUrl
+              ? { avatarUrl: r.author.profile.avatarUrl }
+              : undefined,
+          },
+        })),
+        avgRating,
+      };
+    });
+
+    return {
+      id: department.id,
+      name: department.name,
+      description: department.description ?? undefined,
+      hospital: {
+        ...department.hospital,
+        website: department.hospital?.website ?? "",
+        description: department.hospital?.description ?? "",
+        logoUrl: department.hospital?.logoUrl ?? "",
+      },
+      doctors: doctorsWithRating,
+    };
+  } catch (error) {
+    console.error("Error fetching department:", error);
+    return null;
+  }
 }
