@@ -4,14 +4,21 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "HOSPITAL_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const doctorName = searchParams.get('doctor') || '';
+    const patientName = searchParams.get('patient') || '';
 
     const hospital = await prisma.hospital.findUnique({
       where: { adminId: session.user.id },
@@ -25,10 +32,50 @@ export async function GET() {
       );
     }
 
+    // Construction sécurisée du whereClause
+    const baseWhere: Prisma.MedicalRecordWhereInput = {
+      hospitalId: hospital.id
+    };
+
+    const patientFilter: Prisma.MedicalRecordWhereInput = patientName ? {
+      patient: {
+        user: {
+          name: {
+            contains: patientName,
+            mode: 'insensitive'
+          }
+        }
+      }
+    } : {};
+
+    const doctorFilter: Prisma.MedicalRecordWhereInput = doctorName ? {
+      doctor: {
+        user: {
+          name: {
+            contains: doctorName,
+            mode: 'insensitive'
+          }
+        }
+      }
+    } : {};
+
+    const whereClause: Prisma.MedicalRecordWhereInput = {
+      ...baseWhere,
+      AND: [
+        ...(patientName ? [patientFilter] : []),
+        ...(doctorName ? [doctorFilter] : [])
+      ]
+    };
+
+    // Get total count for pagination
+    const totalRecords = await prisma.medicalRecord.count({
+      where: whereClause
+    });
+
     const medicalRecords = await prisma.medicalRecord.findMany({
-      where: {
-        hospitalId: hospital.id,
-      },
+      where: whereClause,
+      skip: (page - 1) * limit,
+      take: limit,
       orderBy: {
         createdAt: "desc",
       },
@@ -37,12 +84,21 @@ export async function GET() {
         diagnosis: true,
         treatment: true,
         createdAt: true,
+        updatedAt: true,
+        notes: true,
         patient: {
           select: {
             id: true,
             user: {
               select: {
                 name: true,
+                email: true,
+                dateOfBirth: true,
+                profile: {
+                  select: {
+                    genre: true,
+                  }
+                }
               },
             },
           },
@@ -88,9 +144,14 @@ export async function GET() {
       diagnosis: record.diagnosis,
       treatment: record.treatment,
       createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      notes: record.notes,
       patient: {
         id: record.patient.id,
         name: record.patient.user.name,
+        email: record.patient.user.email,
+        dob: record.patient.user.dateOfBirth,
+        gender: record.patient.user.profile?.genre,
       },
       doctor: {
         id: record.doctor.id,
@@ -101,7 +162,17 @@ export async function GET() {
       prescriptions: record.prescription,
     }));
 
-    return NextResponse.json({ records: formatted });
+    return NextResponse.json({ 
+      records: formatted,
+      pagination: {
+        total: totalRecords,
+        page,
+        limit,
+        totalPages: Math.ceil(totalRecords / limit),
+        hasNextPage: page * limit < totalRecords,
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (error) {
     console.error("Error fetching medical records:", error);
     return NextResponse.json(
