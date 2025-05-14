@@ -7,7 +7,10 @@ import { authOptions } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
-export async function PUT(request: Request, { params }: { params: { patientId: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: { patientId: string } }
+) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -16,24 +19,35 @@ export async function PUT(request: Request, { params }: { params: { patientId: s
 
   const appointmentId = params.patientId;
 
-  const { temperature, heartRate, bloodPressureSystolic, bloodPressureDiastolic, oxygenSaturation, weight, height } = await request.json();
+  const {
+    temperature,
+    heartRate,
+    bloodPressureSystolic,
+    bloodPressureDiastolic,
+    oxygenSaturation,
+    weight,
+    height,
+  } = await request.json();
 
   try {
     // 1. Récupérer le rendez-vous pour avoir le patientId
     const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
-      select: { patientId: true }
+      select: { patientId: true },
     });
 
     if (!appointment) {
-      return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Rendez-vous introuvable" },
+        { status: 404 }
+      );
     }
 
     const patientId = appointment.patientId;
 
     // 2. Mettre à jour ou créer les signes vitaux
     const existingVitalSign = await prisma.vitalSign.findFirst({
-      where: { patientId }
+      where: { patientId },
     });
 
     if (existingVitalSign) {
@@ -48,7 +62,7 @@ export async function PUT(request: Request, { params }: { params: { patientId: s
           weight,
           height,
           recordedAt: new Date(),
-        }
+        },
       });
     } else {
       await prisma.vitalSign.create({
@@ -62,7 +76,7 @@ export async function PUT(request: Request, { params }: { params: { patientId: s
           weight,
           height,
           recordedAt: new Date(),
-        }
+        },
       });
     }
 
@@ -123,7 +137,7 @@ export async function PUT(request: Request, { params }: { params: { patientId: s
                 id: true,
                 diagnosis: true,
                 treatment: true,
-                prescriptions: {
+                prescription: {
                   select: {
                     id: true,
                     medicationName: true,
