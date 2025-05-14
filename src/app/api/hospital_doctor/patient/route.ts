@@ -37,8 +37,6 @@ export async function GET() {
       },
     });
 
-    console.log("appointments:", appointments);
-
     const formattedAppointments = appointments.map((appointment) => {
       const { patient, hospital } = appointment;
       const age = patient.user?.dateOfBirth
