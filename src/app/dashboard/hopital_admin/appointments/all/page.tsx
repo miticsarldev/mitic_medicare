@@ -22,10 +22,33 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarDays, User, Stethoscope, ClipboardList, Mail, Phone, Droplets, AlertCircle, Building2 } from "lucide-react"
+import { CalendarDays, User, Stethoscope, ClipboardList, Mail, Phone, Droplets, AlertCircle, Building2, FileText, File, FileImage, FileArchive, FileVideo, Download, FilePlus2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+interface Attachment {
+    id: string
+    fileName: string
+    fileType: string
+    fileUrl: string
+    fileSize: number
+    uploadedAt: string
+}
+
+interface MedicalRecord {
+    id: string
+    diagnosis: string
+    treatment: string
+    notes: string
+    followUpNeeded: boolean
+    followUpDate: string | null
+    createdAt: string
+    updatedAt: string
+    attachments: Attachment[]
+}
 
 interface Doctor {
     id: string
@@ -53,6 +76,7 @@ interface Appointment {
     type: string
     doctor: Doctor
     patient: Patient
+    medicalRecord: MedicalRecord | null
 }
 
 interface PaginationData {
@@ -83,6 +107,18 @@ const STATUS_COLORS = {
     NO_SHOW: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
     DEFAULT: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 } as const
+
+const FILE_ICONS = {
+    'application/pdf': <FileText className="w-5 h-5" />,
+    'application/msword': <FileText className="w-5 h-5" />,
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': <FileText className="w-5 h-5" />,
+    'image/jpeg': <FileImage className="w-5 h-5" />,
+    'image/png': <FileImage className="w-5 h-5" />,
+    'application/zip': <FileArchive className="w-5 h-5" />,
+    'application/x-rar-compressed': <FileArchive className="w-5 h-5" />,
+    'video/mp4': <FileVideo className="w-5 h-5" />,
+    default: <File className="w-5 h-5" />
+}
 
 export default function AppointmentsTable() {
     const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -160,6 +196,19 @@ export default function AppointmentsTable() {
     const getStatusLabel = (status: string) => {
         const option = STATUS_OPTIONS.find(opt => opt.value === status)
         return option ? option.label : status
+    }
+
+    const getFileIcon = (fileType: string) => {
+        const icon = Object.entries(FILE_ICONS).find(([key]) => fileType.includes(key.split('/')[1]));
+        return icon ? icon[1] : FILE_ICONS.default;
+    }
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     return (
@@ -256,6 +305,11 @@ export default function AppointmentsTable() {
                                             <CardTitle className="flex items-center gap-2">
                                                 <User className="w-5 h-5" />
                                                 <span className="truncate">{appt.patient.name}</span>
+                                                {appt.medicalRecord && (
+                                                    <Badge variant="secondary" className="ml-auto">
+                                                        Dossier médical
+                                                    </Badge>
+                                                )}
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-2 text-sm">
@@ -311,88 +365,230 @@ export default function AppointmentsTable() {
                                     </div>
                                 </div>
                             )}
-
                         </>
                     )}
                 </CardContent>
             </Card>
 
             <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle>Détails du rendez-vous</DialogTitle>
                     </DialogHeader>
                     {selectedAppointment && (
-                        <Tabs defaultValue="patient" className="mt-4">
-                            <TabsList className="grid grid-cols-2 w-full">
+                        <Tabs defaultValue="patient" className="flex-1 flex flex-col">
+                            <TabsList className="grid grid-cols-3 w-full">
                                 <TabsTrigger value="patient">Patient</TabsTrigger>
                                 <TabsTrigger value="doctor">Médecin</TabsTrigger>
+                                <TabsTrigger value="medical" disabled={!selectedAppointment.medicalRecord}>
+                                    Dossier médical
+                                </TabsTrigger>
                             </TabsList>
-                            <TabsContent value="patient" className="pt-4 space-y-4">
-                                <div className="space-y-2">
-                                    <h3 className="font-medium flex items-center gap-2">
-                                        <User className="w-5 h-5" />
-                                        Informations patient
-                                    </h3>
-                                    <div className="pl-6 space-y-2 text-sm">
-                                        <p><strong>Nom :</strong> {selectedAppointment.patient.name}</p>
-                                        <p><strong>Genre :</strong> {selectedAppointment.patient.gender}</p>
-                                        <p className="flex items-center gap-2">
-                                            <Mail className="w-4 h-4" />
-                                            {selectedAppointment.patient.email}
-                                        </p>
-                                        <p className="flex items-center gap-2">
-                                            <Phone className="w-4 h-4" />
-                                            {selectedAppointment.patient.phone}
-                                        </p>
-                                        <p className="flex items-center gap-2">
-                                            <Droplets className="w-4 h-4" />
-                                            <strong>Groupe sanguin :</strong> {selectedAppointment.patient.bloodType}
-                                        </p>
-                                        <p className="flex items-center gap-2">
-                                            <AlertCircle className="w-4 h-4" />
-                                            <strong>Allergies :</strong> {selectedAppointment.patient.allergies}
-                                        </p>
-                                        <p className="flex items-start gap-2">
-                                            <ClipboardList className="w-4 h-4 mt-0.5" />
-                                            <strong>Notes médicales :</strong> {selectedAppointment.patient.medicalNotes}
-                                        </p>
+
+                            <ScrollArea className="flex-1 py-4">
+                                <TabsContent value="patient" className="space-y-6">
+                                    <div className="space-y-4">
+                                        <h3 className="font-medium flex items-center gap-2 text-lg">
+                                            <User className="w-5 h-5" />
+                                            Informations patient
+                                        </h3>
+                                        <div className="pl-6 space-y-4 text-sm">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="font-semibold">Nom complet</p>
+                                                    <p>{selectedAppointment.patient.name}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold">Genre</p>
+                                                    <p>{selectedAppointment.patient.gender}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold flex items-center gap-2">
+                                                        <Mail className="w-4 h-4" />
+                                                        Email
+                                                    </p>
+                                                    <p>{selectedAppointment.patient.email}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold flex items-center gap-2">
+                                                        <Phone className="w-4 h-4" />
+                                                        Téléphone
+                                                    </p>
+                                                    <p>{selectedAppointment.patient.phone}</p>
+                                                </div>
+                                            </div>
+
+                                            <Separator />
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="font-semibold flex items-center gap-2">
+                                                        <Droplets className="w-4 h-4" />
+                                                        Groupe sanguin
+                                                    </p>
+                                                    <p>{selectedAppointment.patient.bloodType}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold flex items-center gap-2">
+                                                        <AlertCircle className="w-4 h-4" />
+                                                        Allergies
+                                                    </p>
+                                                    <p>{selectedAppointment.patient.allergies}</p>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="font-semibold flex items-start gap-2">
+                                                    <ClipboardList className="w-4 h-4 mt-0.5" />
+                                                    Notes médicales
+                                                </p>
+                                                <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
+                                                    {selectedAppointment.patient.medicalNotes}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="doctor" className="pt-4 space-y-4">
-                                <div className="space-y-2">
-                                    <h3 className="font-medium flex items-center gap-2">
-                                        <Stethoscope className="w-5 h-5" />
-                                        Informations médecin
-                                    </h3>
-                                    <div className="pl-6 space-y-2 text-sm">
-                                        <p><strong>Nom :</strong> {selectedAppointment.doctor.name}</p>
-                                        <p><strong>Spécialisation :</strong> {selectedAppointment.doctor.specialization}</p>
-                                        <p className="flex items-center gap-2">
-                                            <Building2 className="w-4 h-4" />
-                                            <strong>Département :</strong> {selectedAppointment.doctor.department}
-                                        </p>
+                                </TabsContent>
+
+                                <TabsContent value="doctor" className="space-y-6">
+                                    <div className="space-y-4">
+                                        <h3 className="font-medium flex items-center gap-2 text-lg">
+                                            <Stethoscope className="w-5 h-5" />
+                                            Informations médecin
+                                        </h3>
+                                        <div className="pl-6 space-y-4 text-sm">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="font-semibold">Nom</p>
+                                                    <p>{selectedAppointment.doctor.name}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold">Spécialisation</p>
+                                                    <p>{selectedAppointment.doctor.specialization}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold flex items-center gap-2">
+                                                        <Building2 className="w-4 h-4" />
+                                                        Département
+                                                    </p>
+                                                    <p>{selectedAppointment.doctor.department}</p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <h3 className="font-medium flex items-center gap-2">
-                                        <ClipboardList className="w-5 h-5" />
-                                        Détails du rendez-vous
-                                    </h3>
-                                    <div className="pl-6 space-y-2 text-sm">
-                                        <p><strong>Date :</strong> {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}</p>
-                                        <p><strong>Motif :</strong> {selectedAppointment.reason}</p>
-                                        <p><strong>Type :</strong> {selectedAppointment.type}</p>
-                                        <p>
-                                            <strong>Statut :</strong>{" "}
-                                            <Badge className={STATUS_COLORS[selectedAppointment.status as keyof typeof STATUS_COLORS] || "bg-gray-100"}>
-                                                {getStatusLabel(selectedAppointment.status)}
-                                            </Badge>
-                                        </p>
+
+                                    <div className="space-y-4">
+                                        <h3 className="font-medium flex items-center gap-2 text-lg">
+                                            <CalendarDays className="w-5 h-5" />
+                                            Détails du rendez-vous
+                                        </h3>
+                                        <div className="pl-6 space-y-4 text-sm">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="font-semibold">Date</p>
+                                                    <p>{format(new Date(selectedAppointment.scheduledAt), 'PPpp')}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold">Motif</p>
+                                                    <p>{selectedAppointment.reason}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold">Type</p>
+                                                    <p>{selectedAppointment.type}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold">Statut</p>
+                                                    <Badge className={STATUS_COLORS[selectedAppointment.status as keyof typeof STATUS_COLORS] || "bg-gray-100"}>
+                                                        {getStatusLabel(selectedAppointment.status)}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </TabsContent>
+                                </TabsContent>
+
+                                {selectedAppointment.medicalRecord && (
+                                    <TabsContent value="medical" className="space-y-6">
+                                        <div className="space-y-4">
+                                            <h3 className="font-medium flex items-center gap-2 text-lg">
+                                                <FilePlus2 className="w-5 h-5" />
+                                                Dossier médical
+                                            </h3>
+                                            <div className="pl-6 space-y-6 text-sm">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <p className="font-semibold">Diagnostic</p>
+                                                        <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
+                                                            {selectedAppointment.medicalRecord.diagnosis}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold">Traitement</p>
+                                                        <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
+                                                            {selectedAppointment.medicalRecord.treatment}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-semibold">Notes complémentaires</p>
+                                                    <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
+                                                        {selectedAppointment.medicalRecord.notes || "Aucune note supplémentaire"}
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <p className="font-semibold">Suivi nécessaire</p>
+                                                        <p>{selectedAppointment.medicalRecord.followUpNeeded ? "Oui" : "Non"}</p>
+                                                        {selectedAppointment.medicalRecord.followUpNeeded && (
+                                                            <p className="mt-2">
+                                                                <span className="font-semibold">Date de suivi: </span>
+                                                                {selectedAppointment.medicalRecord.followUpDate
+                                                                    ? format(new Date(selectedAppointment.medicalRecord.followUpDate), 'PPpp')
+                                                                    : "Non précisée"}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold">Dernière mise à jour</p>
+                                                        <p>{format(new Date(selectedAppointment.medicalRecord.updatedAt), 'PPpp')}</p>
+                                                    </div>
+                                                </div>
+
+                                                {selectedAppointment.medicalRecord.attachments.length > 0 && (
+                                                    <div>
+                                                        <p className="font-semibold mb-3">Pièces jointes ({selectedAppointment.medicalRecord.attachments.length})</p>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            {selectedAppointment.medicalRecord.attachments.map((file) => (
+                                                                <div key={file.id} className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors">
+                                                                    <div className="flex-shrink-0">
+                                                                        {getFileIcon(file.fileType)}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="font-medium truncate">{file.fileName}</p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), 'PP')}
+                                                                        </p>
+                                                                    </div>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8"
+                                                                        onClick={() => window.open(file.fileUrl, '_blank')}
+                                                                    >
+                                                                        <Download className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </TabsContent>
+                                )}
+                            </ScrollArea>
                         </Tabs>
                     )}
                 </DialogContent>

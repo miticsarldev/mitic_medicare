@@ -1,11 +1,8 @@
 'use client';
-import React, { useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React from "react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Calendar as CalendarIcon,
   User2,
   Clock,
   BadgeCheck,
@@ -26,26 +23,7 @@ import { DoctorType } from "@/types/doctor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const renderSchedule = () => {
-    if (!doctor?.schedule) return null;
-
-    const dayName = selectedDate.toLocaleDateString("en-US", { weekday: "long" });
-    const todaySlots = doctor.schedule.find((s) => s.day === dayName)?.slots;
-
-    if (!Array.isArray(todaySlots)) return null;
-
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4">
-        {todaySlots.map((slot, index) => (
-          <Button key={index} variant="outline" className="text-sm">
-            {slot}
-          </Button>
-        ))}
-      </div>
-    );
-  };
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -104,7 +82,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                 </h1>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
                   <Badge variant="secondary" className="text-primary">
-                    {doctor.specialization}
+                     {doctor.specialization}
                   </Badge>
                   {doctor.isVerified && (
                     <Badge
@@ -123,8 +101,11 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
               <div className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm font-mediumd">
                     {doctor.department?.name || ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Departement
                   </p>
                 </div>
               </div>
@@ -133,7 +114,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                 <Briefcase className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm font-medium">
-                    {doctor.experience} 
+                    {doctor.experience}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Pratique médicale
@@ -163,7 +144,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Tabs */}
         <div className="md:col-span-2 space-y-4">
           <Card className="shadow-sm">
@@ -270,34 +251,6 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                 </TabsContent>
               </Tabs>
             </CardHeader>
-          </Card>
-        </div>
-
-
-        {/* Calendrier */}
-        <div className="space-y-4">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CalendarIcon className="w-5 h-5" /> Prendre rendez-vous
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(day) => {
-                  if (day) setSelectedDate(day);
-                }}
-                className="rounded-md border"
-              />
-
-              <h4 className="mt-4 text-sm font-semibold">Horaires disponibles</h4>
-              {renderSchedule()}
-              <Button className="mt-4 w-full" disabled>
-                Confirmer le rendez-vous
-              </Button>
-            </CardContent>
           </Card>
         </div>
       </div>

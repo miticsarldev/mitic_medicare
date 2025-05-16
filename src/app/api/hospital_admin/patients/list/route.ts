@@ -1,9 +1,8 @@
-export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma, UserGenre } from "@prisma/client";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -15,15 +14,24 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Récupérer les paramètres de pagination
         const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get('page') || '1', 10);
-        const pageSize = parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString(), 10);
+        const page = parseInt(searchParams.get("page") || "1", 10);
+        const pageSize = parseInt(searchParams.get("pageSize") || DEFAULT_PAGE_SIZE.toString(), 10);
+        const nameFilter = searchParams.get("name") || undefined;
+        const genderFilter = searchParams.get("gender") || undefined;
+        const minAppointmentsFilter = searchParams.get("minAppointments");
+        const minAppointments = minAppointmentsFilter ? parseInt(minAppointmentsFilter) : undefined;
 
-        // Valider les paramètres
         if (isNaN(page) || page < 1 || isNaN(pageSize) || pageSize < 1) {
             return NextResponse.json(
                 { error: "Invalid pagination parameters" },
+                { status: 400 }
+            );
+        }
+
+        if (minAppointmentsFilter && (minAppointments === undefined || isNaN(minAppointments))) {
+            return NextResponse.json(
+                { error: "Invalid minimum appointments parameter" },
                 { status: 400 }
             );
         }
@@ -38,18 +46,79 @@ export async function GET(request: Request) {
         }
 
         const hospitalId = hospital.id;
-        const skip = (page - 1) * pageSize;
 
-        // Récupérer les données avec pagination
-        const [patientsWithAppointments, totalCount] = await Promise.all([
-            prisma.patient.findMany({
+        // Étape 1 : patients ayant au moins X rendez-vous dans cet hôpital
+        let filteredPatientIds: string[] | undefined = undefined;
+        if (minAppointments) {
+            const grouped = await prisma.appointment.groupBy({
+                by: ['patientId'],
                 where: {
-                    appointments: {
-                        some: {
-                            hospitalId: hospitalId,
+                    hospitalId,
+                },
+                _count: {
+                    patientId: true,
+                },
+                having: {
+                    patientId: {
+                        _count: {
+                            gte: minAppointments,
                         },
                     },
                 },
+            });
+
+            filteredPatientIds = grouped.map((g) => g.patientId);
+            if (filteredPatientIds.length === 0) {
+                return NextResponse.json({
+                    patients: [],
+                    pagination: {
+                        currentPage: page,
+                        pageSize,
+                        totalItems: 0,
+                        totalPages: 0,
+                        hasNextPage: false,
+                        hasPreviousPage: false,
+                    },
+                });
+            }
+        }
+
+        // Étape 2 : construction des conditions de recherche
+        const whereConditions: Prisma.PatientWhereInput = {
+            appointments: {
+                some: {
+                    hospitalId,
+                },
+            },
+        };
+
+        if (filteredPatientIds) {
+            whereConditions.id = { in: filteredPatientIds };
+        }
+
+        if (nameFilter || genderFilter) {
+            whereConditions.user = {};
+        }
+
+        if (nameFilter) {
+            whereConditions.user!.name = {
+                contains: nameFilter,
+                mode: "insensitive",
+            };
+        }
+
+        if (genderFilter) {
+            whereConditions.user!.profile = {
+                genre: UserGenre[genderFilter as keyof typeof UserGenre],
+            };
+        }
+
+
+        const skip = (page - 1) * pageSize;
+
+        const [patientsWithAppointments, totalCount] = await Promise.all([
+            prisma.patient.findMany({
+                where: whereConditions,
                 skip,
                 take: pageSize,
                 select: {
@@ -103,16 +172,34 @@ export async function GET(request: Request) {
                             createdAt: true,
                         },
                     },
-                },
-            }),
-            prisma.patient.count({
-                where: {
-                    appointments: {
-                        some: {
-                            hospitalId: hospitalId,
+                    medicalHistories: {
+                        select: {
+                            id: true,
+                            title: true,
+                            condition: true,
+                            diagnosedDate: true,
+                            status: true,
+                            details: true,
+                            doctor: {
+                                select: {
+                                    id: true,
+                                    specialization: true,
+                                    user: {
+                                        select: {
+                                            name: true,
+                                            email: true,
+                                        },
+                                    },
+                                },
+                            },
+                            createdAt: true,
+                            updatedAt: true,
                         },
                     },
                 },
+            }),
+            prisma.patient.count({
+                where: whereConditions,
             }),
         ]);
 
@@ -147,6 +234,24 @@ export async function GET(request: Request) {
                 lastAppointment: lastAppointment?.scheduledAt || null,
                 appointments,
                 medicalRecords: patient.medicalRecords,
+                medicalHistories: patient.medicalHistories.map((history) => ({
+                    id: history.id,
+                    title: history.title,
+                    condition: history.condition,
+                    diagnosedDate: history.diagnosedDate,
+                    status: history.status,
+                    details: history.details,
+                    doctor: history.doctor
+                        ? {
+                            id: history.doctor.id,
+                            name: history.doctor.user.name,
+                            email: history.doctor.user.email,
+                            specialty: history.doctor.specialization,
+                        }
+                        : null,
+                    createdAt: history.createdAt,
+                    updatedAt: history.updatedAt,
+                })),
                 healthStatus: {
                     allergies: patient.allergies || null,
                     notes: patient.medicalNotes || null,
@@ -154,19 +259,18 @@ export async function GET(request: Request) {
             };
         });
 
-        // Calculer les métadonnées de pagination
         const totalPages = Math.ceil(totalCount / pageSize);
 
         return NextResponse.json({
             patients: patientsFormatted,
             pagination: {
                 currentPage: page,
-                pageSize: pageSize,
+                pageSize,
                 totalItems: totalCount,
-                totalPages: totalPages,
+                totalPages,
                 hasNextPage: page < totalPages,
                 hasPreviousPage: page > 1,
-            }
+            },
         });
     } catch (error) {
         console.error("Error fetching patients:", error);
