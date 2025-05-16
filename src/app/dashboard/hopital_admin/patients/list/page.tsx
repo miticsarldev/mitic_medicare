@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Filter, Search, X } from "lucide-react";
@@ -31,6 +31,24 @@ interface Appointment {
   };
 }
 
+//history
+interface MedicalHistory {
+  id: string;
+  title: string;
+  condition: string;
+  diagnosedDate: string;
+  status: string;
+  details: string;
+  doctor?: {
+    id: string;
+    specialty: string;
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface MedicalRecord {
   id: string;
   diagnosis: string;
@@ -48,9 +66,9 @@ interface Patient {
   email: string;
   phone?: string;
   address?: string;
-  city: string | null;
-  state: string | null;
-  zipCode: string | null;
+  city: string | undefined;
+  state: string | undefined;
+  zipCode: string | undefined;
   numberOfMedicalRecords: number;
   appointments: Appointment[];
   medicalRecords: MedicalRecord[];
@@ -58,6 +76,7 @@ interface Patient {
     allergies: string | null;
     notes: string | null;
   };
+  medicalHistories: MedicalHistory[];
 }
 
 interface PaginationData {
@@ -107,10 +126,16 @@ export default function PatientList() {
       url.searchParams.set("page", page.toString());
       url.searchParams.set("pageSize", ITEMS_PER_PAGE.toString());
 
+      // Ajouter les paramètres de filtrage selon votre API
+      if (search) url.searchParams.set("name", search);
+      if (genderFilter.length > 0) url.searchParams.set("gender", genderFilter.join(','));
+      if (minAppointments > 0) url.searchParams.set("minAppointments", minAppointments.toString());
+
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to fetch patients");
       const data = await res.json();
-      
+
+      // Adapter selon la structure de votre réponse API
       setPatients(data.patients);
       if (data.pagination) {
         setPagination({
@@ -133,11 +158,22 @@ export default function PatientList() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search, genderFilter, minAppointments]); // Ajouter les dépendances
 
+  // Gestion du debounce pour la recherche
   useEffect(() => {
-    fetchPatients();
-  }, [fetchPatients]);
+    const timer = setTimeout(() => {
+      fetchPatients(1); // Reset à la première page quand la recherche change
+    }, 500); // Délai de 500ms
+
+    return () => clearTimeout(timer);
+  }, [search, fetchPatients]);
+
+  // Pour les autres filtres (genre et appointments), on déclenche immédiatement
+  useEffect(() => {
+    fetchPatients(1);
+  }, [genderFilter, minAppointments, fetchPatients]);
+
 
   const toggleGender = useCallback((gender: string) => {
     setGenderFilter((prev) =>
@@ -153,23 +189,18 @@ export default function PatientList() {
     setMinAppointments(0);
   }, []);
 
-  const filteredPatients = useMemo(() => {
-    return patients.filter((patient) => {
-      const matchesSearch = patient.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const matchesGender =
-        genderFilter.length === 0 || genderFilter.includes(patient.gender);
-      const matchesAppointments =
-        patient.numberOfAppointments >= minAppointments;
-      return matchesSearch && matchesGender && matchesAppointments;
-    });
-  }, [patients, search, genderFilter, minAppointments]);
-
-  const handlePageChange = useCallback((page: number) => {
-    if (page < 1 || page > pagination.totalPages) return;
-    fetchPatients(page);
-  }, [fetchPatients, pagination.totalPages]);
+  // const filteredPatients = useMemo(() => {
+  //   return patients.filter((patient) => {
+  //     const matchesSearch = patient.name
+  //       .toLowerCase()
+  //       .includes(search.toLowerCase());
+  //     const matchesGender =
+  //       genderFilter.length === 0 || genderFilter.includes(patient.gender);
+  //     const matchesAppointments =
+  //       patient.numberOfAppointments >= minAppointments;
+  //     return matchesSearch && matchesGender && matchesAppointments;
+  //   });
+  // }, [patients, search, genderFilter, minAppointments]);
 
   const FilterPanel = React.memo(function FilterPanelComponent({
     isMobile = false,
@@ -178,26 +209,15 @@ export default function PatientList() {
     isMobile?: boolean;
     onApply?: () => void;
   }) {
-    const [localSearch, setLocalSearch] = useState(search);
-    const [localGenderFilter, setLocalGenderFilter] = useState(genderFilter);
-    const [localMinAppointments, setLocalMinAppointments] =
-      useState(minAppointments);
+    // Ajoutez une référence pour l'input
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
+    // Utilisez useEffect pour remettre le focus après chaque rendu
     useEffect(() => {
-      if (isMobile) {
-        setLocalSearch(search);
-        setLocalGenderFilter(genderFilter);
-        setLocalMinAppointments(minAppointments);
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
       }
-    }, [isMobile]);
-
-    const handleToggleGender = (gender: string) => {
-      setLocalGenderFilter((prev) =>
-        prev.includes(gender)
-          ? prev.filter((g) => g !== gender)
-          : [...prev, gender]
-      );
-    };
+    });
 
     return (
       <Card>
@@ -210,16 +230,13 @@ export default function PatientList() {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
+                ref={searchInputRef} 
                 id="search"
                 type="search"
                 placeholder="Nom du patient..."
                 className="pl-9"
-                value={isMobile ? localSearch : search}
-                onChange={(e) =>
-                  isMobile
-                    ? setLocalSearch(e.target.value)
-                    : setSearch(e.target.value)
-                }
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
           </div>
@@ -233,16 +250,8 @@ export default function PatientList() {
                 <div key={gender.value} className="flex items-center gap-2">
                   <Checkbox
                     id={`gender-${gender.value}`}
-                    checked={
-                      isMobile
-                        ? localGenderFilter.includes(gender.value)
-                        : genderFilter.includes(gender.value)
-                    }
-                    onCheckedChange={() =>
-                      isMobile
-                        ? handleToggleGender(gender.value)
-                        : toggleGender(gender.value)
-                    }
+                    checked={genderFilter.includes(gender.value)}
+                    onCheckedChange={() => toggleGender(gender.value)}
                   />
                   <Label htmlFor={`gender-${gender.value}`}>
                     {gender.label}
@@ -260,14 +269,10 @@ export default function PatientList() {
               id="minAppointments"
               type="number"
               min={0}
-              value={isMobile ? localMinAppointments : minAppointments}
+              value={minAppointments}
               onChange={(e) => {
                 const value = parseInt(e.target.value) || 0;
-                if (isMobile) {
-                  setLocalMinAppointments(value);
-                } else {
-                  setMinAppointments(value);
-                }
+                setMinAppointments(value);
               }}
             />
           </div>
@@ -277,22 +282,15 @@ export default function PatientList() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => {
-                  setLocalSearch(search);
-                  setLocalGenderFilter(genderFilter);
-                  setLocalMinAppointments(minAppointments);
-                  setShowMobileFilters(false);
-                }}
+                onClick={() => setShowMobileFilters(false)}
               >
                 Annuler
               </Button>
               <Button
                 className="flex-1"
                 onClick={() => {
-                  setSearch(localSearch);
-                  setGenderFilter(localGenderFilter);
-                  setMinAppointments(localMinAppointments);
                   onApply?.();
+                  setShowMobileFilters(false);
                 }}
               >
                 Appliquer
@@ -307,6 +305,12 @@ export default function PatientList() {
       </Card>
     );
   });
+
+  const handlePageChange = useCallback((page: number) => {
+    if (page < 1 || page > pagination.totalPages) return;
+    fetchPatients(page);
+  }, [fetchPatients, pagination.totalPages]);
+
 
   const ActiveFilters = React.memo(function ActiveFiltersComponent() {
     if (!search && genderFilter.length === 0 && minAppointments === 0)
@@ -498,12 +502,12 @@ export default function PatientList() {
 
         {loading ? (
           <LoadingSkeleton />
-        ) : filteredPatients.length === 0 ? (
+        ) : patients.length === 0 ? (
           <EmptyState />
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPatients.map((patient) => (
+              {patients.map((patient) => (
                 <PatientCard key={patient.id} patient={patient} />
               ))}
             </div>
