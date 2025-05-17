@@ -4,16 +4,42 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { ReviewStatus } from "@prisma/client";
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
     try {
-        // Vérifier la session utilisateur
         const session = await getServerSession(authOptions);
+
         if (!session || session.user.role !== "HOSPITAL_ADMIN") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Récupérer l'hôpital de l'utilisateur
+        const { id } = params;
+        const { status } = await request.json();
+
+        if (!Object.values(ReviewStatus).includes(status)) {
+            return NextResponse.json(
+                { error: "Invalid status value" },
+                { status: 400 }
+            );
+        }
+
+        // Vérifier que l'avis appartient bien à l'hôpital de l'admin
+        const review = await prisma.review.findUnique({
+            where: { id },
+            include: {
+                doctor: { select: { hospitalId: true } },
+                hospital: { select: { id: true } },
+            },
+        });
+
+        if (!review) {
+            return NextResponse.json({ error: "Review not found" }, { status: 404 });
+        }
+
         const hospital = await prisma.hospital.findUnique({
             where: { adminId: session.user.id },
             select: { id: true },
@@ -23,39 +49,47 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
             return NextResponse.json({ error: "Hospital not found" }, { status: 404 });
         }
 
-        // Vérifier l'existence de l'avis
-        const review = await prisma.review.findUnique({
-            where: { id: params.id },
-        });
+        // Vérifier que l'avis concerne bien cet hôpital
+        const isHospitalReview = review.hospital?.id === hospital.id;
+        const isDoctorReview = review.doctor?.hospitalId === hospital.id;
 
-        if (!review) {
-            return NextResponse.json({ error: "Review not found" }, { status: 404 });
+        if (!isHospitalReview && !isDoctorReview) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        // Vérifier que l'avis cible bien l'hôpital de l'utilisateur
-        if (review.hospitalId !== hospital.id) {
-            return NextResponse.json({ error: "Review does not target your hospital" }, { status: 400 });
-        }
-
-        // Extraire les données de la requête
-        const { status } = await req.json();
-
-        // Vérifier que le statut est valide
-        if (!["PENDING", "APPROVED", "REJECTED"].includes(status)) {
-            return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-        }
-
-        // Mettre à jour le statut de l'avis
+        // Mettre à jour le statut
         const updatedReview = await prisma.review.update({
-            where: { id: params.id },
-            data: { status: status },
+            where: { id },
+            data: { status },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                targetType: true,
+                doctor: review.targetType === "DOCTOR" ? {
+                    select: {
+                        id: true,
+                        specialization: true,
+                        user: { select: { name: true } },
+                    },
+                } : undefined,
+                hospital: review.targetType === "HOSPITAL" ? {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                } : undefined,
+            },
         });
 
-        return NextResponse.json({ updatedReview });
+        return NextResponse.json({
+            message: "Review status updated successfully",
+            review: updatedReview,
+        });
     } catch (error) {
-        console.error("Erreur lors de la mise à jour du statut de l'avis :", error);
+        console.error("Error updating review status:", error);
         return NextResponse.json(
-            { error: "Erreur serveur lors de la mise à jour du statut" },
+            { error: "Failed to update review status" },
             { status: 500 }
         );
     }

@@ -4,66 +4,150 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { ReviewStatus, ReviewTargetType, Prisma } from "@prisma/client";
 
-export async function GET() {
+const DEFAULT_PAGE_SIZE = 10;
+
+export async function GET(request: Request) {
   try {
-    // Vérification de la session
     const session = await getServerSession(authOptions);
+
     if (!session || session.user.role !== "HOSPITAL_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Récupération de l'hôpital lié à l'admin
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || DEFAULT_PAGE_SIZE.toString(), 10);
+    const targetType = searchParams.get("targetType") as ReviewTargetType | null;
+    const statusFilter = searchParams.get("status") as ReviewStatus | null;
+    const minRating = parseInt(searchParams.get("minRating") || "0", 10);
+
+    if (isNaN(page) || page < 1 || isNaN(pageSize) || pageSize < 1 || isNaN(minRating)) {
+      return NextResponse.json({ error: "Invalid query parameters" }, { status: 400 });
+    }
+
     const hospital = await prisma.hospital.findUnique({
       where: { adminId: session.user.id },
       select: { id: true },
     });
 
     if (!hospital) {
-      return NextResponse.json(
-        { error: "Hospital not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Hospital not found" }, { status: 404 });
     }
 
-    // Récupération des reviews qui ciblent cet hôpital
-    const reviews = await prisma.review.findMany({
-      where: {
-        hospitalId: hospital.id,
-        targetType: "HOSPITAL",
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
+    const skip = (page - 1) * pageSize;
+
+    // Préparation des conditions de filtrage
+    const whereConditions: Prisma.ReviewWhereInput = {
+      rating: { gte: minRating },
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(targetType === "HOSPITAL"
+        ? { targetType: "HOSPITAL", hospitalId: hospital.id }
+        : targetType === "DOCTOR"
+        ? {
+            targetType: "DOCTOR",
+            doctor: { hospitalId: hospital.id },
+          }
+        : {
+            OR: [
+              { targetType: "HOSPITAL", hospitalId: hospital.id },
+              { targetType: "DOCTOR", doctor: { hospitalId: hospital.id } },
+            ],
+          }),
+    };
+
+    const [reviews, totalCount] = await Promise.all([
+      prisma.review.findMany({
+        where: whereConditions,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          rating: true,
+          status: true,
+          targetType: true,
+          isAnonymous: true,
+          createdAt: true,
+          updatedAt: true,
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          doctor: {
+            select: {
+              id: true,
+              user: { select: { name: true } },
+              specialization: true,
+            },
+          },
+          hospital: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.review.count({ where: whereConditions }),
+    ]);
 
-    const formattedReviews = reviews.map((review) => ({
+    const formatted = reviews.map((review) => ({
       id: review.id,
       title: review.title,
       content: review.content,
       rating: review.rating,
-      createdAt: review.createdAt,
       status: review.status,
-      isAnonymous: review.isAnonymous,
+      targetType: review.targetType,
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
       author: review.isAnonymous
-        ? { name: "Anonyme", image: null }
-        : review.author,
+        ? { name: "Anonyme" }
+        : {
+            id: review.author.id,
+            name: review.author.name,
+            email: review.author.email,
+            phone: review.author.phone,
+          },
+      doctor:
+        review.targetType === "DOCTOR" && review.doctor
+          ? {
+              id: review.doctor.id,
+              name: review.doctor.user.name,
+              specialization: review.doctor.specialization,
+            }
+          : null,
+      hospital:
+        review.targetType === "HOSPITAL" && review.hospital
+          ? {
+              id: review.hospital.id,
+              name: review.hospital.name,
+            }
+          : null,
     }));
 
-    return NextResponse.json({ reviews: formattedReviews });
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    return NextResponse.json({
+      reviews: formatted,
+      pagination: {
+        currentPage: page,
+        pageSize,
+        totalItems: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
   } catch (error) {
-    console.error("Erreur lors de la récupération des reviews:", error);
-    return NextResponse.json(
-      { error: "Erreur serveur lors de la récupération des reviews" },
-      { status: 500 }
-    );
+    console.error("Error fetching reviews:", error);
+    return NextResponse.json({ error: "Failed to fetch reviews" }, { status: 500 });
   }
 }

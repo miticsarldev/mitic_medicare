@@ -378,6 +378,10 @@ export const hospitalAdminNavItems = [
         title: "Gestion des Disponibilités",
         url: "/dashboard/hopital_admin/management/avaibility",
       },
+      {
+        title: "Gestion des Avis",
+        url: "/dashboard/hopital_admin/management/reviews",
+      },
     ],
   },
   {
