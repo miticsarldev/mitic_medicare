@@ -335,12 +335,7 @@ export const hospitalAdminNavItems = [
       {
         title: "Liste des Patients",
         url: "/dashboard/hopital_admin/patients/list",
-      },
-      {
-        title: "Dossiers Médicaux",
-        url: "/dashboard/hopital_admin/patients/medical-records",
-        icon: FolderHeart,
-      },
+      }
     ],
   },
   {
@@ -382,6 +377,10 @@ export const hospitalAdminNavItems = [
       {
         title: "Gestion des Disponibilités",
         url: "/dashboard/hopital_admin/management/avaibility",
+      },
+      {
+        title: "Gestion des Avis",
+        url: "/dashboard/hopital_admin/management/reviews",
       },
     ],
   },

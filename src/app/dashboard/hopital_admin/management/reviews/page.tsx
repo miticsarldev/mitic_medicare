@@ -1,185 +1,514 @@
-"use client"
+'use client'
+import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from "@/components/ui/select";
+// import { Input } from "@/components/ui/input";
+import {
+    Loader2,
+    Star,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+    ShieldCheck,
+    ShieldX,
+    ShieldQuestion
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import axios from "axios";
+import { ReviewStatus, ReviewTargetType } from "@prisma/client";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
-import React, { useEffect, useState } from "react"
-import { format } from "date-fns"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-
-
-
-interface Review {
-    id: string
-    title: string
-    content: string
-    rating: number
-    status: string
-    isAnonymous: boolean
-    createdAt: string
-    author: {
-        id: string
-        name: string
-    }
-    response: {
-        content: string
-        createdAt: string
-        isOfficial: boolean
-    }
+// Types
+interface Author {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
 }
 
-export default function ReviewAdminCardView() {
-    const [reviews, setReviews] = useState<Review[]>([])
-    const [loading, setLoading] = useState(true)
-    const [responseText, setResponseText] = useState<{ [key: string]: string }>({})
+interface DoctorInfo {
+    id: string;
+    name: string;
+    specialization: string | null;
+}
 
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 5 // Number of reviews per page
+interface HospitalInfo {
+    id: string;
+    name: string;
+}
+
+interface Review {
+    id: string;
+    title: string;
+    content: string;
+    rating: number;
+    author: Author | null;
+    targetType: ReviewTargetType;
+    doctor: DoctorInfo | null;
+    hospital: HospitalInfo | null;
+    status: ReviewStatus;
+    isAnonymous: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface Pagination {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
+
+interface ApiResponse {
+    reviews: Review[];
+    pagination: Pagination;
+}
+
+const STATUS_OPTIONS = [
+    { value: "ALL", label: "Tous les statuts" },
+    { value: "PENDING", label: "En attente" },
+    { value: "APPROVED", label: "Approuvé" },
+    { value: "REJECTED", label: "Rejeté" },
+];
+
+const TARGET_OPTIONS = [
+    { value: "ALL", label: "Toutes les cibles" },
+    { value: "DOCTOR", label: "Médecins" },
+    { value: "HOSPITAL", label: "Hôpital" },
+];
+
+const STATUS_COLORS = {
+    PENDING: "bg-yellow-500/10 text-yellow-600 border-yellow-500/50",
+    APPROVED: "bg-green-500/10 text-green-600 border-green-500/50",
+    REJECTED: "bg-red-500/10 text-red-600 border-red-500/50",
+};
+
+const STATUS_ICONS = {
+    PENDING: <ShieldQuestion className="w-4 h-4" />,
+    APPROVED: <ShieldCheck className="w-4 h-4" />,
+    REJECTED: <ShieldX className="w-4 h-4" />,
+};
+
+const STATUT_TITLES = {
+    PENDING: "En attente",
+    APPROVED: "Approuvé",
+    REJECTED: "Rejeté",
+};
+
+const PAGE_SIZE = 6;
+
+export default function AdminReviewPage() {
+    const [reviews, setReviews] = useState<Review[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState<ReviewStatus | "ALL">("ALL");
+    const [targetFilter, setTargetFilter] = useState<ReviewTargetType | "ALL">("ALL");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [pagination, setPagination] = useState<Pagination>({
+        currentPage: 1,
+        pageSize: PAGE_SIZE,
+        totalItems: 0,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+    });
+    const [selectedReview, setSelectedReview] = useState<Review | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
-        const fetchReviews = async () => {
-            const res = await fetch("/api/hospital_admin/reviews")
-            const data = await res.json()
-            setReviews(data.reviews || []) // Assurer que reviews est toujours un tableau
-            setLoading(false)
-        }
-        fetchReviews()
-    }, [])
+        const fetchData = async () => {
+            await fetchReviews();
+        };
+        fetchData();
+    }, [statusFilter, targetFilter, pagination.currentPage, searchQuery]);
 
-    const handleRespond = async (reviewId: string) => {
-        const content = responseText[reviewId];
-        if (!content) return;
 
+    const fetchReviews = async () => {
+        setLoading(true);
+        setError(null);
         try {
-            const res = await fetch(`/api/hospital_admin/reviews/respond/${reviewId}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    content,
-                    isOfficial: true,
-                }),
-            });
+            const params = {
+                status: statusFilter !== "ALL" ? statusFilter : undefined,
+                targetType: targetFilter !== "ALL" ? targetFilter : undefined,
+                page: pagination.currentPage,
+                pageSize: PAGE_SIZE,
+                search: searchQuery || undefined,
+            };
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                console.error("Erreur API :", errorData);
-                return;
-            }
+            const { data } = await axios.get<ApiResponse>("/api/hospital_admin/reviews", { params });
 
-            setResponseText(prev => ({ ...prev, [reviewId]: "" }));
-            window.location.reload();
-        } catch (error) {
-            console.error("Erreur lors de l'envoi de la réponse :", error);
+            setReviews(data.reviews);
+            setPagination(data.pagination);
+        } catch (err) {
+            console.error("Failed to fetch reviews", err);
+            setError("Erreur lors du chargement des avis. Veuillez réessayer.");
+        } finally {
+            setLoading(false);
         }
     };
 
-
-    const handleModerate = async (reviewId: string, status: string) => {
+    const handleStatusChange = async (reviewId: string, newStatus: ReviewStatus) => {
         try {
-            const res = await fetch(`/api/hospital_admin/reviews/${reviewId}/status`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                console.error("Erreur :", data.error);
-                alert("Erreur : " + data.error);
-                return;
-            }
-
-            window.location.reload();
-        } catch (error) {
-            console.error("Erreur de requête :", error);
-            alert("Erreur de réseau");
+            await axios.patch(`/api/hospital_admin/reviews/status/${reviewId}`, { status: newStatus });
+            fetchReviews();
+            setSelectedReview(null);
+            setIsModalOpen(false);
+        } catch (err) {
+            console.error("Failed to update review status", err);
+            setError("Erreur lors de la mise à jour du statut");
         }
     };
 
+    const formatDate = (dateString: string) => {
+        return format(new Date(dateString), "PPpp", { locale: fr });
+    };
 
-    // Pagination logic: Slice the reviews array to show only the current page
-    const indexOfLastReview = currentPage * itemsPerPage
-    const indexOfFirstReview = indexOfLastReview - itemsPerPage
-    const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview)
-
-    // Change page function
-    const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
-
-    if (loading) return <p>Chargement des avis...</p>
-
-    if (reviews.length === 0) return <p>Aucun avis trouvé.</p>
+    const getTargetName = (review: Review) => {
+        if (review.targetType === "DOCTOR" && review.doctor) {
+            return review.doctor.name;
+        }
+        if (review.targetType === "HOSPITAL" && review.hospital) {
+            return review.hospital.name;
+        }
+        return "Inconnu";
+    };
 
     return (
-        <div className="space-y-4" >
-            {
-                currentReviews.length === 0 ? (
-                    <p>Aucun avis à afficher pour cette page.</p>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" >
-                        {
-                            currentReviews.map((review) => (
-                                <Card key={review.id} className="space-y-2 p-4 shadow-md" >
-                                    <CardContent className="space-y-2" >
-                                        <div className="flex justify-between items-center" >
-                                            <h3 className="text-lg font-semibold" > {review.title} </h3>
-                                            < Badge > {review.status} </Badge>
-                                        </div>
-                                        < p className="text-sm text-muted-foreground" >
-                                            {review.isAnonymous ? "Anonyme" : review.author.name} – {format(new Date(review.createdAt), "dd/MM/yyyy")
-                                            }
-                                        </p>
-                                        < p className="text-sm" > {review.content} </p>
-                                        < p className="text-yellow-600 font-bold" > Note : {review.rating} ⭐</p>
+        <div className="container mx-auto px-4 py-8">
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Gestion des avis</h1>
+                        <p className="text-sm text-muted-foreground">
+                            Consultez et modérez les avis des patients
+                        </p>
+                    </div>
+                </div>
 
-                                        {
-                                            review.response?.content && (
-                                                <div className="bg-gray-100 p-2 rounded">
-                                                    <p className="text-sm italic"> Réponse officielle: </p>
-                                                    < p className="text-sm" > {review.response.content} </p>
-                                                    < p className="text-xs text-muted-foreground" >
-                                                        {format(new Date(review.response.createdAt), "dd/MM/yyyy")
-                                                        }
-                                                    </p>
-                                                </div>
-                                            )}
+                {/* Filtres et recherche */}
+                <div className="flex flex-col md:flex-row gap-4">
+                    {/* <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Rechercher un avis..."
+                            className="pl-9"
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setPagination(prev => ({ ...prev, currentPage: 1 }));
+                            }}
+                        />
+                    </div> */}
 
-
-                                        {
-                                            review.status === "PENDING" && (
-                                                <div className="flex gap-2" >
-                                                    <Button variant="outline" onClick={() => handleModerate(review.id, "REJECTED")
-                                                    }> Rejeter </Button>
-                                                    < Button onClick={() => handleModerate(review.id, "APPROVED")}> Approuver </Button>
-                                                </div>
-                                            )}
-
-                                        <div className="space-y-2" >
-                                            <Textarea
-                                                placeholder="Répondre à cet avis..."
-                                                value={responseText[review.id] || ""}
-                                                onChange={(e) => setResponseText(prev => ({ ...prev, [review.id]: e.target.value }))}
-                                            />
-                                            < Button onClick={() => handleRespond(review.id)}> Envoyer la réponse </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                    <Select
+                        value={statusFilter}
+                        onValueChange={(value: ReviewStatus | "ALL") => {
+                            setStatusFilter(value);
+                            setPagination(prev => ({ ...prev, currentPage: 1 }));
+                        }}
+                    >
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {STATUS_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </SelectItem>
                             ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Select
+                        value={targetFilter}
+                        onValueChange={(value: ReviewTargetType | "ALL") => {
+                            setTargetFilter(value);
+                            setPagination(prev => ({ ...prev, currentPage: 1 }));
+                        }}
+                    >
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Cible" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {TARGET_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* État de chargement et erreur */}
+                {loading && (
+                    <div className="flex justify-center items-center h-64">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     </div>
                 )}
 
-            {/* Pagination Controls */}
-            <div className="flex justify-center gap-2 mt-4" >
-                {
-                    Array.from({ length: Math.ceil(reviews.length / itemsPerPage) }, (_, index) => (
-                        <Button key={index} onClick={() => paginate(index + 1)} variant={currentPage === index + 1 ? "default" : "outline"}>
-                            {index + 1}
-                        </Button>
-                    ))}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
+                        {error}
+                    </div>
+                )}
+
+                {/* Liste des avis */}
+                {!loading && !error && (
+                    <>
+                        {reviews.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 gap-2">
+                                <Search className="w-8 h-8 text-muted-foreground" />
+                                <p className="text-muted-foreground">Aucun avis trouvé</p>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setStatusFilter("ALL");
+                                        setTargetFilter("ALL");
+                                        setSearchQuery("");
+                                    }}
+                                >
+                                    Réinitialiser les filtres
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {reviews.map((review) => (
+                                    <Card
+                                        key={review.id}
+                                        className="hover:shadow-md transition-shadow cursor-pointer"
+                                        onClick={() => {
+                                            setSelectedReview(review);
+                                            setIsModalOpen(true);
+                                        }}
+                                    >
+                                        <CardHeader className="pb-3">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <CardTitle className="text-lg line-clamp-2">
+                                                    {review.title}
+                                                </CardTitle>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "flex items-center gap-1 py-1",
+                                                        STATUS_COLORS[review.status]
+                                                    )}
+                                                >
+                                                    {STATUS_ICONS[review.status]}
+                                                    <span className="capitalize">
+                                                        {STATUT_TITLES[review.status]}
+                                                    </span>
+                                                </Badge>
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                {review.isAnonymous ? "Anonyme" : review.author?.name || "Inconnu"} • {formatDate(review.createdAt)}
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3">
+                                            <div className="flex items-center gap-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className={cn("w-4 h-4", {
+                                                            "fill-yellow-500": i < review.rating,
+                                                            "fill-none stroke-yellow-500/50": i >= review.rating,
+                                                        })}
+                                                    />
+                                                ))}
+                                                <span className="text-sm text-muted-foreground ml-1">
+                                                    {review.rating}/5
+                                                </span>
+                                            </div>
+                                            <p className="text-sm line-clamp-3 text-muted-foreground">
+                                                {review.content}
+                                            </p>
+                                            <div className="text-xs text-muted-foreground">
+                                                Sur: {getTargetName(review)}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Pagination */}
+                        {pagination.totalPages > 1 && (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+                                <div className="text-sm text-muted-foreground">
+                                    {pagination.totalItems} avis • Page {pagination.currentPage} sur {pagination.totalPages}
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={!pagination.hasPreviousPage}
+                                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                                    >
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Précédent
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={!pagination.hasNextPage}
+                                        onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                                    >
+                                        Suivant
+                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Modal de détails */}
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogContent className="max-w-2xl">
+                        {selectedReview && (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>{selectedReview.title}</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap items-center gap-4 text-sm">
+                                        <div className="flex items-center gap-1">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star
+                                                    key={i}
+                                                    className={cn("w-4 h-4", {
+                                                        "fill-yellow-500": i < selectedReview.rating,
+                                                        "fill-none stroke-yellow-500/50": i >= selectedReview.rating,
+                                                    })}
+                                                />
+                                            ))}
+                                            <span className="text-muted-foreground ml-1">
+                                                {selectedReview.rating}/5
+                                            </span>
+                                        </div>
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                "flex items-center gap-1 py-1",
+                                                STATUS_COLORS[selectedReview.status]
+                                            )}
+                                        >
+                                            {STATUS_ICONS[selectedReview.status]}
+                                            <span className="capitalize">
+                                                {STATUT_TITLES[selectedReview.status]}
+                                            </span>
+                                        </Badge>
+                                        <div className="text-muted-foreground">
+                                            {selectedReview.isAnonymous ? "Anonyme" : selectedReview.author?.name || "Inconnu"}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            {formatDate(selectedReview.createdAt)}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <h3 className="text-sm font-medium">Cible</h3>
+                                            <p className="text-sm">
+                                                {getTargetName(selectedReview)}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h3 className="text-sm font-medium">Type</h3>
+                                            <p className="text-sm capitalize">
+                                                {selectedReview.targetType.toLowerCase()}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <h3 className="text-sm font-medium">Contenu</h3>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                            {selectedReview.content}
+                                        </p>
+                                    </div>
+
+                                    {!selectedReview.isAnonymous && selectedReview.author && (
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-medium">Auteur</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-sm font-medium">Nom</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {selectedReview.author.name}
+                                                    </p>
+                                                </div>
+                                                {selectedReview.author.email && (
+                                                    <div>
+                                                        <p className="text-sm font-medium">Email</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {selectedReview.author.email}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                                {selectedReview.author.phone && (
+                                                    <div>
+                                                        <p className="text-sm font-medium">Téléphone</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {selectedReview.author.phone}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <DialogFooter className="gap-2 sm:gap-0">
+                                    {selectedReview.status !== "APPROVED" && (
+                                        <Button
+                                            variant="default"
+                                            onClick={() => handleStatusChange(selectedReview.id, "APPROVED")}
+                                        >
+                                            <ShieldCheck className="w-4 h-4 mr-2" />
+                                            Approuver
+                                        </Button>
+                                    )}
+                                    {selectedReview.status !== "REJECTED" && (
+                                        <Button
+                                            variant="destructive"
+                                            onClick={() => handleStatusChange(selectedReview.id, "REJECTED")}
+                                        >
+                                            <ShieldX className="w-4 h-4 mr-2" />
+                                            Rejeter
+                                        </Button>
+                                    )}
+                                    {selectedReview.status !== "PENDING" && (
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => handleStatusChange(selectedReview.id, "PENDING")}
+                                        >
+                                            <ShieldQuestion className="w-4 h-4 mr-2" />
+                                            Remettre en attente
+                                        </Button>
+                                    )}
+                                </DialogFooter>
+                            </>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
-    )
+    );
 }

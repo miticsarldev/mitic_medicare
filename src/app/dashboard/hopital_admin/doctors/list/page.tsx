@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react"
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -19,10 +18,10 @@ import { DoctorCard } from "./DoctorCard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import DoctorForm from "../add/page"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+import DoctorModal from "./DoctorModal"
 
 type Doctor = {
   id: string
@@ -85,7 +84,7 @@ export default function DoctorTable() {
   }, [doctors, search, specialtyFilter, minRating])
 
   const totalPages = useMemo(() => Math.ceil(filteredDoctors.length / ITEMS_PER_PAGE), [filteredDoctors])
-  
+
   const paginatedDoctors = useMemo(() => {
     return filteredDoctors.slice(
       (currentPage - 1) * ITEMS_PER_PAGE,
@@ -101,10 +100,10 @@ export default function DoctorTable() {
         fetch("/api/hospital_admin/doctors"),
         fetch("/api/hospital_admin/department")
       ])
-      
+
       const doctorsData = await doctorsRes.json()
       const departmentsData = await departmentsRes.json()
-      
+
       setDoctors(doctorsData.doctors)
       setDepartments(departmentsData.departments)
     } catch (err) {
@@ -149,7 +148,7 @@ export default function DoctorTable() {
 
   const saveDepartment = useCallback(async () => {
     if (!currentDoctor) return
-    
+
     setLoading(true)
     try {
       await fetch("/api/hospital_admin/doctors/updateDepartement", {
@@ -160,9 +159,9 @@ export default function DoctorTable() {
           departmentId: selectedDept || null,
         }),
       })
-      
+
       await fetchData()
-      
+
       toast({
         title: "Succès",
         description: `Le département de ${currentDoctor.name} a été mis à jour.`,
@@ -187,9 +186,9 @@ export default function DoctorTable() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ doctorId, isActive }),
       })
-      
+
       await fetchData()
-      
+
       toast({
         title: "Succès",
         description: `Le médecin a été ${isActive ? "activé" : "désactivé"}.`,
@@ -252,8 +251,8 @@ export default function DoctorTable() {
           </ScrollArea>
         </div>
 
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="w-full mt-2"
           onClick={resetFilters}
         >
@@ -292,23 +291,16 @@ export default function DoctorTable() {
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold sm:text-2xl">Médecins</h1>
-            <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="h-8 gap-1">
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Ajouter
-                  </span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader className="px-1">
-                  <DialogTitle>Nouveau Médecin</DialogTitle>
-                </DialogHeader>
-                <DoctorForm  />
-              </DialogContent>
-            </Dialog>
+            <h1 className="text-xl font-bold sm:text-2xl">Listes des Médecins</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden lg:flex h-8"
+              onClick={() => setOpenAdd(true)}
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Ajouter un médecin
+            </Button>
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -380,16 +372,18 @@ export default function DoctorTable() {
             ))}
           </div>
         ) : (
-          <div className="space-y-3">
-            {paginatedDoctors.map((doc) => (
-              <DoctorCard
-                key={doc.id}
-                doctor={doc}
-                onChangeDepartment={() => onChangeDepartmentRequest(doc)}
-                onChangeStatus={toggleActive}
-              />
-            ))}
-          </div>
+          <ScrollArea className="h-[500px]">
+            <div className="space-y-4">
+              {paginatedDoctors.map((doc) => (
+                <DoctorCard
+                  key={doc.id}
+                  doctor={doc}
+                  onChangeDepartment={() => onChangeDepartmentRequest(doc)}
+                  onChangeStatus={toggleActive}
+                />
+              ))}
+            </div>
+          </ScrollArea>
         )}
 
         {/* Pagination */}
@@ -464,6 +458,12 @@ export default function DoctorTable() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <DoctorModal
+        open={openAdd}
+        onOpenChange={setOpenAdd}
+        onDoctorCreated={fetchData}
+      />
     </div>
   )
 }
