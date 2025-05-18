@@ -1,4 +1,5 @@
 import {
+  type PrescriptionOrder,
   type Appointment,
   type BloodType,
   type Doctor,
@@ -40,6 +41,15 @@ export type AppointmentWithRelations = Appointment & {
     user: User;
   };
   hospital?: Hospital | null;
+  medicalRecord?:
+    | (MedicalRecord & {
+        prescriptionOrder?:
+          | (PrescriptionOrder & {
+              prescriptions: Prescription[];
+            })[]
+          | null;
+      })
+    | null;
 };
 
 // Medical record types

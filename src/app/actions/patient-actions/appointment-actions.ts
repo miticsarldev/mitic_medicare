@@ -105,6 +105,15 @@ export async function getAppointmentById(
         },
       },
       hospital: true,
+      medicalRecord: {
+        include: {
+          prescriptionOrder: {
+            include: {
+              prescriptions: true,
+            },
+          },
+        },
+      },
     },
   });
 

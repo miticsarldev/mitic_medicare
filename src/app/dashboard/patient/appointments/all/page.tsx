@@ -436,14 +436,16 @@ export default function AppointmentsPage() {
                                     Voir les détails
                                   </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    Reprogrammer
-                                  </Link>
-                                </DropdownMenuItem>
+                                {appointment.status !== "COMPLETED" && (
+                                  <DropdownMenuItem asChild>
+                                    <Link
+                                      href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}
+                                    >
+                                      <Calendar className="mr-2 h-4 w-4" />
+                                      Reprogrammer
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
 
@@ -720,24 +722,16 @@ export default function AppointmentsPage() {
                                     Voir les détails
                                   </Link>
                                 </DropdownMenuItem>
-                                {appointment.status === "COMPLETED" && (
+                                {appointment.status !== "COMPLETED" && (
                                   <DropdownMenuItem asChild>
                                     <Link
-                                      href={`/dashboard/patient/prescriptions?appointmentId=${appointment.id}`}
+                                      href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}
                                     >
-                                      <FileText className="mr-2 h-4 w-4" />
-                                      Voir l&apos;ordonnance
+                                      <Calendar className="mr-2 h-4 w-4" />
+                                      Reprendre rendez-vous
                                     </Link>
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    Reprendre rendez-vous
-                                  </Link>
-                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

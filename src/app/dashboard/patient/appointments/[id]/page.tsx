@@ -7,12 +7,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Calendar, Clock, MapPin } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  MapPin,
+  Pill,
+  FileText,
+} from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { notFound } from "next/navigation";
 import { getAppointmentById } from "@/app/actions/patient-actions/appointment-actions";
 import { CancelAppointmentButton } from "@/components/patient/cancel-appointment-button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function AppointmentDetailPage({
   params,
@@ -27,9 +43,11 @@ export default async function AppointmentDetailPage({
 
   const doctor = appointment.doctor;
   const hospital = appointment.hospital;
+  const medicalRecord = appointment.medicalRecord;
+  const prescriptionOrders = medicalRecord?.prescriptionOrder || [];
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-4 p-2 sm:p-4">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
           <Link href="/dashboard/patient/appointments/all">
@@ -42,7 +60,7 @@ export default async function AppointmentDetailPage({
         </h1>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Informations sur le rendez-vous</CardTitle>
@@ -232,6 +250,144 @@ export default async function AppointmentDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Prescription Orders Section */}
+      {appointment.status === "COMPLETED" &&
+        medicalRecord &&
+        prescriptionOrders.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pill className="h-5 w-5" />
+                Ordonnances
+              </CardTitle>
+              <CardDescription>
+                Prescriptions médicales issues de votre consultation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {prescriptionOrders.map((order) => (
+                <div key={order.id} className="mb-4 last:mb-0">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium">
+                        Ordonnance du{" "}
+                        {new Date(order.issuedAt).toLocaleDateString("fr-FR")}
+                      </h3>
+                      {order.notes && (
+                        <p className="text-sm text-muted-foreground">
+                          {order.notes}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Télécharger
+                    </Button>
+                  </div>
+
+                  {order.prescriptions && order.prescriptions.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Médicament</TableHead>
+                          <TableHead>Dosage</TableHead>
+                          <TableHead>Fréquence</TableHead>
+                          <TableHead>Durée</TableHead>
+                          <TableHead>Statut</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {order.prescriptions.map((prescription) => (
+                          <TableRow key={prescription.id}>
+                            <TableCell className="font-medium">
+                              {prescription.medicationName}
+                            </TableCell>
+                            <TableCell>{prescription.dosage}</TableCell>
+                            <TableCell>{prescription.frequency}</TableCell>
+                            <TableCell>
+                              {prescription.duration || "Non spécifié"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  prescription.isActive
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
+                                {prescription.isActive ? "Actif" : "Terminé"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Aucun médicament prescrit dans cette ordonnance.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Medical Record Section (if appointment is completed) */}
+      {appointment.status === "COMPLETED" && medicalRecord && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Compte-rendu médical
+            </CardTitle>
+            <CardDescription>Résumé de votre consultation</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h3 className="font-medium">Diagnostic</h3>
+              <p className="mt-1 text-sm">{medicalRecord.diagnosis}</p>
+            </div>
+
+            {medicalRecord.treatment && (
+              <div>
+                <h3 className="font-medium">Traitement</h3>
+                <p className="mt-1 text-sm">{medicalRecord.treatment}</p>
+              </div>
+            )}
+
+            {medicalRecord.notes && (
+              <div>
+                <h3 className="font-medium">Notes</h3>
+                <p className="mt-1 text-sm">{medicalRecord.notes}</p>
+              </div>
+            )}
+
+            {medicalRecord.followUpNeeded && (
+              <div>
+                <h3 className="font-medium">Suivi</h3>
+                <p className="mt-1 text-sm">
+                  Un suivi est nécessaire
+                  {medicalRecord.followUpDate && (
+                    <>
+                      {" "}
+                      le{" "}
+                      {new Date(medicalRecord.followUpDate).toLocaleDateString(
+                        "fr-FR"
+                      )}
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
