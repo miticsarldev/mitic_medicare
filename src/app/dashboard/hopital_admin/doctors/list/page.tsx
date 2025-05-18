@@ -376,6 +376,7 @@ export default function DoctorTable() {
             <div className="space-y-4">
               {paginatedDoctors.map((doc) => (
                 <DoctorCard
+                  key={doc.id}
                   doctor={doc}
                   onChangeDepartment={() => onChangeDepartmentRequest(doc)}
                   onChangeStatus={toggleActive}
