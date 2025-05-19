@@ -73,7 +73,7 @@ export async function GET(
                 id: true,
                 diagnosis: true,
                 treatment: true,
-                prescription: {
+                prescriptions: {
                   select: {
                     id: true,
                     medicationName: true,

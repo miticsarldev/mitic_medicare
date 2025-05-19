@@ -42,7 +42,7 @@ export async function GET() {
         hospital: true,
         medicalRecord: {
           include: {
-            prescription: {
+            prescriptions: {
               orderBy: { createdAt: "desc" },
               take: 1,
             },
@@ -63,7 +63,7 @@ export async function GET() {
         status: appointment.status,
         motif: appointment.reason || "Non spécifié",
         notes: appointment.notes || "Aucune note",
-        prescription: medicalRecord?.prescription?.[0] || null,
+        prescription: medicalRecord?.prescriptions?.[0] || null,
       };
     });
 

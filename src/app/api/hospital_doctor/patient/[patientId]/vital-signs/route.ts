@@ -137,7 +137,7 @@ export async function PUT(
                 id: true,
                 diagnosis: true,
                 treatment: true,
-                prescription: {
+                prescriptions: {
                   select: {
                     id: true,
                     medicationName: true,

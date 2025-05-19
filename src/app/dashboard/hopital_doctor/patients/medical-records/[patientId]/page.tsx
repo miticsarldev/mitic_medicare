@@ -107,7 +107,7 @@ export default function PatientMedicalRecord() {
   const [oxygenSaturation, setOxy] = useState<number | undefined>();
   const [weight, setWeight] = useState<number | undefined>();
   const [height, setHeight] = useState<number | undefined>();
-
+  
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
