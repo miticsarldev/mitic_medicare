@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay, getDay } from "date-fns";
 
 export async function GET() {
     try {
@@ -24,9 +24,10 @@ export async function GET() {
         }
 
         const hospitalId = hospital.id;
-
-        const todayStart = startOfDay(new Date());
-        const todayEnd = endOfDay(new Date());
+        const today = new Date();
+        const todayStart = startOfDay(today);
+        const todayEnd = endOfDay(today);
+        const todayDayOfWeek = getDay(today); // 0 (dimanche) à 6 (samedi)
 
         const [
             totalDoctors,
@@ -35,64 +36,62 @@ export async function GET() {
             totalAppointmentsToday,
             doctorsList
         ] = await Promise.all([
-            prisma.doctor.count({
-                where: { hospitalId },
-            }),
+            // Compte tous les médecins de l'hôpital
+            prisma.doctor.count({ where: { hospitalId } }),
+            
+            // Compte les patients qui ont pris au moins un RDV dans cet hôpital
             prisma.patient.count({
                 where: {
-                    user: {
-                        hospital: { id: hospitalId },
-                    },
-                },
+                    appointments: {
+                        some: {
+                            hospitalId: hospitalId
+                        }
+                    }
+                }
             }),
+            
+            // Compte les prescriptions faites aujourd'hui par les médecins de cet hôpital
             prisma.prescription.count({
                 where: {
                     createdAt: { gte: todayStart, lte: todayEnd },
-                    doctor: { hospitalId },
+                    doctor: { hospitalId: hospitalId },
                 },
             }),
+            
+            // Compte les rendez-vous d'aujourd'hui pour cet hôpital
             prisma.appointment.count({
                 where: {
-                    hospitalId,
+                    hospitalId: hospitalId,
                     scheduledAt: { gte: todayStart, lte: todayEnd },
                 },
             }),
+            
+            // Liste des médecins avec leurs stats
             prisma.doctor.findMany({
                 where: { hospitalId },
                 select: {
                     id: true,
                     specialization: true,
-                    user: {
-                        select: {
-                            name: true,
-                        },
-                    },
-                    department: {
-                        select: {
-                            name: true,
-                        },
-                    },
+                    user: { select: { name: true } },
+                    department: { select: { name: true } },
                     availabilities: {
-                        where: {
-                            createdAt: {
-                                gte: todayStart,
-                                lte: todayEnd
-                            }
-
+                        where: { 
+                            dayOfWeek: todayDayOfWeek,
+                            isActive: true 
                         }
                     },
-                    appointments: {
-                        where: {
-                            scheduledAt: {
-                                gte: todayStart,
-                                lte: todayEnd,
-                            },
-                        },
+                    _count: {
                         select: {
-                            id: true,
-                        },
+                            appointments: {
+                                where: {
+                                    scheduledAt: { gte: todayStart, lte: todayEnd },
+                                    hospitalId: hospitalId
+                                }
+                            }
+                        }
                     }
                 },
+                take: 10
             })
         ]);
 
@@ -101,15 +100,19 @@ export async function GET() {
             name: doc.user.name,
             specialization: doc.specialization,
             department: doc.department?.name || "Non assigné",
-            patientsToday: doc.appointments.length,
+            availableToday: doc.availabilities.length > 0,
+            patientsToday: doc._count.appointments,
         }));
 
         return NextResponse.json({
-            totalDoctors,
-            totalPatients,
-            totalPrescriptionsToday,
-            totalAppointmentsToday,
-            doctors, // liste des médecins avec leur état du jour
+            stats: {
+                totalDoctors,
+                totalPatients,
+                totalPrescriptionsToday,
+                totalAppointmentsToday,
+            },
+            doctors,
+            date: today.toISOString()
         });
 
     } catch (error) {

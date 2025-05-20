@@ -5,7 +5,6 @@ import {
   Activity,
   ArrowRight,
   Calendar,
-  Download,
   LifeBuoy,
   RefreshCw,
   Settings,
@@ -24,13 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 
 import {
   Tooltip,
@@ -40,130 +33,121 @@ import {
   Cell,
 } from "@/components/ui/charts";
 
-
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
-export default function SuperAdminOverviewPage() {
-  const [timeRange, setTimeRange] = useState("7d");
+interface Doctor {
+  id: string;
+  name: string;
+  specialization: string;
+  department: string;
+  availableToday: boolean;
+  patientsToday: number;
+  avatar?: string;
+}
+
+type ConsultationType = {
+  name: string;
+  value: number;
+};
+
+type DepartmentData = {
+  name: string;
+  value: number;
+};
+
+export default function HospitalAdminOverviewPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Function to handle refresh
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1000);
-  };
-
-  //interface pour le docteur 
-  interface Doctor {
-    id: string;
-    name: string;
-    specialization: string;
-    department: string;
-    status: string;
-    patientsToday: number;
-    avatar?: string;
-  }
-
-  type ConsultationType = {
-    name: string;
-    value: number;
-  };
-
-  type DepartmentData = {
-    name: string;
-    value: number;
-  };
-
-  // useState pour recuperer les total patients et médecins
-  const [totalPatients, setTotalPatients] = useState(0);
-  const [totalDoctors, setTotalDoctors] = useState(0);
-  const [totalAppointment, setTotalAppointment] = useState(0);
-  const [totalPrescription, setTotalPrescription] = useState(0);
+  const [stats, setStats] = useState({
+    totalDoctors: 0,
+    totalPatients: 0,
+    totalAppointmentsToday: 0,
+    totalPrescriptionsToday: 0,
+  });
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [consultationTypeData, setConsultationTypeData] = useState<ConsultationType[]>([]);
   const [patientDepartementData, setPatientDepartementData] = useState<DepartmentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const fetchData = async () => {
+    setLoading(true);
+    setIsRefreshing(true);
+    try {
+      // Fetch main stats
+      const statsResponse = await fetch('/api/hospital_admin/dashboard/analytics');
+      if (!statsResponse.ok) throw new Error("Failed to fetch stats");
+      const statsData = await statsResponse.json();
+      
+      // Fetch consultation types
+      const consultationResponse = await fetch('/api/hospital_admin/dashboard/graphique?type=consultationTypesAllTime');
+      const consultationData = await consultationResponse.json();
+      
+      // Fetch patients by department
+      const departmentResponse = await fetch('/api/hospital_admin/dashboard/graphique?type=patientsByDepartment');
+      const departmentData = await departmentResponse.json();
 
-  // useEffect pour recuperer les données des patients et médecins
+      setStats({
+        totalDoctors: statsData.stats?.totalDoctors || 0,
+        totalPatients: statsData.stats?.totalPatients || 0,
+        totalAppointmentsToday: statsData.stats?.totalAppointmentsToday || 0,
+        totalPrescriptionsToday: statsData.stats?.totalPrescriptionsToday || 0,
+      });
+
+      setDoctors(statsData.doctors || []);
+      setConsultationTypeData(consultationData || []);
+      setPatientDepartementData(departmentData || []);
+      
+    } catch (err) {
+      console.error(err);
+      setError("Erreur lors de la récupération des données");
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/hospital_admin/dashboard/analytics`);
-        const data = await response.json();
-
-        // Appel pour les types de consultations du jour
-        const responseTypeAppoinment = await fetch(`/api/hospital_admin/dashboard/graphique?type=consultationTypesToday`);
-        const dataTypeAppoinment = await responseTypeAppoinment.json();
-
-        // Appel pour la répartition des patients par département
-        const responsePatientDepartement = await fetch(`/api/hospital_admin/dashboard/graphique?type=patientsByDepartment`);
-        const dataPatientDepartement = await responsePatientDepartement.json();
-
-        setPatientDepartementData(dataPatientDepartement || []);
-        setConsultationTypeData(dataTypeAppoinment.consultationTypeData || []);
-
-        if (!response.ok) throw new Error(data.error || "Erreur inconnue");
-
-        setTotalPatients(data.totalPatients);
-        setTotalDoctors(data.totalDoctors);
-        setTotalAppointment(data.totalAppointmentsToday);
-        setTotalPrescription(data.totalPrescriptionsToday);
-        setDoctors(data.doctors || []);
-      } catch (err) {
-        console.error(err);
-        setError("Erreur lors de la récupération des statistiques.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
+  const handleRefresh = () => {
+    fetchData();
+  };
 
-
-  // Sample data for the dashboard
   const overviewStats = [
     {
-      title: "Total de Medecin",
-      value: totalDoctors,
+      title: "Total de Médecins",
+      value: stats.totalDoctors,
       icon: Users,
       color: "bg-blue-500",
     },
     {
       title: "Total des Patients",
-      value: totalPatients,
+      value: stats.totalPatients,
       icon: User,
       color: "bg-green-500",
     },
     {
-      title: "Nombre de rendez-vous du jour",
-      value: totalAppointment,
+      title: "Rendez-vous du jour",
+      value: stats.totalAppointmentsToday,
       icon: Activity,
       color: "bg-purple-500",
     },
     {
-      title: "Nombre de prescription",
-      value: totalPrescription,
+      title: "Prescriptions du jour",
+      value: stats.totalPrescriptionsToday,
       icon: Calendar,
       color: "bg-amber-500",
     },
   ];
 
-  //gestion du loading et des erreurs
-  if (loading) {
-    return <div className="text-center">Chargement...</div>;
+  if (loading && !isRefreshing) {
+    return <div className="text-center py-8">Chargement en cours...</div>;
   }
 
-  if (error && error !== "") {
-    return <div className="text-red-500">{error}</div>;
+  if (error) {
+    return <div className="text-red-500 text-center py-8">{error}</div>;
   }
 
   return (
@@ -176,20 +160,8 @@ export default function SuperAdminOverviewPage() {
             de votre plateforme.
           </p>
         </div>
-        {/* select time zone sectiom */}
+        
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Période" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">Dernières 24 heures</SelectItem>
-              <SelectItem value="7d">7 derniers jours</SelectItem>
-              <SelectItem value="30d">30 derniers jours</SelectItem>
-              <SelectItem value="90d">90 derniers jours</SelectItem>
-              <SelectItem value="1y">Année en cours</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -199,10 +171,6 @@ export default function SuperAdminOverviewPage() {
               className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
             />
             Actualiser
-          </Button>
-          <Button>
-            <Download className="mr-2 h-4 w-4" />
-            Exporter
           </Button>
         </div>
       </div>
@@ -227,15 +195,15 @@ export default function SuperAdminOverviewPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+        {/* Consultation Types Chart */}
         <Card>
           <CardHeader>
             <CardTitle>Types de Consultations</CardTitle>
-            <CardDescription>Répartition des consultations médicales</CardDescription>
+            <CardDescription>Répartition des consultations du jour</CardDescription>
           </CardHeader>
-
           <CardContent className="h-[300px] flex items-center justify-center">
             {consultationTypeData.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucune donnée disponible pour le moment.</p>
+              <p className="text-muted-foreground text-sm">Aucune donnée disponible</p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
@@ -255,12 +223,13 @@ export default function SuperAdminOverviewPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value}%`, ""]} />
+                  <Tooltip 
+                    formatter={(value: number) => [`${value}`, "Consultations"]}
+                  />
                 </RechartsPieChart>
               </ResponsiveContainer>
             )}
           </CardContent>
-
           {consultationTypeData.length > 0 && (
             <CardFooter className="border-t px-6 py-3">
               <div className="w-full space-y-1">
@@ -273,7 +242,7 @@ export default function SuperAdminOverviewPage() {
                       />
                       <span className="text-sm">{entry.name}</span>
                     </div>
-                    <span className="text-sm font-medium">{entry.value}%</span>
+                    <span className="text-sm font-medium">{entry.value}</span>
                   </div>
                 ))}
               </div>
@@ -281,21 +250,15 @@ export default function SuperAdminOverviewPage() {
           )}
         </Card>
 
-
+        {/* Patients by Department Chart */}
         <Card>
           <CardHeader>
             <CardTitle>Répartition des Patients</CardTitle>
             <CardDescription>Nombre de patients par département</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] flex items-center justify-center">
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Chargement...</p>
-            ) : error ? (
-              <p className="text-sm text-red-500">{error}</p>
-            ) : patientDepartementData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Aucun patient trouvé pour l’instant.
-              </p>
+            {patientDepartementData.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Aucune donnée disponible</p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
@@ -311,14 +274,13 @@ export default function SuperAdminOverviewPage() {
                       `${name} ${(percent * 100).toFixed(0)}%`
                     }
                   >
-                    {patientDepartementData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                    {patientDepartementData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => [`${value}`, "Patients"]} />
+                  <Tooltip 
+                    formatter={(value: number) => [`${value}`, "Patients"]}
+                  />
                 </RechartsPieChart>
               </ResponsiveContainer>
             )}
@@ -331,9 +293,7 @@ export default function SuperAdminOverviewPage() {
                     <div className="flex items-center">
                       <div
                         className="h-3 w-3 rounded-full mr-2"
-                        style={{
-                          backgroundColor: COLORS[index % COLORS.length],
-                        }}
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
                       <span className="text-sm">{entry.name}</span>
                     </div>
@@ -344,16 +304,15 @@ export default function SuperAdminOverviewPage() {
             </CardFooter>
           )}
         </Card>
-
       </div>
 
-      {/* Liste des Médecins */}
+      {/* Doctors List */}
       <Card>
         <CardHeader className="flex flex-row items-center">
           <div className="flex-1 gap-5">
             <CardTitle>Médecins de l&apos;Hôpital</CardTitle>
             <CardDescription>
-              Gérez les médecins et leurs disponibilités
+              Liste des médecins et leurs activités du jour
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" asChild>
@@ -363,12 +322,8 @@ export default function SuperAdminOverviewPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Chargement en cours...</p>
-          ) : doctors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Aucun médecin enregistré pour le moment.
-            </p>
+          {doctors.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Aucun médecin trouvé</p>
           ) : (
             <div className="space-y-4">
               {doctors.map((doctor) => (
@@ -378,16 +333,16 @@ export default function SuperAdminOverviewPage() {
                 >
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={doctor.avatar || ""} alt={doctor.name} />
+                      <AvatarImage src={doctor.avatar} alt={doctor.name} />
                       <AvatarFallback>
                         {doctor.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium">{doctor.name}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {doctor.specialization}
-                      </span>
+                      <p className="text-xs text-muted-foreground">
+                        {doctor.specialization} • {doctor.department}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -395,15 +350,10 @@ export default function SuperAdminOverviewPage() {
                       Patients aujourd&apos;hui: {doctor.patientsToday}
                     </p>
                     <Badge
-                      variant={
-                        doctor.status === "Disponible"
-                          ? "default"
-                          : doctor.status === "Absent"
-                            ? "destructive"
-                            : "outline"
-                      }
+                      variant={doctor.availableToday ? "default" : "destructive"}
+                      className="mt-1"
                     >
-                      {doctor.status}
+                      {doctor.availableToday ? "Disponible" : "Indisponible"}
                     </Badge>
                   </div>
                 </div>
@@ -412,7 +362,6 @@ export default function SuperAdminOverviewPage() {
           )}
         </CardContent>
       </Card>
-
 
       {/* Quick Actions */}
       <Card>
@@ -429,7 +378,7 @@ export default function SuperAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/doctors/list">
+              <a href="/dashboard/hospital-admin/doctors">
                 <Users className="h-6 w-6 text-blue-500" />
                 <span>Gérer les Médecins</span>
               </a>
@@ -439,7 +388,7 @@ export default function SuperAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/patients/list">
+              <a href="/dashboard/hospital-admin/patients">
                 <User className="h-6 w-6 text-green-500" />
                 <span>Gérer les Patients</span>
               </a>
@@ -449,7 +398,7 @@ export default function SuperAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/support/contact">
+              <a href="/dashboard/hospital-admin/support">
                 <LifeBuoy className="h-6 w-6 text-cyan-500" />
                 <span>Support</span>
               </a>
@@ -459,7 +408,7 @@ export default function SuperAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/management/details">
+              <a href="/dashboard/hospital-admin/settings">
                 <Settings className="h-6 w-6 text-gray-500" />
                 <span>Paramètres</span>
               </a>
