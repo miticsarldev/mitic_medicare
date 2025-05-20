@@ -70,6 +70,46 @@ export type Patient = {
       name: string;
       city: string;
     };
+
+    medicalRecord?: {
+      id: string;
+      diagnosis: string;
+      treatment?: string;
+      notes?: string;
+      followUpNeeded: boolean;
+      followUpDate?: Date;
+      createdAt: Date;
+      updatedAt: Date;
+      attachments: {
+        id: string;
+        fileName: string;
+        fileType: string;
+        fileUrl: string;
+        fileSize: number;
+        uploadedAt: Date;
+      }[];
+      prescription?: {
+        id: string;
+        medicationName: string;
+        dosage: string;
+        frequency: string;
+        duration?: string;
+        instructions?: string;
+        isActive: boolean;
+        startDate: Date;
+        endDate?: Date;
+        createdAt: Date;
+        updatedAt: Date;
+        doctor: {
+          id: string;
+          user: {
+            id: string;
+            name: string;
+          };
+        };
+      }[];
+    };
+
   }[];
 
   medicalHistories?: {

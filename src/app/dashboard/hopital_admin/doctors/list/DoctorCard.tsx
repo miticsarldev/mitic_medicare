@@ -11,7 +11,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  MoreVertical, MapPin, Star, Phone, MessageCircle, CheckCircle,
+  MoreVertical, MapPin, Star, Phone, CheckCircle,
    Briefcase, BookOpen, DollarSign, User, Calendar,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -160,11 +160,6 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
             <span>{doctor.averageRating.toFixed(1)}</span>
             <span className="text-muted-foreground text-xs">({doctor.patientsCount} patients)</span>
           </div>
-
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <span>{doctor.consultationFee || "N/A"}</span>
-          </div>
         </CardContent>
 
         <CardFooter className="flex justify-between items-center pt-0">
@@ -179,15 +174,6 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
           >
             {doctor.isActive ? "Désactiver" : "Activer"}
           </Button>
-
-          <div className="flex items-center gap-2">
-            {doctor.availableForChat && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <MessageCircle className="h-3 w-3" />
-                <span className="text-xs">Chat</span>
-              </Badge>
-            )}
-          </div>
         </CardFooter>
       </Card>
 

@@ -35,10 +35,10 @@ export async function getAllPatients(options: GetPatientsOptions) {
       isActive: status === "all" ? undefined : status === "active",
       OR: search
         ? [
-            { name: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-            { id: { contains: search, mode: "insensitive" } },
-          ]
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { id: { contains: search, mode: "insensitive" } },
+        ]
         : undefined,
     },
   };
@@ -420,29 +420,29 @@ export const getPatientById = async (id: string): Promise<Patient> => {
             },
           },
           hospital: true,
-        },
-      },
-      medicalHistories: true,
-      medicalRecords: {
-        include: {
-          hospital: true,
-          doctor: {
+          medicalRecord: {
             include: {
-              user: true,
-            },
-          },
-          attachments: true,
-          prescription: {
-            include: {
+              hospital: true,
               doctor: {
                 include: {
                   user: true,
+                },
+              },
+              attachments: true,
+              prescription: {
+                include: {
+                  doctor: {
+                    include: {
+                      user: true,
+                    },
+                  },
                 },
               },
             },
           },
         },
       },
+      medicalHistories: true,
       prescriptions: {
         include: {
           doctor: {
@@ -481,17 +481,17 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       ...data.user,
       profile: data.user.profile
         ? {
-            address: data.user.profile.address ?? undefined,
-            city: data.user.profile.city ?? undefined,
-            state: data.user.profile.state ?? undefined,
-            zipCode: data.user.profile.zipCode ?? undefined,
-            country: data.user.profile.country ?? undefined,
-            bio: data.user.profile.bio ?? undefined,
-            avatarUrl: data.user.profile.avatarUrl ?? undefined,
-            genre: data.user.profile.genre ?? undefined,
-            createdAt: data.user.profile.createdAt ?? undefined,
-            updatedAt: data.user.profile.updatedAt ?? undefined,
-          }
+          address: data.user.profile.address ?? undefined,
+          city: data.user.profile.city ?? undefined,
+          state: data.user.profile.state ?? undefined,
+          zipCode: data.user.profile.zipCode ?? undefined,
+          country: data.user.profile.country ?? undefined,
+          bio: data.user.profile.bio ?? undefined,
+          avatarUrl: data.user.profile.avatarUrl ?? undefined,
+          genre: data.user.profile.genre ?? undefined,
+          createdAt: data.user.profile.createdAt ?? undefined,
+          updatedAt: data.user.profile.updatedAt ?? undefined,
+        }
         : undefined,
     },
 
@@ -517,10 +517,64 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       },
       hospital: a.hospital
         ? {
-            id: a.hospital.id,
-            name: a.hospital.name,
-            city: a.hospital.city,
-          }
+          id: a.hospital.id,
+          name: a.hospital.name,
+          city: a.hospital.city,
+        }
+        : undefined,
+      medicalRecord: a.medicalRecord
+        ? {
+          id: a.medicalRecord.id,
+          diagnosis: a.medicalRecord.diagnosis,
+          treatment: a.medicalRecord.treatment ?? undefined,
+          notes: a.medicalRecord.notes ?? undefined,
+          followUpNeeded: a.medicalRecord.followUpNeeded,
+          followUpDate: a.medicalRecord.followUpDate ?? undefined,
+          createdAt: a.medicalRecord.createdAt,
+          updatedAt: a.medicalRecord.updatedAt,
+          hospital: a.medicalRecord.hospital
+            ? {
+              id: a.medicalRecord.hospital.id,
+              name: a.medicalRecord.hospital.name,
+            }
+            : undefined,
+          doctor: {
+            id: a.medicalRecord.doctor.id,
+            user: {
+              id: a.medicalRecord.doctor.user.id,
+              name: a.medicalRecord.doctor.user.name,
+            },
+          },
+          attachments: a.medicalRecord.attachments.map((att) => ({
+            id: att.id,
+            fileName: att.fileName,
+            fileType: att.fileType,
+            fileUrl: att.fileUrl,
+            fileSize: att.fileSize,
+            uploadedAt: att.uploadedAt,
+          })),
+          prescriptions: a.medicalRecord.prescription.map((p) => ({
+            id: p.id,
+
+            medicationName: p.medicationName,
+            dosage: p.dosage,
+            frequency: p.frequency,
+            duration: p.duration ?? undefined,
+            instructions: p.instructions ?? undefined,
+            isActive: p.isActive,
+            startDate: p.startDate,
+            endDate: p.endDate ?? undefined,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+            doctor: {
+              id: p.doctor.id,
+              user: {
+                id: p.doctor.user.id,
+                name: p.doctor.user.name,
+              },
+            },
+          })),
+        }
         : undefined,
     })),
 
@@ -534,38 +588,6 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       createdBy: h.createdBy,
       createdAt: h.createdAt,
       updatedAt: h.updatedAt,
-    })),
-
-    medicalRecords: data.medicalRecords?.map((m) => ({
-      id: m.id,
-      diagnosis: m.diagnosis,
-      treatment: m.treatment ?? undefined,
-      notes: m.notes ?? undefined,
-      followUpNeeded: m.followUpNeeded,
-      followUpDate: m.followUpDate ?? undefined,
-      createdAt: m.createdAt,
-      updatedAt: m.updatedAt,
-      hospital: m.hospital
-        ? {
-            id: m.hospital.id,
-            name: m.hospital.name,
-          }
-        : undefined,
-      doctor: {
-        id: m.doctor.id,
-        user: {
-          id: m.doctor.user.id,
-          name: m.doctor.user.name,
-        },
-      },
-      attachments: m.attachments.map((att) => ({
-        id: att.id,
-        fileName: att.fileName,
-        fileType: att.fileType,
-        fileUrl: att.fileUrl,
-        fileSize: att.fileSize,
-        uploadedAt: att.uploadedAt,
-      })),
     })),
 
     prescriptions: data.prescriptions?.map((p) => ({
@@ -607,3 +629,4 @@ export const getPatientById = async (id: string): Promise<Patient> => {
 
   return mapped;
 };
+

@@ -24,6 +24,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { CreateMedicalHistoryModal } from "../CreateMedicalHistoryModal";
 
 interface Appointment {
     id: string;
@@ -89,8 +90,9 @@ interface PatientCardProps {
     patient: Patient;
 }
 
-export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
+export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) => {
     const [showHistory, setShowHistory] = useState(false);
+    const [patient, setPatient] = useState<Patient>(initialPatient);
     const initials = patient.name
         .split(" ")
         .map((n) => n[0])
@@ -100,6 +102,15 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
     const formatDoctorInfo = (doctor: MedicalHistory['doctor']) => {
         if (!doctor) return "Médecin non spécifié";
         return `${doctor.name}${doctor.specialty ? ` (${doctor.specialty})` : ''}`;
+    };
+
+    // Méthode corrigée pour utiliser setPatient
+    const addHistorique = (history: MedicalHistory) => {
+        setPatient(prev => ({
+            ...prev,
+            medicalHistories: [...prev.medicalHistories, history]
+        }));
+        setShowHistory(true);
     };
 
     return (
@@ -176,6 +187,7 @@ export const PatientCard: FC<PatientCardProps> = ({ patient }) => {
                                 {patient.medicalHistories.length} entrées
                             </Badge>
                         </DialogTitle>
+                        <CreateMedicalHistoryModal patientId={patient.id} addHistorique={addHistorique} />
                     </DialogHeader>
 
                     <ScrollArea className="flex-1 px-6">

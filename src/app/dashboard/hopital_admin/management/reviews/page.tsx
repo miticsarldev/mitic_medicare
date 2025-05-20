@@ -17,7 +17,6 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-// import { Input } from "@/components/ui/input";
 import {
     Loader2,
     Star,
@@ -133,14 +132,6 @@ export default function AdminReviewPage() {
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            await fetchReviews();
-        };
-        fetchData();
-    }, [statusFilter, targetFilter, pagination.currentPage, searchQuery]);
-
-
     const fetchReviews = async () => {
         setLoading(true);
         setError(null);
@@ -165,17 +156,12 @@ export default function AdminReviewPage() {
         }
     };
 
-    const handleStatusChange = async (reviewId: string, newStatus: ReviewStatus) => {
-        try {
-            await axios.patch(`/api/hospital_admin/reviews/status/${reviewId}`, { status: newStatus });
-            fetchReviews();
-            setSelectedReview(null);
-            setIsModalOpen(false);
-        } catch (err) {
-            console.error("Failed to update review status", err);
-            setError("Erreur lors de la mise à jour du statut");
-        }
-    };
+    useEffect(() => {
+        const fetchData = async () => {
+            await fetchReviews();
+        };
+        fetchData();
+    }, [statusFilter, targetFilter, pagination.currentPage, searchQuery, fetchReviews]);
 
     const formatDate = (dateString: string) => {
         return format(new Date(dateString), "PPpp", { locale: fr });
@@ -475,34 +461,8 @@ export default function AdminReviewPage() {
                                         </div>
                                     )}
                                 </div>
-                                <DialogFooter className="gap-2 sm:gap-0">
-                                    {selectedReview.status !== "APPROVED" && (
-                                        <Button
-                                            variant="default"
-                                            onClick={() => handleStatusChange(selectedReview.id, "APPROVED")}
-                                        >
-                                            <ShieldCheck className="w-4 h-4 mr-2" />
-                                            Approuver
-                                        </Button>
-                                    )}
-                                    {selectedReview.status !== "REJECTED" && (
-                                        <Button
-                                            variant="destructive"
-                                            onClick={() => handleStatusChange(selectedReview.id, "REJECTED")}
-                                        >
-                                            <ShieldX className="w-4 h-4 mr-2" />
-                                            Rejeter
-                                        </Button>
-                                    )}
-                                    {selectedReview.status !== "PENDING" && (
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => handleStatusChange(selectedReview.id, "PENDING")}
-                                        >
-                                            <ShieldQuestion className="w-4 h-4 mr-2" />
-                                            Remettre en attente
-                                        </Button>
-                                    )}
+                                <DialogFooter>
+                                    {/* Les boutons d'action ont été supprimés comme demandé */}
                                 </DialogFooter>
                             </>
                         )}

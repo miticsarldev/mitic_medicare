@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Trash2, Pencil, Loader2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Loader2, Users, X } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { deleteDoctorAvailability, getDoctorAvailabilities, upsertDoctorAvailability, updateSlotDurationForAllAvailabilities } from "@/app/actions/doctor-actions";
+import { deleteDoctorAvailability, getDoctorAvailabilities, upsertDoctorAvailability, updateSlotDurationForAllAvailabilities, updateSlotDurationForMultipleDoctorsTransactional } from "@/app/actions/doctor-actions";
 import { toast } from "@/hooks/use-toast";
 
 type Doctor = {
@@ -46,6 +46,8 @@ export default function DoctorAvailabilityPage() {
     const [openSlotDialog, setOpenSlotDialog] = useState(false);
     const [editingAvailability, setEditingAvailability] = useState<Availability | null>(null);
     const [globalSlotDuration, setGlobalSlotDuration] = useState<number>(30);
+    const [openMultiDoctorDialog, setOpenMultiDoctorDialog] = useState(false);
+    const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         dayOfWeek: 1,
         startTime: "09:00",
@@ -266,6 +268,108 @@ export default function DoctorAvailabilityPage() {
         }
     };
 
+    const MultiSelect = ({
+        options,
+        value,
+        onChange,
+        placeholder
+    }: {
+        options: { value: string, label: string }[],
+        value: string[],
+        onChange: (values: string[]) => void,
+        placeholder?: string
+    }) => {
+        const toggleValue = (val: string) => {
+            if (value.includes(val)) {
+                onChange(value.filter(v => v !== val));
+            } else {
+                onChange([...value, val]);
+            }
+        };
+
+        return (
+            <div className="border rounded-md p-2 min-h-10">
+                {value.length === 0 && (
+                    <span className="text-muted-foreground">{placeholder}</span>
+                )}
+                <div className="flex flex-wrap gap-2">
+                    {value.map(val => {
+                        const option = options.find(o => o.value === val);
+                        return (
+                            <span
+                                key={val}
+                                className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm flex items-center"
+                            >
+                                {option?.label}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleValue(val);
+                                    }}
+                                    className="ml-2 text-muted-foreground hover:text-foreground"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </span>
+                        );
+                    })}
+                </div>
+                <div className="mt-2 space-y-1">
+                    {options.map(option => (
+                        <div
+                            key={option.value}
+                            className={`p-2 text-sm rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${value.includes(option.value) ? 'bg-gray-100 dark:bg-gray-800' : ''
+                                }`}
+                            onClick={() => toggleValue(option.value)}
+                        >
+                            {option.label}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    //modifier le slot de plusieurs médecins
+    const handleUpdateMultipleDoctorsSlotDuration = async () => {
+        if (selectedDoctors.length === 0) {
+            toast({
+                title: "Erreur",
+                description: "Veuillez sélectionner au moins un médecin",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsLoading(prev => ({ ...prev, slots: true }));
+        try {
+            const updatedCount = await updateSlotDurationForMultipleDoctorsTransactional(
+                selectedDoctors,
+                globalSlotDuration
+            );
+
+            toast({
+                title: "Succès",
+                description: `Durée des créneaux mise à jour pour ${updatedCount} médecin(s)`,
+            });
+
+            if (selectedDoctor) {
+                await loadAvailabilities(selectedDoctor);
+            }
+            setOpenMultiDoctorDialog(false);
+            setSelectedDoctors([]);
+        } catch (error) {
+            toast({
+                title: "Erreur",
+                description: "Échec de la mise à jour de la durée des créneaux",
+                variant: "destructive"
+            });
+            console.error("Erreur lors de la mise à jour multiple:", error);
+        } finally {
+            setIsLoading(prev => ({ ...prev, slots: false }));
+        }
+    };
+
     return (
         <div className="p-4 space-y-4 mx-auto">
             {/* affichage de skeleton lors du chargement */}
@@ -340,7 +444,16 @@ export default function DoctorAvailabilityPage() {
                                         size="sm"
                                     >
                                         <Pencil className="mr-2 h-4 w-4" />
-                                        Modifier durée des créneaux
+                                        Modifier créneaux du medecin
+                                    </Button>
+                                    <Button
+                                        onClick={() => setOpenMultiDoctorDialog(true)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="ml-2"
+                                    >
+                                        <Users className="mr-2 h-4 w-4" />
+                                        Modifier plusieurs médecins
                                     </Button>
                                 </div>
 
@@ -599,6 +712,65 @@ export default function DoctorAvailabilityPage() {
                             onClick={confirmDelete}
                         >
                             Confirmer la suppression
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Dialog pour modifier la durée des créneaux pour plusieurs médecins */}
+            <Dialog open={openMultiDoctorDialog} onOpenChange={setOpenMultiDoctorDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Modifier la durée des créneaux pour plusieurs médecins</DialogTitle>
+                        <DialogDescription>
+                            Sélectionnez les médecins à modifier et définissez la nouvelle durée des créneaux.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Médecins à modifier</Label>
+                            <MultiSelect
+                                options={doctors.map(d => ({
+                                    value: d.id,
+                                    label: `${d.name}`
+                                }))}
+                                value={selectedDoctors}
+                                onChange={setSelectedDoctors}
+                                placeholder="Sélectionnez un ou plusieurs médecins"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Nouvelle durée des créneaux (minutes)</Label>
+                            <Input
+                                type="number"
+                                min="5"
+                                max="120"
+                                step="5"
+                                value={globalSlotDuration}
+                                onChange={e => setGlobalSlotDuration(parseInt(e.target.value) || 30)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setOpenMultiDoctorDialog(false);
+                                setSelectedDoctors([]);
+                            }}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={handleUpdateMultipleDoctorsSlotDuration}
+                            disabled={isLoading.slots}
+                        >
+                            {isLoading.slots ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Enregistrement...
+                                </>
+                            ) : "Mettre à jour"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -684,3 +684,44 @@ export async function updateSlotDurationForAllAvailabilities(doctorId: string, s
     data: { slotDuration },
   });
 }
+
+/**
+ * Met à jour la durée des créneaux pour plusieurs médecins en transaction
+ * @param doctorIds - Tableau des IDs des médecins à mettre à jour
+ * @param slotDuration - Nouvelle durée des créneaux (en minutes)
+ * @returns Le nombre de médecins distincts modifiés
+ */
+export async function updateSlotDurationForMultipleDoctorsTransactional(
+  doctorIds: string[],
+  slotDuration: number
+): Promise<number> {
+  // Validation des entrées
+  if (!Array.isArray(doctorIds)) {
+    throw new Error("doctorIds must be an array");
+  }
+  if (doctorIds.length === 0) {
+    throw new Error("doctorIds array cannot be empty");
+  }
+  if (typeof slotDuration !== 'number' || slotDuration <= 0) {
+    throw new Error("slotDuration must be a positive number");
+  }
+
+  try {
+    const results = await prisma.$transaction(
+      doctorIds.map(doctorId =>
+        prisma.doctorAvailability.updateMany({
+          where: { doctorId },
+          data: { slotDuration }
+        })
+      )
+    );
+
+    // Calcul du nombre de médecins distincts modifiés
+    const modifiedDoctorsCount = results.filter(result => result.count > 0).length;
+    return modifiedDoctorsCount;
+
+  } catch (error) {
+    console.error("Transaction error:", error);
+    throw new Error("Failed to update doctors' slot durations");
+  }
+}
