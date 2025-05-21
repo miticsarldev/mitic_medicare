@@ -80,6 +80,42 @@ interface PatientDetails {
     recordedAt: Date;
   }[];
 }
+interface Prescription {
+  id: string;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration?: string;
+  instructions?: string;
+}
+interface Hospital {
+  id: string;
+  name: string;
+}
+interface Patient {
+  id: string;
+  bloodType?: string;
+}
+interface Appointment {
+  id: string;
+  status: string;
+  reason: string;
+}
+interface MedicalRecord {
+  id: string;
+  diagnosis: string;
+  treatment?: string;
+  notes: string;
+  createdAt: string | number | Date;
+
+  hospital: Hospital;
+  appointment: Appointment;
+  patient: Patient;
+
+  prescriptions: Prescription[];
+  followUpNeeded: boolean;
+  followUpDate?: string | Date | null;
+}
 
 export default function PatientMedicalRecord() {
   const { patientId } = useParams();
@@ -108,7 +144,7 @@ export default function PatientMedicalRecord() {
   const [weight, setWeight] = useState<number | undefined>();
   const [height, setHeight] = useState<number | undefined>();
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
-  const [recordData, setRecordData] = useState<any>(null); 
+  const [recordData, setRecordData] = useState<MedicalRecord | null>(null);
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -830,7 +866,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
           <div>
             <p className="font-semibold mt-4">💊 Prescriptions :</p>
             <ul className="list-disc list-inside">
-              {recordData.prescriptions.map((pres: any) => (
+              {recordData.prescriptions.map((pres: Prescription) => (
                 <li key={pres.id}>
                   {pres.medicationName} - {pres.dosage} - {pres.frequency} pendant {pres.duration}
                 </li>

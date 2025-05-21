@@ -107,7 +107,7 @@ export async function POST(req: Request) {
         appointmentId: appointment.id,
         hospitalId: doctor.hospitalId,
         // Ajout des prescriptions si présentes
-        prescriptions: prescriptions?.length ? {
+        prescription: prescriptions?.length ? {
           create: prescriptions.map(prescription => ({
             medicationName: prescription.medicationName,
             dosage: prescription.dosage,
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
         } : undefined
       },
       include: {
-        prescriptions: true
+        prescription: true
       }
     });
 
@@ -191,7 +191,7 @@ export async function GET() {
             reason: true
           }
         },
-        prescriptions: true
+        prescription: true
       }
     });
 
