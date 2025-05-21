@@ -45,6 +45,10 @@ import {
   FileText,
   MoreHorizontal,
   Search,
+  CheckCircle,
+  XCircle,
+  Clock as ClockIcon,
+  UserX,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -53,21 +57,54 @@ import Image from "next/image";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case "CONFIRMED":
     case "COMPLETED":
-      return <Badge className="bg-green-500 hover:bg-green-600">Terminé</Badge>;
+      return (
+        <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Terminé
+        </Badge>
+      );
+    case "CONFIRMED":
+      return (
+        <Badge className="bg-blue-500 hover:bg-blue-600 flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Confirmé
+        </Badge>
+      );
     case "PENDING":
       return (
-        <Badge variant="outline" className="text-amber-500 border-amber-500">
+        <Badge variant="outline" className="text-amber-500 border-amber-500 flex items-center gap-1">
+          <ClockIcon className="h-3 w-3" />
           En attente
         </Badge>
       );
     case "CANCELED":
-      return <Badge variant="destructive">Annulé</Badge>;
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <XCircle className="h-3 w-3" />
+          Annulé
+        </Badge>
+      );
+    case "NO_SHOW":
+      return (
+        <Badge className=" hover:border-t-gray-950-600 flex items-center gap-1">
+          <UserX className="h-3 w-3" />
+          Absent
+        </Badge>
+      );
     default:
       return <Badge variant="outline">Inconnu</Badge>;
   }
 };
+
+const statusOptions = [
+  { value: "all", label: "Tous les statuts" },
+  { value: "completed", label: "Terminés" },
+  { value: "confirmed", label: "Confirmés" },
+  { value: "pending", label: "En attente" },
+  { value: "canceled", label: "Annulés" },
+  { value: "no_show", label: "Non présentés" },
+];
 
 export default function DoctorAppointmentHistoryPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -115,7 +152,6 @@ export default function DoctorAppointmentHistoryPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
   const paginatedAppointments = filteredAppointments.slice(
     (currentPage - 1) * itemsPerPage,
@@ -158,29 +194,34 @@ export default function DoctorAppointmentHistoryPage() {
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
-                    setCurrentPage(1); // Reset to first page when searching
+                    setCurrentPage(1); 
                   }}
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={(value) => {
-              setStatusFilter(value);
-              setCurrentPage(1); // Reset to first page when changing filter
-            }}>
+            <Select 
+              value={statusFilter} 
+              onValueChange={(value) => {
+                setStatusFilter(value);
+                setCurrentPage(1); 
+              }}
+            >
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filtrer par statut" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="confirmed">Terminés</SelectItem>
-                <SelectItem value="canceled">Annulés</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select 
               value={itemsPerPage.toString()} 
               onValueChange={(value) => {
                 setItemsPerPage(Number(value));
-                setCurrentPage(1); // Reset to first page when changing items per page
+                setCurrentPage(1); 
               }}
             >
               <SelectTrigger className="w-full md:w-[120px]">
@@ -265,7 +306,6 @@ export default function DoctorAppointmentHistoryPage() {
             </CardContent>
           </Card>
 
-          {/* Pagination controls */}
           <div className="flex items-center justify-between px-2">
             <div className="text-sm text-muted-foreground">
               Page {currentPage} sur {totalPages}
@@ -414,7 +454,6 @@ export default function DoctorAppointmentHistoryPage() {
             )}
           </div>
 
-          {/* Pagination controls */}
           <div className="flex items-center justify-between px-2">
             <div className="text-sm text-muted-foreground">
               Page {currentPage} sur {totalPages}
@@ -521,6 +560,7 @@ export default function DoctorAppointmentHistoryPage() {
           )}
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

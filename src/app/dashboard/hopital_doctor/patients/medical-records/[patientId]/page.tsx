@@ -80,6 +80,42 @@ interface PatientDetails {
     recordedAt: Date;
   }[];
 }
+interface Prescription {
+  id: string;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration?: string;
+  instructions?: string;
+}
+interface Hospital {
+  id: string;
+  name: string;
+}
+interface Patient {
+  id: string;
+  bloodType?: string;
+}
+interface Appointment {
+  id: string;
+  status: string;
+  reason: string;
+}
+interface MedicalRecord {
+  id: string;
+  diagnosis: string;
+  treatment?: string;
+  notes: string;
+  createdAt: string | number | Date;
+
+  hospital: Hospital;
+  appointment: Appointment;
+  patient: Patient;
+
+  prescriptions: Prescription[];
+  followUpNeeded: boolean;
+  followUpDate?: string | Date | null;
+}
 
 export default function PatientMedicalRecord() {
   const { patientId } = useParams();
@@ -107,6 +143,8 @@ export default function PatientMedicalRecord() {
   const [oxygenSaturation, setOxy] = useState<number | undefined>();
   const [weight, setWeight] = useState<number | undefined>();
   const [height, setHeight] = useState<number | undefined>();
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [recordData, setRecordData] = useState<MedicalRecord | null>(null);
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -168,7 +206,29 @@ export default function PatientMedicalRecord() {
       console.error("Erreur lors de l'ajout de l'historique", err);
     }
   };
+  const handleViewDiagnosis = async (appointmentId: string) => {
+    try {
+    const res = await fetch(`/api/hospital_doctor/history/record?appointmentId=${appointmentId}`);
+    const data = await res.json();
+    setRecordData(data[0]); 
+    setIsRecordModalOpen(true);
+  } catch (error) {
+    console.error("Erreur lors de la récupération du dossier médical:", error);
+  }
+    };
 
+  const translateStatus = (status: string) => {
+  const statusTranslations: Record<string, string> = {
+    'ACTIVE': 'Actif',
+    'INACTIVE': 'Inactif', 
+    'CHRONIC': 'Chronique',
+    'RESOLVED': 'Résolu',
+    'PENDING': 'En attente',
+    'CONTROLLED': 'Contrôlé'
+  };
+  
+  return statusTranslations[status] || status;
+};
   const handlePrescriptionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -287,7 +347,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
 
       {/* Système d'onglets */}
       <Tabs defaultValue="medical-history" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="infos">
             <User2 className="w-4 h-4 mr-2" />
             Infos
@@ -300,10 +360,10 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
             <Activity className="w-4 h-4 mr-2" />
             Signes vitaux
           </TabsTrigger>
-          <TabsTrigger value="prescriptions">
+          {/* <TabsTrigger value="prescriptions">
             <Pill className="w-4 h-4 mr-2" />
             Prescriptions
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger value="appointments">
             <Calendar className="w-4 h-4 mr-2" />
             Consultations
@@ -383,7 +443,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Assurance</h3>
             <div className="space-y-2">
               {patient.insuranceProvider && (
@@ -399,7 +459,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
         </div>
       </CardContent>
     </Card>
@@ -425,7 +485,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
                   {patient.medicalHistories.map((history) => (
                     <li key={history.id} className="flex items-center gap-4 p-3 border rounded-md dark:border-gray-700">
                       <Badge variant="outline" className="shrink-0">
-                        {history.status}
+                        {translateStatus(history.status)}
                       </Badge>
                       <div>
                         <p className="font-medium text-gray-900 dark:text-gray-100">{history.title} - {history.condition}</p>
@@ -590,9 +650,12 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
                             </p>
                           )}
                         </div>
-                        <Badge variant="outline" className="shrink-0">
-                          Terminée
-                        </Badge>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleViewDiagnosis(appointment.id)}
+                        >
+                          Voir diagnostic
+                        </Button>
                       </div>
                       {appointment.medicalRecord && (
                         <div className="mt-3 pt-3 border-t dark:border-gray-700">
@@ -771,6 +834,53 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
     </form>
   </DialogContent>
 </Dialog>
+
+<Dialog open={isRecordModalOpen} onOpenChange={setIsRecordModalOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Diagnostic & Dossier Médical</DialogTitle>
+    </DialogHeader>
+
+    {recordData ? (
+      <div className="space-y-3 text-sm">
+        <p><strong>📝 Diagnostic :</strong> {recordData.diagnosis || 'N/A'}</p>
+        <p><strong>💊 Traitement :</strong> {recordData.treatment || 'N/A'}</p>
+
+        <p><strong>🏥 Hôpital :</strong> {recordData.hospital?.name || 'N/A'}</p>
+        <p><strong>📅 Date du dossier :</strong> {new Date(recordData.createdAt).toLocaleDateString()}</p>
+
+        <p><strong>📋 Statut du rendez-vous :</strong> {recordData.appointment?.status || 'N/A'}</p>
+        <p><strong>📄 Motif de consultation :</strong> {recordData.appointment?.reason || 'N/A'}</p>
+
+        <p><strong>🧾 Notes :</strong> {recordData.notes || 'N/A'}</p>
+
+        {recordData.followUpNeeded && (
+          <p><strong>📅 Suivi nécessaire le :</strong> {recordData.followUpDate ? new Date(recordData.followUpDate).toLocaleDateString() : 'À définir'}</p>
+        )}
+
+        {recordData.patient?.bloodType && (
+          <p><strong>🩸 Groupe sanguin :</strong> {recordData.patient.bloodType}</p>
+        )}
+
+        {recordData.prescriptions?.length > 0 && (
+          <div>
+            <p className="font-semibold mt-4">💊 Prescriptions :</p>
+            <ul className="list-disc list-inside">
+              {recordData.prescriptions.map((pres: Prescription) => (
+                <li key={pres.id}>
+                  {pres.medicationName} - {pres.dosage} - {pres.frequency} pendant {pres.duration}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    ) : (
+      <p>Aucun dossier trouvé pour ce rendez-vous.</p>
+    )}
+  </DialogContent>
+</Dialog>
+
 
       {/* Modal pour ajouter une prescription */}
       <Dialog open={isPrescriptionModalOpen} onOpenChange={setIsPrescriptionModalOpen}>
