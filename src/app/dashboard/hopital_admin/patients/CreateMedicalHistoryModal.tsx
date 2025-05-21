@@ -9,18 +9,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from 'lucide-react'
 
-//types
-type MedicalHistory = {
+interface MedicalHistory {
     id: string;
     title: string;
     condition: string;
-    diagnosedDate?: Date;
+    diagnosedDate: string;
     status: string;
-    details?: string;
-    createdBy: string;
-    createdAt: Date;
-    updatedAt: Date;
-};
+    details: string;
+    doctor?: {
+        id: string;
+        specialty: string;
+        name: string;
+        email: string;
+    } | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 
 interface CreateMedicalHistoryModalProps {
     patientId: string
@@ -28,58 +33,74 @@ interface CreateMedicalHistoryModalProps {
 }
 
 export function CreateMedicalHistoryModal({ patientId, addHistorique }: CreateMedicalHistoryModalProps) {
-    const [open, setOpen] = useState(false)
-    const [title, setTitle] = useState('')
-    const [condition, setCondition] = useState('')
-    const [diagnosedDate, setDiagnosedDate] = useState<string>(new Date().toISOString().split('T')[0]) // Format 'YYYY-MM-DD'
-    const [status, setStatus] = useState<string>('ACTIVE')
-    const [details, setDetails] = useState('')
-    const [loading, setLoading] = useState(false)
+    const [open, setOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        title: '',
+        condition: '',
+        diagnosedDate: new Date().toISOString().split('T')[0],
+        status: 'ACTIVE',
+        details: ''
+    });
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
-        if (loading) return; // Prevent multiple submissions
+        if (loading) return;
 
         try {
-            setLoading(true); // Start loading
+            setLoading(true);
 
-             // Convert the date to ISO-8601 with time
-             const diagnosedDateISO = `${diagnosedDate}T00:00:00Z`; 
+            const diagnosedDateISO = `${formData.diagnosedDate}T00:00:00Z`;
 
-             const response = await fetch('/api/hospital_admin/medical-history/create', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({
-                     patientId,
-                     title,
-                     condition,
-                     diagnosedDate: diagnosedDateISO, 
-                     status,
-                     details,
-                 }),
-             })
+            const response = await fetch('/api/hospital_admin/medical-history/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patientId,
+                    ...formData,
+                    diagnosedDate: diagnosedDateISO
+                }),
+            });
 
             if (!response.ok) {
-                throw new Error('Erreur lors de la création de l\'historique médical.')
+                throw new Error('Erreur lors de la création');
             }
 
-            const data = await response.json()
-            addHistorique(data.medicalHistorie)
+            const data = await response.json();
+
+            // Appel à la fonction parente
+            addHistorique(data.medicalHistorie);
+
+            // Réinitialisation du formulaire
+            setFormData({
+                title: '',
+                condition: '',
+                diagnosedDate: new Date().toISOString().split('T')[0],
+                status: 'ACTIVE',
+                details: ''
+            });
 
             toast({
-                title: "Historique créé avec succès ✅",
-                description: "Les informations médicales ont été enregistrées.",
-            })
-            setOpen(false) 
+                title: "Succès",
+                description: "Historique créé avec succès",
+            });
+
+            setOpen(false);
         } catch (error) {
             toast({
                 title: "Erreur",
-                description: "Une erreur est survenue lors de la création de l'historique.",
-            })
-            console.error('Erreur lors de la création de l\'historique :', error)
+                description: "Échec de la création",
+                variant: "destructive"
+            });
+            console.error('Erreur:', error);
         } finally {
-            setLoading(false); // End loading
+            setLoading(false);
         }
-    }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -95,20 +116,35 @@ export function CreateMedicalHistoryModal({ patientId, addHistorique }: CreateMe
                 <div className="space-y-4 pt-2">
                     <div>
                         <label className="text-sm font-medium">Date de diagnostic</label>
-                        <input 
-                            type="date" 
-                            value={diagnosedDate} 
-                            onChange={(e) => setDiagnosedDate(e.target.value)} 
+                        <input
+                            type="date"
+                            name="diagnosedDate"
+                            value={formData.diagnosedDate}
+                            onChange={handleChange}
                             className="w-full p-2 border rounded"
                         />
                     </div>
 
-                    <Input placeholder="Titre" value={title} onChange={(e) => setTitle(e.target.value)} />
-                    <Input placeholder="Condition" value={condition} onChange={(e) => setCondition(e.target.value)} />
+                    <Input
+                        name="title"
+                        placeholder="Titre"
+                        value={formData.title}
+                        onChange={handleChange}
+                    />
+
+                    <Input
+                        name="condition"
+                        placeholder="Condition"
+                        value={formData.condition}
+                        onChange={handleChange}
+                    />
 
                     <div>
                         <label className="text-sm font-medium">Statut</label>
-                        <Select value={status} onValueChange={setStatus}>
+                        <Select
+                            value={formData.status}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="Sélectionner le statut" />
                             </SelectTrigger>
@@ -120,14 +156,19 @@ export function CreateMedicalHistoryModal({ patientId, addHistorique }: CreateMe
                         </Select>
                     </div>
 
-                    <Textarea placeholder="Détails" value={details} onChange={(e) => setDetails(e.target.value)} />
+                    <Textarea
+                        name="details"
+                        placeholder="Détails"
+                        value={formData.details}
+                        onChange={handleChange}
+                    />
 
-                    <Button 
-                        onClick={handleSubmit} 
-                        className="w-full" 
-                        disabled={loading} 
+                    <Button
+                        onClick={handleSubmit}
+                        className="w-full"
+                        disabled={loading}
                     >
-                        {loading ? <Loader2 className="animate-spin" />: 'Enregistrer'}
+                        {loading ? <Loader2 className="animate-spin" /> : 'Enregistrer'}
                     </Button>
                 </div>
             </DialogContent>

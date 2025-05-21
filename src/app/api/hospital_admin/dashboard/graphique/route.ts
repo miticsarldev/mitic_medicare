@@ -127,19 +127,10 @@ export async function GET(request: NextRequest) {
         }
 
         // 🟨 Logique 3 : Répartition des types de consultations du jour
-        if (type === "consultationTypesToday") {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-
+        if (type === "consultationTypesAllTime") {
             const consultations = await prisma.appointment.findMany({
                 where: {
                     hospitalId: hospital.id,
-                    scheduledAt: {
-                        gte: today,
-                        lt: tomorrow,
-                    },
                 },
                 select: {
                     type: true,
@@ -161,6 +152,7 @@ export async function GET(request: NextRequest) {
 
             return NextResponse.json(consultationTypeData);
         }
+
 
         return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
     } catch (error) {

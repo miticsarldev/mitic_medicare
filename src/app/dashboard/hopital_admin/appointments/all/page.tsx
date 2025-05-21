@@ -29,6 +29,20 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+//interface pour prescription
+interface Prescription {
+    id: string
+    medicationName: string
+    dosage: string
+    frequency: string
+    duration: string
+    instructions: string
+    isActive: boolean
+    startDate: string
+    endDate: string
+}
+
+
 interface Attachment {
     id: string
     fileName: string
@@ -37,7 +51,6 @@ interface Attachment {
     fileSize: number
     uploadedAt: string
 }
-
 interface MedicalRecord {
     id: string
     diagnosis: string
@@ -48,6 +61,7 @@ interface MedicalRecord {
     createdAt: string
     updatedAt: string
     attachments: Attachment[]
+    prescriptions: Prescription[]
 }
 
 interface Doctor {
@@ -514,7 +528,9 @@ export default function AppointmentsTable() {
                                                 <FilePlus2 className="w-5 h-5" />
                                                 Dossier médical
                                             </h3>
+
                                             <div className="pl-6 space-y-6 text-sm">
+                                                {/* Diagnostic et traitement */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <p className="font-semibold">Diagnostic</p>
@@ -530,6 +546,7 @@ export default function AppointmentsTable() {
                                                     </div>
                                                 </div>
 
+                                                {/* Notes complémentaires */}
                                                 <div>
                                                     <p className="font-semibold">Notes complémentaires</p>
                                                     <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
@@ -537,6 +554,7 @@ export default function AppointmentsTable() {
                                                     </p>
                                                 </div>
 
+                                                {/* Suivi et mise à jour */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div>
                                                         <p className="font-semibold">Suivi nécessaire</p>
@@ -545,49 +563,82 @@ export default function AppointmentsTable() {
                                                             <p className="mt-2">
                                                                 <span className="font-semibold">Date de suivi: </span>
                                                                 {selectedAppointment.medicalRecord.followUpDate
-                                                                    ? format(new Date(selectedAppointment.medicalRecord.followUpDate), 'PPpp')
+                                                                    ? format(new Date(selectedAppointment.medicalRecord.followUpDate), "PPpp")
                                                                     : "Non précisée"}
                                                             </p>
                                                         )}
                                                     </div>
                                                     <div>
                                                         <p className="font-semibold">Dernière mise à jour</p>
-                                                        <p>{format(new Date(selectedAppointment.medicalRecord.updatedAt), 'PPpp')}</p>
+                                                        <p>{format(new Date(selectedAppointment.medicalRecord.updatedAt), "PPpp")}</p>
                                                     </div>
                                                 </div>
 
-                                                {selectedAppointment.medicalRecord.attachments.length > 0 && (
-                                                    <div>
-                                                        <p className="font-semibold mb-3">Pièces jointes ({selectedAppointment.medicalRecord.attachments.length})</p>
+                                                {/* Pièces jointes */}
+                                                <div className="space-y-3">
+                                                    <p className="font-semibold">Pièces jointes ({selectedAppointment.medicalRecord.attachments.length})</p>
+                                                    {selectedAppointment.medicalRecord.attachments.length > 0 ? (
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                             {selectedAppointment.medicalRecord.attachments.map((file) => (
-                                                                <div key={file.id} className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors">
-                                                                    <div className="flex-shrink-0">
-                                                                        {getFileIcon(file.fileType)}
-                                                                    </div>
+                                                                <div
+                                                                    key={file.id}
+                                                                    className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                                                                >
+                                                                    <div className="flex-shrink-0">{getFileIcon(file.fileType)}</div>
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="font-medium truncate">{file.fileName}</p>
                                                                         <p className="text-xs text-muted-foreground">
-                                                                            {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), 'PP')}
+                                                                            {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), "PP")}
                                                                         </p>
                                                                     </div>
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         className="h-8 w-8"
-                                                                        onClick={() => window.open(file.fileUrl, '_blank')}
+                                                                        onClick={() => window.open(file.fileUrl, "_blank")}
                                                                     >
                                                                         <Download className="h-4 w-4" />
                                                                     </Button>
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    ) : (
+                                                        <div className="p-4 bg-muted/30 text-sm text-muted-foreground rounded-md">
+                                                            Aucune pièce jointe disponible pour ce rendez-vous.
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Prescriptions */}
+                                                <div className="space-y-3 pt-4">
+                                                    <p className="font-semibold">Prescriptions ({selectedAppointment.medicalRecord.prescriptions.length})</p>
+                                                    {selectedAppointment.medicalRecord.prescriptions.length > 0 ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            {selectedAppointment.medicalRecord.prescriptions.map((prescription) => (
+                                                                <div
+                                                                    key={prescription.id}
+                                                                    className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                                                                >
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="font-medium truncate">{prescription.medicationName}</p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {prescription.dosage} • {prescription.frequency} • {prescription.duration}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-4 bg-muted/30 text-sm text-muted-foreground rounded-md">
+                                                            Aucune prescription enregistrée pour ce rendez-vous.
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </TabsContent>
                                 )}
+
                             </ScrollArea>
                         </Tabs>
                     )}
