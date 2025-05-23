@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus, User2 } from "lucide-react";
+import { Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus, User2, FileSearch, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -280,7 +280,12 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
     console.error("Erreur réseau lors de la mise à jour des signes vitaux", err);
   }
 };
-
+  const statusColors = {
+    CONFIRMED: "bg-green-100 text-green-800",
+    PENDING: "bg-yellow-100 text-yellow-800",
+    CANCELLED: "bg-red-100 text-red-800",
+    COMPLETED: "bg-blue-100 text-blue-800",
+  };
 
   useEffect(() => {
     if (latestVitalSigns) {
@@ -623,61 +628,70 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
         </TabsContent>
 
         {/* Contenu de l'onglet Consultations */}
-        <TabsContent value="appointments">
-          <Card className="bg-white dark:bg-gray-800 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                <Calendar className="w-6 h-6 text-blue-500" />
-                Historique des consultations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {completedAppointments.length > 0 ? (
-                <ul className="space-y-4">
-                  {completedAppointments.map((appointment) => (
-                    <li key={appointment.id} className="border rounded-md p-4 dark:border-gray-700">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">
-                            Consultation avec Dr. {appointment.doctor.user.name}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatDate(appointment.scheduledAt)} - {appointment.type}
-                          </p>
-                          {appointment.reason && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                              Motif: {appointment.reason}
-                            </p>
-                          )}
-                        </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleViewDiagnosis(appointment.id)}
-                        >
-                          Voir diagnostic
-                        </Button>
-                      </div>
-                      {appointment.medicalRecord && (
-                        <div className="mt-3 pt-3 border-t dark:border-gray-700">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">
-                            Diagnostic: {appointment.medicalRecord.diagnosis}
-                          </p>
-                          {appointment.medicalRecord.treatment && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                              Traitement: {appointment.medicalRecord.treatment}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">Aucune consultation terminée</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+         <TabsContent value="appointments">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-xl font-semibold">Rendez-vous</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Historique des consultations du patient
+                      </p>
+                    </div>
+                  </div>
+
+                  {completedAppointments?.length ? (
+                    <div className="space-y-4">
+                     {completedAppointments.map((appt) => (
+                        <Card key={appt.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex flex-col sm:flex-row justify-between gap-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <div className="font-medium">{appt.doctor.user.name}</div>
+                                  {/* <Badge variant="outline" className="text-xs">
+                                    {appt.doctor.specialization}
+                                  </Badge> */}
+                                </div>
+                                <div className="text-sm">
+                                  <span className="font-medium">
+                                    {new Date(appt.scheduledAt).toLocaleDateString()}
+                                  </span>
+                                  <span className="mx-2">•</span>
+                                  <span>
+                                    {new Date(appt.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Motif : {appt.reason || 'Non spécifié'}
+                                </div>
+                              </div>
+                              <div className="flex flex-col sm:items-end gap-2">
+                                <Badge className={`${statusColors[appt.status]} capitalize`}>
+                                  {appt.status.toLowerCase()}
+                                </Badge>
+                                {appt.medicalRecord && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-2"
+                          onClick={() => handleViewDiagnosis(appt.id)}
+                                  >
+                                    <FileSearch className="h-4 w-4" />
+                                    Voir dossier
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 space-y-2">
+                      <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Aucun rendez-vous trouvé</p>
+                    </div>
+                  )}
+                </TabsContent>
       </Tabs>
 
       {/* Modal pour ajouter un historique médical */}
@@ -836,49 +850,94 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
 </Dialog>
 
 <Dialog open={isRecordModalOpen} onOpenChange={setIsRecordModalOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Diagnostic & Dossier Médical</DialogTitle>
-    </DialogHeader>
+  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+  <DialogHeader>
+    <DialogTitle>Diagnostic & Dossier Médical</DialogTitle>
+  </DialogHeader>
 
-    {recordData ? (
-      <div className="space-y-3 text-sm">
-        <p><strong>📝 Diagnostic :</strong> {recordData.diagnosis || 'N/A'}</p>
-        <p><strong>💊 Traitement :</strong> {recordData.treatment || 'N/A'}</p>
-
-        <p><strong>🏥 Hôpital :</strong> {recordData.hospital?.name || 'N/A'}</p>
-        <p><strong>📅 Date du dossier :</strong> {new Date(recordData.createdAt).toLocaleDateString()}</p>
-
-        <p><strong>📋 Statut du rendez-vous :</strong> {recordData.appointment?.status || 'N/A'}</p>
-        <p><strong>📄 Motif de consultation :</strong> {recordData.appointment?.reason || 'N/A'}</p>
-
-        <p><strong>🧾 Notes :</strong> {recordData.notes || 'N/A'}</p>
-
-        {recordData.followUpNeeded && (
-          <p><strong>📅 Suivi nécessaire le :</strong> {recordData.followUpDate ? new Date(recordData.followUpDate).toLocaleDateString() : 'À définir'}</p>
-        )}
-
-        {recordData.patient?.bloodType && (
-          <p><strong>🩸 Groupe sanguin :</strong> {recordData.patient.bloodType}</p>
-        )}
-
-        {recordData.prescriptions?.length > 0 && (
-          <div>
-            <p className="font-semibold mt-4">💊 Prescriptions :</p>
-            <ul className="list-disc list-inside">
-              {recordData.prescriptions.map((pres: Prescription) => (
-                <li key={pres.id}>
-                  {pres.medicationName} - {pres.dosage} - {pres.frequency} pendant {pres.duration}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+  {recordData ? (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-medium mb-2">Diagnostic</h3>
+        <div className="p-4 bg-muted/50 rounded-lg">
+          {recordData.diagnosis || 'Non spécifié'}
+        </div>
       </div>
-    ) : (
-      <p>Aucun dossier trouvé pour ce rendez-vous.</p>
-    )}
-  </DialogContent>
+
+      <div>
+        <h3 className="font-medium mb-2">Traitement</h3>
+        <div className="p-4 bg-muted/50 rounded-lg">
+          {recordData.treatment || 'Non spécifié'}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-medium mb-2">Informations sur le rendez-vous</h3>
+        <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+          <p><strong>Hôpital :</strong> {recordData.hospital?.name || 'N/A'}</p>
+          <p><strong>Date du dossier :</strong> {new Date(recordData.createdAt).toLocaleDateString()}</p>
+          {/* <p><strong>Statut du rendez-vous :</strong> {recordData.appointment?.status || 'N/A'}</p> */}
+          <p><strong>Motif de consultation :</strong> {recordData.appointment?.reason || 'N/A'}</p>
+        </div>
+      </div>
+
+      {recordData.notes && (
+        <div>
+          <h3 className="font-medium mb-2">Notes</h3>
+          <div className="p-4 bg-muted/50 rounded-lg whitespace-pre-line">
+            {recordData.notes}
+          </div>
+        </div>
+      )}
+
+      {recordData.followUpNeeded && (
+        <div>
+          <h3 className="font-medium mb-2">Suivi</h3>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <p>Un suivi est nécessaire</p>
+            {recordData.followUpDate && (
+              <p className="mt-2">
+                Date de suivi: {new Date(recordData.followUpDate).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {recordData.patient?.bloodType && (
+        <div>
+          <h3 className="font-medium mb-2">Informations patient</h3>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <p>Groupe sanguin: {recordData.patient.bloodType}</p>
+          </div>
+        </div>
+      )}
+
+      {recordData.prescriptions?.length > 0 && (
+        <div>
+          <h3 className="font-medium mb-2">Prescriptions ({recordData.prescriptions.length})</h3>
+          <div className="space-y-2">
+            {recordData.prescriptions.map((pres: Prescription) => (
+              <div key={pres.id} className="p-3 border rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{pres.medicationName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {pres.dosage} • {pres.frequency} • {pres.duration}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  ) : (
+    <p>Aucun dossier trouvé pour ce rendez-vous.</p>
+  )}
+</DialogContent>
 </Dialog>
 
 

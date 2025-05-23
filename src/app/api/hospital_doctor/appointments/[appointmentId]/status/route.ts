@@ -22,7 +22,6 @@ export async function PATCH(
     const validStatuses = [
       "PENDING",
       "CONFIRMED",
-      "REJECTED",
       "COMPLETED",
       "CANCELED",
       "NO_SHOW",

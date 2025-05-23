@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Building, Bed, Stethoscope, Phone, MapPin, Users, Activity } from "lucide-react";
+import { Building, Stethoscope, Phone, MapPin, Users,  Calendar, Globe } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
@@ -88,14 +88,14 @@ export default function HospitalInfoPage() {
             </div>
           </div>
           <div className="flex items-center gap-4 p-4">
-            <Bed className="w-8 h-8 text-green-500" />
+            <Calendar className="w-8 h-8 text-green-500" />
             <div>
               <p className={`text-lg font-semibold ${textColor}`}>{hospital.stats.appointments}</p>
               <p className={`text-sm ${secondaryTextColor}`}>Rendez-vous</p>
             </div>
           </div>
           <div className="flex items-center gap-4 p-4">
-            <Activity className="w-8 h-8 text-orange-500" />
+            <Building className="w-8 h-8 text-orange-500" />
             <div>
               <p className={`text-lg font-semibold ${textColor}`}>{hospital.stats.departments}</p>
               <p className={`text-sm ${secondaryTextColor}`}>Départements</p>
@@ -160,7 +160,7 @@ export default function HospitalInfoPage() {
           </div>
           {hospital.website && (
             <div className="flex items-center gap-4">
-              <Activity className="w-6 h-6 text-orange-500" />
+              <Globe className="w-6 h-6 text-black-500" />
               <div>
                 <a 
                   href={hospital.website} 
