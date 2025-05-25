@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { deleteDoctorAvailability, getDoctorAvailabilities, upsertDoctorAvailability, updateSlotDurationForAllAvailabilities, updateSlotDurationForMultipleDoctorsTransactional } from "@/app/actions/doctor-actions";
+import { deleteDoctorAvailability, getDoctorAvailabilities, upsertDoctorAvailability, updateSlotDurationForAllAvailabilities,  updateAvailabilityForMultipleDoctors } from "@/app/actions/doctor-actions";
 import { toast } from "@/hooks/use-toast";
 
 type Doctor = {
@@ -48,6 +48,13 @@ export default function DoctorAvailabilityPage() {
     const [globalSlotDuration, setGlobalSlotDuration] = useState<number>(30);
     const [openMultiDoctorDialog, setOpenMultiDoctorDialog] = useState(false);
     const [selectedDoctors, setSelectedDoctors] = useState<string[]>([]);
+    const [multiDoctorFormData, setMultiDoctorFormData] = useState({
+        dayOfWeek: 1,
+        startTime: "09:00",
+        endTime: "17:00",
+        slotDuration: 30,
+        isActive: true,
+    });
     const [formData, setFormData] = useState({
         dayOfWeek: 1,
         startTime: "09:00",
@@ -60,6 +67,7 @@ export default function DoctorAvailabilityPage() {
         availabilities: false,
         form: false,
         slots: false,
+        multiDoctor: false,
     });
     const [deleteConfirmation, setDeleteConfirmation] = useState<{
         open: boolean;
@@ -91,7 +99,6 @@ export default function DoctorAvailabilityPage() {
         try {
             const data = await getDoctorAvailabilities(doctorId);
             setAvailabilities(data);
-            // Si des disponibilités existent, on prend la durée de créneau de la première
             if (data.length > 0) {
                 setGlobalSlotDuration(data[0].slotDuration);
             }
@@ -254,10 +261,8 @@ export default function DoctorAvailabilityPage() {
     const handleDayChange = (dayId: number) => {
         const usedDays = getUsedDays();
         if (editingAvailability) {
-            // Permet de changer le jour si on est en mode édition
             setFormData({ ...formData, dayOfWeek: dayId });
         } else if (!usedDays.includes(dayId)) {
-            // Permet de choisir un jour seulement s'il n'est pas déjà utilisé
             setFormData({ ...formData, dayOfWeek: dayId });
         } else {
             toast({
@@ -330,8 +335,7 @@ export default function DoctorAvailabilityPage() {
         );
     };
 
-    //modifier le slot de plusieurs médecins
-    const handleUpdateMultipleDoctorsSlotDuration = async () => {
+    const handleUpdateMultipleDoctorsAvailability = async () => {
         if (selectedDoctors.length === 0) {
             toast({
                 title: "Erreur",
@@ -341,16 +345,29 @@ export default function DoctorAvailabilityPage() {
             return;
         }
 
-        setIsLoading(prev => ({ ...prev, slots: true }));
+        if (!isValidTime(multiDoctorFormData.startTime, multiDoctorFormData.endTime)) {
+            toast({
+                title: "Erreur",
+                description: "L'heure de fin doit être après l'heure de début",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsLoading(prev => ({ ...prev, multiDoctor: true }));
         try {
-            const updatedCount = await updateSlotDurationForMultipleDoctorsTransactional(
+            const updatedCount = await updateAvailabilityForMultipleDoctors(
                 selectedDoctors,
-                globalSlotDuration
+                multiDoctorFormData.dayOfWeek,
+                multiDoctorFormData.startTime,
+                multiDoctorFormData.endTime,
+                multiDoctorFormData.slotDuration,
+                multiDoctorFormData.isActive
             );
 
             toast({
                 title: "Succès",
-                description: `Durée des créneaux mise à jour pour ${updatedCount} médecin(s)`,
+                description: `Disponibilité mise à jour pour ${updatedCount} médecin(s)`,
             });
 
             if (selectedDoctor) {
@@ -361,32 +378,28 @@ export default function DoctorAvailabilityPage() {
         } catch (error) {
             toast({
                 title: "Erreur",
-                description: "Échec de la mise à jour de la durée des créneaux",
+                description: "Échec de la mise à jour des disponibilités",
                 variant: "destructive"
             });
             console.error("Erreur lors de la mise à jour multiple:", error);
         } finally {
-            setIsLoading(prev => ({ ...prev, slots: false }));
+            setIsLoading(prev => ({ ...prev, multiDoctor: false }));
         }
     };
 
     return (
         <div className="p-4 space-y-4 mx-auto">
-            {/* affichage de skeleton lors du chargement */}
             {isLoading.doctors || isLoading.availabilities ? (
                 <div className="space-y-4 mb-4">
-                    {/* Titre + Select */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-pulse">
                         <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-60"></div>
                         <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full sm:w-72"></div>
                     </div>
 
-                    {/* Bouton ajouter */}
                     <div className="flex justify-end animate-pulse">
                         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
                     </div>
 
-                    {/* Tableau simulé */}
                     <div className="border rounded-lg overflow-hidden animate-pulse">
                         <div className="grid grid-cols-7 gap-2 p-4">
                             {DAYS.map((_, idx) => (
@@ -447,7 +460,16 @@ export default function DoctorAvailabilityPage() {
                                         Modifier créneaux du medecin
                                     </Button>
                                     <Button
-                                        onClick={() => setOpenMultiDoctorDialog(true)}
+                                        onClick={() => {
+                                            setMultiDoctorFormData({
+                                                dayOfWeek: 1,
+                                                startTime: "09:00",
+                                                endTime: "17:00",
+                                                slotDuration: globalSlotDuration,
+                                                isActive: true,
+                                            });
+                                            setOpenMultiDoctorDialog(true);
+                                        }}
                                         variant="outline"
                                         size="sm"
                                         className="ml-2"
@@ -477,7 +499,6 @@ export default function DoctorAvailabilityPage() {
                                                             {dayAvailabilities.length > 0 ? (
                                                                 <div className="space-y-2">
                                                                     {dayAvailabilities.map(avail => {
-
                                                                         return (
                                                                             <div
                                                                                 key={avail.id}
@@ -509,7 +530,6 @@ export default function DoctorAvailabilityPage() {
                                                                                 <div className="text-xs text-muted-foreground mb-1">
                                                                                     Créneaux de {avail.slotDuration} min
                                                                                 </div>
-
                                                                             </div>
                                                                         );
                                                                     })}
@@ -716,13 +736,14 @@ export default function DoctorAvailabilityPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            {/* Dialog pour modifier la durée des créneaux pour plusieurs médecins */}
+
+            {/* Dialog pour modifier la disponibilité pour plusieurs médecins */}
             <Dialog open={openMultiDoctorDialog} onOpenChange={setOpenMultiDoctorDialog}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Modifier la durée des créneaux pour plusieurs médecins</DialogTitle>
+                        <DialogTitle>Modifier la disponibilité pour plusieurs médecins</DialogTitle>
                         <DialogDescription>
-                            Sélectionnez les médecins à modifier et définissez la nouvelle durée des créneaux.
+                            Définissez une nouvelle plage horaire qui sera appliquée aux médecins sélectionnés.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -731,7 +752,7 @@ export default function DoctorAvailabilityPage() {
                             <MultiSelect
                                 options={doctors.map(d => ({
                                     value: d.id,
-                                    label: `${d.name}`
+                                    label: `${d.name} (${d.specialization})`
                                 }))}
                                 value={selectedDoctors}
                                 onChange={setSelectedDoctors}
@@ -740,15 +761,80 @@ export default function DoctorAvailabilityPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Nouvelle durée des créneaux (minutes)</Label>
+                            <Label>Jour</Label>
+                            <Select
+                                value={multiDoctorFormData.dayOfWeek.toString()}
+                                onValueChange={(val) => setMultiDoctorFormData({
+                                    ...multiDoctorFormData,
+                                    dayOfWeek: parseInt(val)
+                                })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner un jour" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DAYS.map(day => (
+                                        <SelectItem
+                                            key={day.id}
+                                            value={day.id.toString()}
+                                        >
+                                            {day.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Heure de début</Label>
+                                <Input
+                                    type="time"
+                                    value={multiDoctorFormData.startTime}
+                                    onChange={e => setMultiDoctorFormData({
+                                        ...multiDoctorFormData,
+                                        startTime: e.target.value
+                                    })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Heure de fin</Label>
+                                <Input
+                                    type="time"
+                                    value={multiDoctorFormData.endTime}
+                                    onChange={e => setMultiDoctorFormData({
+                                        ...multiDoctorFormData,
+                                        endTime: e.target.value
+                                    })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Durée des créneaux (minutes)</Label>
                             <Input
                                 type="number"
                                 min="5"
                                 max="120"
                                 step="5"
-                                value={globalSlotDuration}
-                                onChange={e => setGlobalSlotDuration(parseInt(e.target.value) || 30)}
+                                value={multiDoctorFormData.slotDuration}
+                                onChange={e => setMultiDoctorFormData({
+                                    ...multiDoctorFormData,
+                                    slotDuration: parseInt(e.target.value) || 30
+                                })}
                             />
+                        </div>
+
+                        <div className="flex items-center space-x-2 pt-2">
+                            <Switch
+                                id="multiIsActive"
+                                checked={multiDoctorFormData.isActive}
+                                onCheckedChange={val => setMultiDoctorFormData({
+                                    ...multiDoctorFormData,
+                                    isActive: val
+                                })}
+                            />
+                            <Label htmlFor="multiIsActive">Disponibilité active</Label>
                         </div>
                     </div>
                     <DialogFooter>
@@ -762,10 +848,10 @@ export default function DoctorAvailabilityPage() {
                             Annuler
                         </Button>
                         <Button
-                            onClick={handleUpdateMultipleDoctorsSlotDuration}
-                            disabled={isLoading.slots}
+                            onClick={handleUpdateMultipleDoctorsAvailability}
+                            disabled={isLoading.multiDoctor}
                         >
-                            {isLoading.slots ? (
+                            {isLoading.multiDoctor ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Enregistrement...

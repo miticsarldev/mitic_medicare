@@ -1,3 +1,4 @@
+import { AppointmentStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 export type Doctor = {
   id: string;
@@ -233,7 +234,7 @@ type PatientProfile = {
 type Appointment = {
   id: string;
   scheduledAt: Date;
-  status: string;
+  status: AppointmentStatus;
   reason: string | null;
   notes: string | null;
   startTime: Date | null;

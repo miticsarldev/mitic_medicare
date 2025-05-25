@@ -230,21 +230,22 @@ export function CreateAppointmentModal({
                                 </div>
                             ) : (
                                 <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-                                    {slots.map((time) => {
-                                        const isTaken = takenSlots.includes(time)
-                                        const isSelected = selectedSlot === time
-                                        return (
+                                    {slots.length === 0 ? (
+                                        <div className="text-sm text-muted-foreground">
+                                            Aucun créneau disponible pour ce médecin.
+                                        </div>
+                                    ) : (
+                                        slots.map((slot) => (
                                             <Button
-                                                key={time}
-                                                variant={isSelected ? "default" : "outline"}
-                                                size="sm"
-                                                disabled={isTaken}
-                                                onClick={() => setSelectedSlot(time)}
+                                                key={slot}
+                                                variant={selectedSlot === slot ? "default" : "outline"}
+                                                onClick={() => setSelectedSlot(slot)}
+                                                disabled={takenSlots.includes(slot)}
                                             >
-                                                {time}
+                                                {slot}
                                             </Button>
-                                        )
-                                    })}
+                                        ))
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -132,7 +132,7 @@ export default function AdminReviewPage() {
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -154,14 +154,11 @@ export default function AdminReviewPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [statusFilter, targetFilter, pagination.currentPage, searchQuery]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            await fetchReviews();
-        };
-        fetchData();
-    }, [statusFilter, targetFilter, pagination.currentPage, searchQuery, fetchReviews]);
+        fetchReviews();
+    }, [fetchReviews]);
 
     const formatDate = (dateString: string) => {
         return format(new Date(dateString), "PPpp", { locale: fr });
@@ -191,18 +188,6 @@ export default function AdminReviewPage() {
 
                 {/* Filtres et recherche */}
                 <div className="flex flex-col md:flex-row gap-4">
-                    {/* <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Rechercher un avis..."
-                            className="pl-9"
-                            value={searchQuery}
-                            onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                setPagination(prev => ({ ...prev, currentPage: 1 }));
-                            }}
-                        />
-                    </div> */}
 
                     <Select
                         value={statusFilter}
