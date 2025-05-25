@@ -747,7 +747,3 @@ export async function updateAvailabilityForMultipleDoctors(
   }
 }
 
-// Fonction utilitaire pour valider le format d'heure
-function isValidTime(time: string): boolean {
-  return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
-}
