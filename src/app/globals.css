@@ -12,6 +12,64 @@ body {
   }
 }
 
+/* styles/globals.css */
+.dark-calendar .rbc-calendar {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+.dark-calendar .rbc-header {
+  background-color: #111827;
+  color: #f3f4f6;
+  border-bottom: 1px solid #374151;
+}
+
+.dark-calendar .rbc-day-bg + .rbc-day-bg,
+.dark-calendar .rbc-month-row + .rbc-month-row {
+  border-color: #374151;
+}
+
+.dark-calendar .rbc-off-range-bg {
+  background-color: #1f2937;
+}
+
+.dark-calendar .rbc-today {
+  background-color: #1e40af20;
+}
+
+.dark-calendar .rbc-btn-group button {
+  color: #f3f4f6;
+  background-color: #111827;
+  border-color: #374151;
+}
+
+.dark-calendar .rbc-btn-group button.rbc-active {
+  background-color: #1d4ed8;
+}
+
+.dark-calendar .rbc-event {
+  color: #f3f4f6;
+}
+
+/* Styles pour react-date-range en mode sombre */
+.rdrDateRangePickerWrapper.dark {
+  --rdr-background-color: #1f2937;
+  --rdr-month-background-color: #1f2937;
+  --rdr-day-passive-color: #6b7280;
+  --rdr-day-number-color: #f3f4f6;
+  --rdr-day-disabled-color: #4b5563;
+  --rdr-in-range-background-color: #1d4ed8;
+  --rdr-selected-background-color: #1e40af;
+  --rdr-day-hover-background-color: #374151;
+  --rdr-day-active-background-color: #1e40af;
+  --rdr-border-color: #374151;
+  --rdr-input-background-color: #111827;
+  --rdr-input-text-color: #f3f4f6;
+  --rdr-input-border-color: #374151;
+  --rdr-week-day-color: #9ca3af;
+  --rdr-day-current-color: #3b82f6;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
