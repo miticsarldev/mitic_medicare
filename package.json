@@ -69,6 +69,7 @@
     "nodemailer": "^6.10.0",
     "react": "^18",
     "react-big-calendar": "^1.18.0",
+    "react-date-range": "^2.0.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",
     "react-email": "^3.0.7",

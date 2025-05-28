@@ -472,6 +472,9 @@ export const hospitalDoctorNavItems = [
       {
         title: "Sécurité & Confidentialité",
         url: "/dashboard/hopital_doctor/settings/security",
+      },{
+        title: "Avis & Feedback",
+        url: "/dashboard/hopital_doctor/settings/reviews",
       },
     ],
   },

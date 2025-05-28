@@ -77,10 +77,7 @@ export async function GET() {
           orderBy: { dayOfWeek: "asc" },
         },
         appointments: {
-          where: {
-            status: { in: ["PENDING", "CONFIRMED"] },
-            scheduledAt: { gte: new Date() },
-          },
+          // Suppression des filtres pour obtenir tous les rendez-vous
           select: {
             id: true,
             scheduledAt: true,
@@ -137,7 +134,7 @@ export async function GET() {
         department: doctor.department?.name,
         specialization: doctor.specialization,
         availabilities: doctor.availabilities,
-        appointments: doctor.appointments,
+        appointments: doctor.appointments, // Maintenant avec tous les rendez-vous
       },
     };
     return NextResponse.json(response);
