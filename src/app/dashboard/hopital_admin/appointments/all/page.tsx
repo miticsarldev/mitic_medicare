@@ -28,6 +28,8 @@ import { format } from "date-fns"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { fr } from "date-fns/locale";
+
 
 //interface pour prescription
 interface Prescription {
@@ -333,7 +335,7 @@ export default function AppointmentsTable() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <CalendarDays className="w-4 h-4" />
-                                                {format(new Date(appt.scheduledAt), 'PPpp')}
+                                                {format(new Date(appt.scheduledAt), 'PPpp', { locale: fr })}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Badge className={STATUS_COLORS[appt.status as keyof typeof STATUS_COLORS] || "bg-gray-100"}>
@@ -500,7 +502,7 @@ export default function AppointmentsTable() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <p className="font-semibold">Date</p>
-                                                    <p>{format(new Date(selectedAppointment.scheduledAt), 'PPpp')}</p>
+                                                    <p>{format(new Date(selectedAppointment.scheduledAt), 'PPpp', {locale : fr})}</p>
                                                 </div>
                                                 <div>
                                                     <p className="font-semibold">Motif</p>
@@ -563,14 +565,14 @@ export default function AppointmentsTable() {
                                                             <p className="mt-2">
                                                                 <span className="font-semibold">Date de suivi: </span>
                                                                 {selectedAppointment.medicalRecord.followUpDate
-                                                                    ? format(new Date(selectedAppointment.medicalRecord.followUpDate), "PPpp")
+                                                                    ? format(new Date(selectedAppointment.medicalRecord.followUpDate), "PPpp", {locale: fr})
                                                                     : "Non précisée"}
                                                             </p>
                                                         )}
                                                     </div>
                                                     <div>
                                                         <p className="font-semibold">Dernière mise à jour</p>
-                                                        <p>{format(new Date(selectedAppointment.medicalRecord.updatedAt), "PPpp")}</p>
+                                                        <p>{format(new Date(selectedAppointment.medicalRecord.updatedAt), "PPpp",{locale: fr})}</p>
                                                     </div>
                                                 </div>
 
@@ -588,7 +590,7 @@ export default function AppointmentsTable() {
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="font-medium truncate">{file.fileName}</p>
                                                                         <p className="text-xs text-muted-foreground">
-                                                                            {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), "PP")}
+                                                                            {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), "PP", {locale: fr})}
                                                                         </p>
                                                                     </div>
                                                                     <Button

@@ -12,7 +12,6 @@ import {
   Phone,
   MapPin,
   Star,
-  Notebook,
   CheckCircle2,
   Building2,
   Award,
@@ -21,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DoctorType } from "@/types/doctor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AppointmentStatus } from "@prisma/client";
 
 export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
 
@@ -33,6 +33,23 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
       .join("")
       .toUpperCase();
   };
+
+  const translateStatus = (status: AppointmentStatus) => {
+    switch (status) {
+      case "CONFIRMED":
+        return "Confirmé";
+      case "PENDING":
+        return "En attente";
+      case "CANCELED":
+        return "Annulé";
+      case "COMPLETED":
+        return "Terminé";
+      case "NO_SHOW":
+        return "Absent";
+      default:
+        return status;
+    }
+  }
 
   if (!doctor) return <div className="p-4 text-center">Chargement...</div>;
 
@@ -82,7 +99,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                 </h1>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
                   <Badge variant="secondary" className="text-primary">
-                     {doctor.specialization}
+                    {doctor.specialization}
                   </Badge>
                   {doctor.isVerified && (
                     <Badge
@@ -210,7 +227,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                                   Motif : {appt.reason || "Aucun motif fourni."}
                                 </div>
                               </div>
-                              <Badge variant="secondary">{appt.status}</Badge>
+                              <Badge variant="secondary">{translateStatus(appt.status)}</Badge>
                             </div>
                           </Card>
                         ))}
@@ -243,9 +260,6 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                     </div>
                     <div className="flex items-center gap-2">
                       <Star className="w-4 h-4" /> Note moyenne : {doctor.averageRating.toFixed(1)} ({doctor.reviewsCount} avis)
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Notebook className="w-4 h-4" /> Disponible pour le chat : {doctor.availableForChat ? 'Oui' : 'Non'}
                     </div>
                   </CardContent>
                 </TabsContent>

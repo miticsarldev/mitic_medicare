@@ -11,12 +11,16 @@ import {
   Mail,
   Phone,
   MapPin,
-  Star,
-  Notebook,
   HeartPulse,
   FileText,
   History,
   FileSearch,
+  FilePlus2,
+  Download,
+  FileImage,
+  FileArchive,
+  FileVideo,
+  File,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Patient } from "@/types/patient";
@@ -24,8 +28,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CreateAppointmentModal } from "./CreateAppointmentModal";
 import { AppointmentStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 type Appointment = {
   id: string;
@@ -70,25 +76,25 @@ type Appointment = {
       uploadedAt: Date;
     }[];
     prescription?: {
+      id: string;
+      medicationName: string;
+      dosage: string;
+      frequency: string;
+      duration?: string;
+      instructions?: string;
+      isActive: boolean;
+      startDate: Date;
+      endDate?: Date;
+      createdAt: Date;
+      updatedAt: Date;
+      doctor: {
         id: string;
-        medicationName: string;
-        dosage: string;
-        frequency: string;
-        duration?: string;
-        instructions?: string;
-        isActive: boolean;
-        startDate: Date;
-        endDate?: Date;
-        createdAt: Date;
-        updatedAt: Date;
-        doctor: {
+        user: {
           id: string;
-          user: {
-            id: string;
-            name: string;
-          };
+          name: string;
         };
-      }[];
+      };
+    }[];
   };
 };
 
@@ -103,6 +109,18 @@ type MedicalHistory = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+const FILE_ICONS = {
+  'application/pdf': <FileText className="w-5 h-5" />,
+  'application/msword': <FileText className="w-5 h-5" />,
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': <FileText className="w-5 h-5" />,
+  'image/jpeg': <FileImage className="w-5 h-5" />,
+  'image/png': <FileImage className="w-5 h-5" />,
+  'application/zip': <FileArchive className="w-5 h-5" />,
+  'application/x-rar-compressed': <FileArchive className="w-5 h-5" />,
+  'video/mp4': <FileVideo className="w-5 h-5" />,
+  default: <File className="w-5 h-5" />
+}
 
 export default function PatientProfilePage({ patient }: { patient: Patient }) {
   const [appointments, setAppointments] = useState<Appointment[]>(patient.appointments || []);
@@ -127,9 +145,63 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
   const statusColors = {
     CONFIRMED: "bg-green-100 text-green-800",
     PENDING: "bg-yellow-100 text-yellow-800",
-    CANCELLED: "bg-red-100 text-red-800",
+    CANCELED: "bg-red-100 text-red-800",
     COMPLETED: "bg-blue-100 text-blue-800",
+    NO_SHOW: "bg-gray-100 text-gray-800",
+    DEFAULT: "bg-gray-100 text-gray-800",
   };
+
+  // historique statu "ACTIVE", "RESOLVED", "CHRONIC"
+  const historiqueColors = {
+    ACTIVE : "bg-green-100 text-green-800",
+    RESOLVED : "bg-blue-100 text-blue-800",
+    CHRONIC : "bg-yellow-100 text-yellow-800",
+  }
+
+  // Traduction des statuts de l'istorique 
+  const translateHistorique = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return "Actif";
+      case "RESOLVED":
+        return "Résolu";
+      case "CHRONIC":
+        return "Chronique";
+      default:
+        return status;
+    }
+  }
+
+
+  const translateStatus = (status: AppointmentStatus) => {
+    switch (status) {
+      case "CONFIRMED":
+        return "Confirmé";
+      case "PENDING":
+        return "En attente";
+      case "CANCELED":
+        return "Annulé";
+      case "COMPLETED":
+        return "Terminé";
+      case "NO_SHOW":
+        return "Absent";
+      default:
+        return status;
+    }
+  }
+
+  const getFileIcon = (fileType: string) => {
+    const icon = Object.entries(FILE_ICONS).find(([key]) => fileType.includes(key.split('/')[1]));
+    return icon ? icon[1] : FILE_ICONS.default;
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -268,7 +340,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                               </div>
                               <div className="flex flex-col sm:items-end gap-2">
                                 <Badge className={`${statusColors[appt.status]} capitalize`}>
-                                  {appt.status.toLowerCase()}
+                                  {translateStatus(appt.status)}
                                 </Badge>
                                 {appt.medicalRecord && (
                                   <Button
@@ -319,18 +391,6 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 {patient.user.profile?.city}, {patient.user.profile?.zipCode}
                               </p>
                             </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-medium text-muted-foreground">Assurance</h3>
-                          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                            <Notebook className="h-5 w-5 text-primary" />
-                            <span>{patient.insuranceProvider || 'Non renseignée'}</span>
-                          </div>
-                          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                            <Star className="h-5 w-5 text-primary" />
-                            <span>{patient.insuranceNumber || 'Non renseigné'}</span>
                           </div>
                         </div>
                       </div>
@@ -437,8 +497,8 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 )}
                               </div>
                               <div className="flex flex-col items-end gap-2">
-                                <Badge variant="outline" className="capitalize">
-                                  {history.status.toLowerCase()}
+                                <Badge variant="outline" className={`${historiqueColors[history.status]} capitalize`}>
+                                  {translateHistorique(history.status)}
                                 </Badge>
                                 {history.diagnosedDate && (
                                   <p className="text-xs text-muted-foreground">
@@ -480,6 +540,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                 selected={selectedDate}
                 onSelect={(day) => day && setSelectedDate(day)}
                 className="rounded-md border"
+                locale={fr}
               />
               <CreateAppointmentModal
                 patientId={patient.id}
@@ -494,7 +555,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
             <CardHeader>
               <CardTitle>Statistiques</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-center">
+            <CardContent className="grid grid-cols-3 gap-4 text-center">
               <div className="space-y-1">
                 <div className="text-2xl font-bold">{appointments.length}</div>
                 <div className="text-sm text-muted-foreground">Rendez-vous</div>
@@ -509,6 +570,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
               </div>
             </CardContent>
           </Card>
+
         </div>
       </div>
 
@@ -516,99 +578,119 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
       <Dialog open={!!selectedMedicalRecord} onOpenChange={(open) => !open && setSelectedMedicalRecord(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedMedicalRecord && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Dossier médical</DialogTitle>
-              </DialogHeader>
+            <div className="space-y-4">
+              <h3 className="font-medium flex items-center gap-2 text-lg">
+                <FilePlus2 className="w-5 h-5" />
+                Dossier médical
+              </h3>
 
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-medium mb-2">Diagnostic</h3>
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    {selectedMedicalRecord.diagnosis || 'Non spécifié'}
+              <div className="pl-6 space-y-6 text-sm">
+                {/* Diagnostic et traitement */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="font-semibold">Diagnostic</p>
+                    <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
+                      {selectedMedicalRecord.diagnosis}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-semibold">Traitement</p>
+                    <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
+                      {selectedMedicalRecord.treatment}
+                    </p>
                   </div>
                 </div>
 
-                {selectedMedicalRecord.treatment && (
-                  <div>
-                    <h3 className="font-medium mb-2">Traitement</h3>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      {selectedMedicalRecord.treatment}
-                    </div>
-                  </div>
-                )}
+                {/* Notes complémentaires */}
+                <div>
+                  <p className="font-semibold">Notes complémentaires</p>
+                  <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
+                    {selectedMedicalRecord.notes || "Aucune note supplémentaire"}
+                  </p>
+                </div>
 
-                {selectedMedicalRecord.notes && (
+                {/* Suivi et mise à jour */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="font-medium mb-2">Notes</h3>
-                    <div className="p-4 bg-muted/50 rounded-lg whitespace-pre-line">
-                      {selectedMedicalRecord.notes}
-                    </div>
+                    <p className="font-semibold">Suivi nécessaire</p>
+                    <p>{selectedMedicalRecord.followUpNeeded ? "Oui" : "Non"}</p>
+                    {selectedMedicalRecord.followUpNeeded && (
+                      <p className="mt-2">
+                        <span className="font-semibold">Date de suivi: </span>
+                        {selectedMedicalRecord.followUpDate
+                          ? format(new Date(selectedMedicalRecord.followUpDate), "PPpp", { locale: fr })
+                          : "Non précisée"}
+                      </p>
+                    )}
                   </div>
-                )}
-
-                {selectedMedicalRecord.followUpNeeded && (
                   <div>
-                    <h3 className="font-medium mb-2">Suivi</h3>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p>Un suivi est nécessaire</p>
-                      {selectedMedicalRecord.followUpDate && (
-                        <p className="mt-2">
-                          Date de suivi: {new Date(selectedMedicalRecord.followUpDate).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
+                    <p className="font-semibold">Dernière mise à jour</p>
+                    <p>{format(new Date(selectedMedicalRecord.updatedAt), "PPpp", { locale: fr })}</p>
                   </div>
-                )}
+                </div>
 
-                {selectedMedicalRecord.attachments?.length > 0 && (
-                  <div>
-                    <h3 className="font-medium mb-2">Pièces jointes ({selectedMedicalRecord.attachments.length})</h3>
-                    <div className="space-y-2">
-                      {selectedMedicalRecord.attachments.map((att) => (
-                        <div key={att.id} className="p-3 border rounded-lg flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{att.fileName}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {att.fileType} • {(att.fileSize / 1024).toFixed(1)} KB
-                              </p>
-                            </div>
+                {/* Pièces jointes */}
+                <div className="space-y-3">
+                  <p className="font-semibold">Pièces jointes ({selectedMedicalRecord.attachments.length})</p>
+                  {selectedMedicalRecord.attachments.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedMedicalRecord.attachments.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex-shrink-0">{getFileIcon(file.fileType)}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{file.fileName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), "PP")}
+                            </p>
                           </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={att.fileUrl} target="_blank" rel="noopener noreferrer">
-                              Voir
-                            </a>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => window.open(file.fileUrl, "_blank")}
+                          >
+                            <Download className="h-4 w-4" />
                           </Button>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="p-4 bg-muted/30 text-sm text-muted-foreground rounded-md">
+                      Aucune pièce jointe disponible pour ce rendez-vous.
+                    </div>
+                  )}
+                </div>
 
-                {selectedMedicalRecord.prescription && selectedMedicalRecord.prescription.length > 0 && (
-                  <div>
-                    <h3 className="font-medium mb-2">Prescriptions ({selectedMedicalRecord.prescription.length})</h3>
-                    <div className="space-y-2">
-                      {selectedMedicalRecord.prescription.map((presc) => (
-                        <div key={presc.id} className="p-3 border rounded-lg flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{presc.medicationName}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {presc.dosage} • {presc.frequency} • {presc.duration}
-                              </p>
-                            </div>
+                {/* Prescriptions */}
+                <div className="space-y-3 pt-4">
+                  <p className="font-semibold">Prescriptions ({selectedMedicalRecord.prescription?.length || 0})</p>
+                  {(selectedMedicalRecord.prescription?.length ?? 0) > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedMedicalRecord.prescription?.map((prescription) => (
+                        <div
+                          key={prescription.id}
+                          className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{prescription.medicationName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {prescription.dosage} • {prescription.frequency} • {prescription.duration}
+                            </p>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="p-4 bg-muted/30 text-sm text-muted-foreground rounded-md">
+                      Aucune prescription enregistrée pour ce rendez-vous.
+                    </div>
+                  )}
+                </div>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>

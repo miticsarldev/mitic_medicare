@@ -686,42 +686,64 @@ export async function updateSlotDurationForAllAvailabilities(doctorId: string, s
 }
 
 /**
- * Met à jour la durée des créneaux pour plusieurs médecins en transaction
+ * Met à jour ou crée les disponibilités pour plusieurs médecins en transaction
  * @param doctorIds - Tableau des IDs des médecins à mettre à jour
- * @param slotDuration - Nouvelle durée des créneaux (en minutes)
- * @returns Le nombre de médecins distincts modifiés
+ * @param dayOfWeek - Jour de la semaine (0-6)
+ * @param startTime - Heure de début (format HH:MM)
+ * @param endTime - Heure de fin (format HH:MM)
+ * @param slotDuration - Durée des créneaux (en minutes)
+ * @param isActive - Si la disponibilité est active
+ * @returns Le nombre de médecins distincts modifiés/créés
  */
-export async function updateSlotDurationForMultipleDoctorsTransactional(
+export async function updateAvailabilityForMultipleDoctors(
   doctorIds: string[],
-  slotDuration: number
+  dayOfWeek: number,
+  startTime: string,
+  endTime: string,
+  slotDuration: number,
+  isActive: boolean
 ): Promise<number> {
-  // Validation des entrées
-  if (!Array.isArray(doctorIds)) {
-    throw new Error("doctorIds must be an array");
-  }
-  if (doctorIds.length === 0) {
-    throw new Error("doctorIds array cannot be empty");
-  }
-  if (typeof slotDuration !== 'number' || slotDuration <= 0) {
-    throw new Error("slotDuration must be a positive number");
-  }
+  // Validation des entrées...
 
   try {
-    const results = await prisma.$transaction(
+    // Pré-collecter les IDs existants pour chaque doctorId
+    const existingAvailabilities = await Promise.all(
       doctorIds.map(doctorId =>
-        prisma.doctorAvailability.updateMany({
-          where: { doctorId },
-          data: { slotDuration }
+        prisma.doctorAvailability.findFirst({
+          where: { doctorId, dayOfWeek },
+          select: { id: true }
         })
       )
     );
 
-    // Calcul du nombre de médecins distincts modifiés
-    const modifiedDoctorsCount = results.filter(result => result.count > 0).length;
-    return modifiedDoctorsCount;
+    const results = await prisma.$transaction(
+      doctorIds.map((doctorId, idx) =>
+        prisma.doctorAvailability.upsert({
+          where: {
+            id: existingAvailabilities[idx]?.id ?? '', // Fournir une valeur par défaut qui forcera la création
+          },
+          update: {
+            startTime,
+            endTime,
+            slotDuration,
+            isActive,
+          },
+          create: {
+            doctorId,
+            dayOfWeek,
+            startTime,
+            endTime,
+            slotDuration,
+            isActive,
+          },
+        })
+      )
+    );
 
+    return results.length;
   } catch (error) {
     console.error("Transaction error:", error);
-    throw new Error("Failed to update doctors' slot durations");
+    throw new Error("Failed to update doctors' availabilities");
   }
 }
+
