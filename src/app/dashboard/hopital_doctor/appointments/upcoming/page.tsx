@@ -1,522 +1,545 @@
+
 "use client";
-import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Calendar, Clock, MapPin, User, Info, Stethoscope } from "lucide-react";
-import { useTheme } from "next-themes";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+
+import { useState, useEffect } from "react";
+import { Calendar, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MedicalRecordModal } from "@/components/record";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast"
+import { Appointment, AppointmentsResponse, } from "@/types/appointment";
+import { AppointmentStatus } from "@prisma/client";
+import { ConfirmModal } from "../components/confirm-modal";
+import { CancelModal } from "../components/cancel-modal";
+import { CompleteModal } from "../components/complete-modal";
+import { DetailsModal } from "../components/details-modal";
 
-type Appointment = {
-  id: string;
-  patientName: string;
-  patientEmail: string;
-  patientPhone: string;
-  age: number;
-  bloodType: string;
-  hospitalName: string;
-  hospitalLocation: string;
-  scheduledAt: string;
-  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELED" | "NO_SHOW";
-  type: string;
-  reason: string;
-  notes: string;
-  medicalRecord?: {
-    diagnosis: string;
-    treatment: string;
-  } | null;
-};
+const statusOptions = [
+  { value: "ALL", label: "Tous les statuts" },
+  { value: "PENDING", label: "En attente" },
+  { value: "CONFIRMED", label: "Confirmé" },
+  { value: "COMPLETED", label: "Terminé" },
+  { value: "CANCELED", label: "Annulé" },
+  { value: "NO_SHOW", label: "Absent" },
+];
 
-const DoctorAppointments = () => {
-  const { theme } = useTheme();
+export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [filterStatus, setFilterStatus] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    completed: 0,
+    canceled: 0,
+  });
+  const [filters, setFilters] = useState({
+    status: "ALL",
+    patientName: "",
+    date: null as Date | null,
+  });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    totalItems: 0,
+    totalPages: 1,
+  });
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isMedicalRecordModalOpen, setIsMedicalRecordModalOpen] = useState(false);
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
+  const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "details" | null>(null);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch("/api/hospital_doctor/patient");
-        if (!response.ok) {
-          throw new Error("Erreur lors de la récupération des rendez-vous");
-        }
-        const data = await response.json();
-        setAppointments(data);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des rendez-vous :", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAppointments();
-  }, []);
+    fetchStats();
+  }, [pagination.currentPage, filters]);
 
-  const calculateStats = () => {
-    const totalAppointments = appointments.length;
-    const completedAppointments = appointments.filter(a => a.status === "COMPLETED").length;
-    const pendingAppointments = appointments.filter(a => a.status === "PENDING").length;
-    const confirmedAppointments = appointments.filter(a => a.status === "CONFIRMED").length;
-    const canceledAppointments = appointments.filter(a => a.status === "CANCELED").length;
-    
-    const completionRate = totalAppointments > 0 
-      ? Math.round((completedAppointments / totalAppointments) * 100) 
-      : 0;
-    
-    const cancellationRate = totalAppointments > 0 
-      ? Math.round((canceledAppointments / totalAppointments) * 100) 
-      : 0;
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      let url = `/api/hospital_doctor/appointments/all?page=${pagination.currentPage}&pageSize=${pagination.pageSize}`;
 
-    return {
-      total: totalAppointments,
-      completed: completedAppointments,
-      pending: pendingAppointments,
-      confirmed: confirmedAppointments,
-      canceled: canceledAppointments,
-      completionRate,
-      cancellationRate,
-    };
+      if (filters.status !== "ALL") {
+        url += `&status=${filters.status}`;
+      }
+      if (filters.patientName) {
+        url += `&patientName=${encodeURIComponent(filters.patientName)}`;
+      }
+      if (filters.date) {
+        url += `&date=${filters.date.toISOString().split('T')[0]}`;
+      }
+
+      const res = await fetch(url);
+      const data: AppointmentsResponse = await res.json();
+      setAppointments(data.appointments);
+      setPagination({
+        currentPage: data.pagination.currentPage,
+        pageSize: data.pagination.pageSize,
+        totalItems: data.pagination.totalItems,
+        totalPages: data.pagination.totalPages,
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les rendez-vous",
+        variant: "destructive",
+      });
+      console.error("Error fetching appointments:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const stats = calculateStats();
-
-  const filteredAppointments = appointments.filter((app) => {
-    const statusMatch = filterStatus === "all" || app.status.toLowerCase() === filterStatus.toLowerCase();
-    return statusMatch;
-  });
-
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentAppointments = filteredAppointments.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  const handleAppointmentStatus = async (appointmentId: string, newStatus: "CONFIRMED" | "COMPLETED" | "CANCELED") => {
+  const fetchStats = async () => {
     try {
-      const response = await fetch(`/api/hospital_doctor/appointments/${appointmentId}/status`, {
+      const res = await fetch("/api/hospital_doctor/appointments/stats");
+      const data = await res.json();
+      setStats(data);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  
+  const handleStatusUpdate = async (data: {
+    appointmentId: string;
+    action: "confirm" | "canceled" | "complete";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    medicalRecord?: any;
+  }) => {
+    try {
+      const response = await fetch("/api/hospital_doctor/appointments/update-status", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify(data),
       });
-  
-      if (response.ok) {
-        setAppointments(appointments.map(app => 
-          app.id === appointmentId ? { ...app, status: newStatus } : app
-        ));
-        setIsModalOpen(false);
+
+      if (!response.ok) {
+        throw new Error("Échec de la mise à jour");
       }
+
+      toast({
+        title: "Succès",
+        description: "Rendez-vous mis à jour avec succès",
+      });
+
+      fetchAppointments();
+      fetchStats();
+      setModalType(null);
     } catch (error) {
-      console.error("Erreur lors de la mise à jour du statut:", error);
+      toast({
+        title: "Erreur",
+        description: "Échec de la mise à jour du rendez-vous",
+        variant: "destructive",
+      });
+      console.error("Error updating appointment status:", error);
     }
   };
 
-  const openAppointmentDetails = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setIsModalOpen(true);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, currentPage: newPage }));
+    }
   };
 
-  const getStatusBadge = (status: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleFilterChange = (key: keyof typeof filters, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      status: "ALL",
+      patientName: "",
+      date: null,
+    });
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
+
+  const getStatusBadge = (status: AppointmentStatus) => {
     switch (status) {
-      case "COMPLETED":
-        return <Badge className="bg-green-500 hover:bg-green-600">Terminé</Badge>;
+      case "PENDING":
+        return <Badge variant="secondary">En attente</Badge>;
       case "CONFIRMED":
         return <Badge className="bg-blue-500 hover:bg-blue-600">Confirmé</Badge>;
-      case "PENDING":
-        return <Badge variant="outline" className="text-amber-500 border-amber-500">En attente</Badge>;
       case "CANCELED":
         return <Badge variant="destructive">Annulé</Badge>;
+      case "COMPLETED":
+        return <Badge className="bg-green-500 hover:bg-green-600">Terminé</Badge>;
       case "NO_SHOW":
-        return <Badge className="bg-purple-500 hover:bg-purple-600">Non présenté</Badge>;
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Absent</Badge>;
       default:
         return <Badge variant="outline">Inconnu</Badge>;
     }
   };
 
   return (
-    <div className={`min-h-screen p-6 ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
-      <div className={`p-6 rounded-lg shadow-lg ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <h1 className="text-2xl font-bold flex items-center">
-            <Calendar className="mr-2" size={24} /> Rendez-vous Médicaux
-          </h1>
-          <div className="mt-4 md:mt-0 flex gap-4">
-            <select 
-              value={filterStatus} 
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                setCurrentPage(1); // Reset to first page when filter changes
-              }} 
-              className="border rounded-md px-3 py-2"
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Gestion des Rendez-vous</h1>
+      </div>
+
+      {/* Cartes Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <StatCard
+          title="Total RDV"
+          value={stats.total}
+          icon={<FileText className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="En attente"
+          value={stats.pending}
+          icon={<Clock className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Confirmés"
+          value={stats.confirmed}
+          icon={<Check className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Terminés"
+          value={stats.completed}
+          icon={<Stethoscope className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Annulés"
+          value={stats.canceled}
+          icon={<X className="h-6 w-6 text-muted-foreground" />}
+        />
+      </div>
+
+      {/* Zone de Filtres */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg">Filtres</CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
             >
-              <option value="all">Tous</option>
-              <option value="pending">En attente</option>
-              <option value="confirmed">Confirmé</option>
-              <option value="canceled">Annulés</option>
-              <option value="completed">Terminés</option>
-            </select>
+              Réinitialiser
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Statut</label>
+              <Select
+                value={filters.status}
+                onValueChange={(value) => handleFilterChange("status", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Section des statistiques */}
-      <div className={`mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 ${theme === "dark" ? "bg-gray-800" : "bg-white"} p-6 rounded-lg shadow-lg`}>
-        {/* Total des rendez-vous */}
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-3 h-3 rounded-full bg-blue-700"></div>
-            <h3 className="text-gray-500 text-sm">Total des rendez-vous</h3>
-          </div>
-           <p className="text-2xl font-bold">{stats.total}</p>
-           <p className="text-sm bg-blue-50 text-blue-700 border-blue-200">Rendez-vous Total</p>
-        </div>
-        
-        {/* Rendez-vous confirmés */}
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-3 h-3 rounded-full bg-blue-400"></div>
-            <h3 className="text-gray-500 text-sm">Confirmés</h3>
-          </div>
-          <p className="text-2xl font-bold">{stats.confirmed}</p>
-          <p className="text-sm bg-blue-50 text-blue-500 border-blue-200">{stats.confirmed} à Confirmer</p>
-        </div>
-        
-        {/* Rendez-vous terminés */}
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <h3 className="text-gray-500 text-sm">Terminés</h3>
-          </div>
-          <p className="text-2xl font-bold">{stats.completed}</p>
-          <p className="text-sm text-green-500">{stats.completionRate}% de taux de complétion</p>
-        </div>
-        
-        {/* Rendez-vous annulés */}
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <h3 className="text-gray-500 text-sm">Annulés</h3>
-          </div>
-          <p className="text-2xl font-bold">{stats.canceled}</p>
-          <p className="text-sm text-red-500">{stats.cancellationRate}% de taux d&aposannulation</p>
-        </div>
-      </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Nom du patient</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un patient..."
+                  className="pl-9"
+                  value={filters.patientName}
+                  onChange={(e) => handleFilterChange("patientName", e.target.value)}
+                />
+              </div>
+            </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1">Date</label>
+              <Input
+                type="date"
+                value={filters.date ? filters.date.toISOString().split('T')[0] : ""}
+                onChange={(e) => handleFilterChange("date", e.target.value ? new Date(e.target.value) : null)}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Liste des rendez-vous */}
       {loading ? (
-        <p className="text-center mt-6">Chargement des rendez-vous...</p>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 rounded-lg" />
+          ))}
+        </div>
+      ) : appointments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <FileText className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">Aucun rendez-vous trouvé</h3>
+          <p className="text-gray-500 mt-1">Aucun rendez-vous ne correspond à vos critères de recherche.</p>
+        </div>
       ) : (
         <>
-          <div className="mt-6 space-y-4">
-            {currentAppointments.length > 0 ? (
-              currentAppointments.map((appointment) => (
-                <div 
-                  key={appointment.id} 
-                  className={`p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-start md:items-center border-l-4 ${
-                    appointment.status === "COMPLETED" ? "border-green-500" :
-                    appointment.status === "CONFIRMED" ? "border-blue-500" :
-                    appointment.status === "CANCELED" ? "border-red-500" :
-                    "border-gray-300"
-                  } ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}
-                >
-                  <div className="mb-4 md:mb-0 flex-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-lg font-semibold">{appointment.patientName}</h3>
-                      <div className="md:hidden">
-                        {getStatusBadge(appointment.status)}
-                      </div>
-                    </div>
-                    <p className="text-gray-500 flex items-center mt-2">
-                      <User className="mr-2" size={16} /> {appointment.age} ans • {appointment.bloodType}
-                    </p>
-                    <p className="text-gray-500 flex items-center mt-1">
-                      <Clock className="mr-2" size={16} /> 
-                      {new Date(appointment.scheduledAt).toLocaleString('fr-FR', {
-                        day: 'numeric',
-                        month: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                    <p className="text-gray-500 flex items-center mt-1">
-                      <MapPin className="mr-2" size={16} /> {appointment.hospitalName}
-                    </p>
-                    <p className="text-gray-500 mt-1">Motif : {appointment.reason}</p>
-                    <div className="mt-2">
-                      <p className="text-gray-500">Statut : {getStatusBadge(appointment.status)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col md:flex-row gap-3 items-end">
-                    {/* <div className="hidden md:block">
-                      {getStatusBadge(appointment.status)}
-                    </div> */}
-                    
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => openAppointmentDetails(appointment)}
-                        className="flex items-center border border-blue-500 text-blue-500 px-4 py-2 rounded-md hover:bg-blue-500 hover:text-white"
-                      >
-                        <Info className="mr-2" size={18} /> Détails
-                      </button>
-                      
-                      {appointment.status === "PENDING" ? (
-                        <>
-                          <button 
-                            onClick={() => handleAppointmentStatus(appointment.id, "CONFIRMED")}
-                            className="flex items-center justify-center border border-green-500 text-green-500 px-4 py-2 rounded-md hover:bg-green-500 hover:text-white"
-                          >
-                            <CheckCircle className="mr-2" size={18} /> Accepter
-                          </button>
-                          <button 
-                            onClick={() => handleAppointmentStatus(appointment.id, "CANCELED")}
-                            className="flex items-center justify-center border border-red-500 text-red-500 px-4 py-2 rounded-md hover:bg-red-500 hover:text-white"
-                          >
-                            <XCircle className="mr-2" size={18} /> Refuser
-                          </button>
-                        </>
-                      ) : appointment.status === "CONFIRMED" ? (
-                        <button 
-                          onClick={() => handleAppointmentStatus(appointment.id, "COMPLETED")}
-                          className="flex items-center justify-center border border-purple-500 text-purple-500 px-4 py-2 rounded-md hover:bg-purple-500 hover:text-white"
-                        >
-                          <CheckCircle className="mr-2" size={18} /> Marquer comme terminé
-                        </button>
-                      ) : appointment.status === "COMPLETED" && (
-                        <button 
-                          onClick={() => {
-                            setSelectedAppointment(appointment);
-                            setIsMedicalRecordModalOpen(true);
-                          }}
-                          className="flex items-center justify-center border border-black-500 text-black-500 px-4 py-2 rounded-md hover:bg-gray-500 hover:text-white"
-                        >
-                          <Stethoscope className="mr-2" size={18} /> Faire un diagnostic
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center mt-6">Aucun rendez-vous trouvé.</p>
-            )}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {appointments.map((appointment) => (
+              <AppointmentCard
+                key={appointment.id}
+                appointment={appointment}
+                onAction={(type, apt) => {
+                  setSelectedAppointment(apt);
+                  setModalType(type);
+                }}
+                getStatusBadge={getStatusBadge}
+              />
+            ))}
           </div>
 
           {/* Pagination */}
-          {filteredAppointments.length > itemsPerPage && (
-            <div className="flex justify-center mt-6">
-              <nav className="flex items-center gap-1">
-                <button
-                  onClick={() => paginate(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded-md border disabled:opacity-50"
-                >
-                  Précédent
-                </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                  <button
-                    key={number}
-                    onClick={() => paginate(number)}
-                    className={`px-3 py-1 rounded-md border ${currentPage === number ? 'bg-blue-500 text-white' : ''}`}
-                  >
-                    {number}
-                  </button>
-                ))}
-                
-                <button
-                  onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded-md border disabled:opacity-50"
-                >
-                  Suivant
-                </button>
-              </nav>
-            </div>
-          )}
+          <div className="flex justify-between items-center mt-8">
+            <Button
+              variant="outline"
+              disabled={pagination.currentPage === 1}
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+            >
+              Précédent
+            </Button>
+            <span className="text-sm text-gray-600">
+              Page {pagination.currentPage} sur {pagination.totalPages} • {pagination.totalItems} rendez-vous
+            </span>
+            <Button
+              variant="outline"
+              disabled={pagination.currentPage === pagination.totalPages}
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+            >
+              Suivant
+            </Button>
+          </div>
         </>
       )}
 
-      {/* Modal de détails */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Détails du rendez-vous</DialogTitle>
-            <DialogDescription>
-              {selectedAppointment?.patientName} - {selectedAppointment && 
-                new Date(selectedAppointment.scheduledAt).toLocaleDateString('fr-FR')
-              }
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedAppointment && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Informations patient</h4>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User size={20} />
-                    </div>
-                    <div>
-                      <p className="font-medium">{selectedAppointment.patientName}</p>
-                      <p className="text-sm text-gray-500">{selectedAppointment.age} ans • {selectedAppointment.bloodType}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-1">
-                    <p className="text-sm"><span className="font-medium">Email:</span> {selectedAppointment.patientEmail}</p>
-                    <p className="text-sm"><span className="font-medium">Téléphone:</span> {selectedAppointment.patientPhone}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Détails du rendez-vous</h4>
-                  <div className="flex items-center gap-2">
-                    <Calendar size={18} className="text-gray-500" />
-                    <span>
-                      {new Date(selectedAppointment.scheduledAt).toLocaleString('fr-FR', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={18} className="text-gray-500" />
-                    <span>{selectedAppointment.hospitalName}</span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="font-medium">Motif:</p>
-                    <p>{selectedAppointment.reason}</p>
-                  </div>
-                  <div className="mt-2">
-                    <p className="font-medium">Statut:</p>
-                    <div className="mt-1">
-                      {getStatusBadge(selectedAppointment.status)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold">Notes</h4>
-                <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                  <p className="text-gray-700 whitespace-pre-line">
-                    {selectedAppointment.notes || "Aucune note"}
-                  </p>
-                </div>
-              </div>
-
-              {selectedAppointment.medicalRecord && (
-                <div>
-                  <h4 className="font-semibold">Compte-rendu médical</h4>
-                  <div className="mt-2 p-3 bg-gray-50 rounded-md space-y-2">
-                    <div>
-                      <p className="font-medium">Diagnostic:</p>
-                      <p>{selectedAppointment.medicalRecord.diagnosis}</p>
-                    </div>
-                    {selectedAppointment.medicalRecord.treatment && (
-                      <div>
-                        <p className="font-medium">Traitement:</p>
-                        <p>{selectedAppointment.medicalRecord.treatment}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4">
-                {selectedAppointment.status === "PENDING" && (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleAppointmentStatus(selectedAppointment.id, "CANCELED")}
-                    >
-                      <XCircle className="mr-2" size={18} /> Refuser
-                    </Button>
-                    <Button 
-                      onClick={() => handleAppointmentStatus(selectedAppointment.id, "CONFIRMED")}
-                    >
-                      <CheckCircle className="mr-2" size={18} /> Accepter
-                    </Button>
-                  </>
-                )}
-
-                {selectedAppointment.status === "CONFIRMED" && (
-                  <Button 
-                    onClick={() => handleAppointmentStatus(selectedAppointment.id, "COMPLETED")}
-                  >
-                    <CheckCircle className="mr-2" size={18} /> Marquer comme terminé
-                  </Button>
-                )}
-
-                {selectedAppointment.status === "COMPLETED" && !selectedAppointment.medicalRecord && (
-                  <Button 
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setIsMedicalRecordModalOpen(true);
-                    }}
-                  >
-                    <Stethoscope className="mr-2" size={18} /> Faire un diagnostic
-                  </Button>
-                )}
-
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Fermer
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal pour le dossier médical */}
+      {/* Modals */}
       {selectedAppointment && (
-        <MedicalRecordModal
-          appointment={selectedAppointment}
-          onSuccess={() => {
-            // Rafraîchir les données si nécessaire
-            const fetchAppointments = async () => {
-              try {
-                const response = await fetch("/api/hospital_doctor/patient");
-                if (response.ok) {
-                  const data = await response.json();
-                  setAppointments(data);
-                }
-              } catch (error) {
-                console.error("Erreur lors du rafraîchissement:", error);
-              }
-            };
-            fetchAppointments();
-          }}
-          open={isMedicalRecordModalOpen}
-          onOpenChange={setIsMedicalRecordModalOpen}
-        />
+        <>
+          <ConfirmModal
+            open={modalType === "confirm"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            onConfirm={() => {
+              handleStatusUpdate({
+                appointmentId: selectedAppointment.id,
+                action: "confirm",
+              });
+            }}
+          />
+
+          <CancelModal
+            open={modalType === "cancel"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            onConfirm={() => {
+              handleStatusUpdate({
+                appointmentId: selectedAppointment.id,
+                action: "canceled",
+              });
+            }}
+          />
+
+          <CompleteModal
+            open={modalType === "complete"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            appointment={selectedAppointment}
+            onSubmit={(medicalRecordData) => {
+              handleStatusUpdate({
+                appointmentId: selectedAppointment.id,
+                action: "complete",
+                medicalRecord: medicalRecordData,
+              });
+            }}
+          />
+
+          <DetailsModal
+            open={modalType === "details"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            appointment={selectedAppointment}
+          />
+        </>
       )}
     </div>
   );
-};
+}
 
-export default DoctorAppointments;
+// Composant Carte de Statistique
+function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode; }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Composant Carte de Rendez-vous
+function AppointmentCard({
+  appointment,
+  onAction,
+  getStatusBadge
+}: {
+  appointment: Appointment;
+  onAction: (type: "confirm" | "cancel" | "complete" | "details", apt: Appointment) => void;
+  getStatusBadge: (status: AppointmentStatus) => React.ReactNode;
+}) {
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-gray-500" />
+              {appointment.patient.name}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              <div className="flex items-center gap-2 text-sm">
+                <Stethoscope className="h-4 w-4" />
+                {appointment.doctor.name} - {appointment.doctor.specialization || "Spécialité non précisée"}
+              </div>
+            </CardDescription>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onAction("details", appointment)}>
+                <Eye className="mr-2 h-4 w-4" /> Détails
+              </DropdownMenuItem>
+              {appointment.status === "PENDING" && (
+                <>
+                  <DropdownMenuItem onClick={() => onAction("confirm", appointment)}>
+                    <Check className="mr-2 h-4 w-4" /> Confirmer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onAction("cancel", appointment)}
+                    className="text-red-600"
+                  >
+                    <X className="mr-2 h-4 w-4" /> Annuler
+                  </DropdownMenuItem>
+                </>
+              )}
+              {appointment.status === "CONFIRMED" && (
+                <>
+                  <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Compléter
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() => onAction("cancel", appointment)}
+                    className="text-red-600"
+                  >
+                    <X className="mr-2 h-4 w-4" /> Annuler
+                  </DropdownMenuItem>
+
+                </>
+
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar className="h-4 w-4 text-gray-500" />
+          <span className="text-sm">
+            {new Date(appointment.scheduledAt).toLocaleDateString("fr-FR", {
+              weekday: "short",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Clock className="h-4 w-4 text-gray-500" />
+          <span className="text-sm">
+            {new Date(appointment.scheduledAt).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+        <div className="mb-3">
+          {getStatusBadge(appointment.status)}
+        </div>
+        {appointment.reason && (
+          <p className="text-sm text-gray-600 line-clamp-2">
+            <span className="font-medium">Motif :</span> {appointment.reason}
+          </p>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onAction("details", appointment)}
+        >
+          Détails
+        </Button>
+        <div className="flex gap-2">
+          {appointment.status === "PENDING" && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => onAction("confirm", appointment)}
+              >
+                <Check className="mr-2 h-4 w-4" /> Confirmer
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onAction("cancel", appointment)}
+              >
+                <X className="mr-2 h-4 w-4" /> Annuler
+              </Button>
+            </>
+          )}
+          {appointment.status === "CONFIRMED" && (
+
+            <>
+              <Button
+                size="sm"
+                onClick={() => onAction("complete", appointment)}
+              >
+                <FileText className="mr-2 h-4 w-4" /> Compléter
+              </Button>
+
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onAction("cancel", appointment)}
+              >
+                <X className="mr-2 h-4 w-4" /> Annuler
+              </Button>
+            </>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}

@@ -1,29 +1,30 @@
 'use client';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip,  ResponsiveContainer } from "recharts";
-import { Calendar as CalendarIcon, Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar,  Star } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import {  Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar, Star, Activity, Stethoscope, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { DashboardData } from "./types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const filterOptions = ['jour', 'semaine', 'mois', 'année'];
   const [appointmentFilter, setAppointmentFilter] = useState("semaine");
   const [typeFilter, setTypeFilter] = useState("mois");
   const [cancellationFilter] = useState("mois");
-  const [patientStats, setPatientStats] = useState<PatientStat[]>([]);
   const [appointmentTypeStats, setAppointmentTypeStats] = useState([]);
   const { data: session } = useSession(); 
-  const [data, setData] = useState <DashboardData | null>(null);
-  console.log(data);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  type PatientStat = {
-    name: string;
-    patients: number;
-  };
+
+  // Couleurs personnalisées pour les graphiques
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  const CHART_GRADIENT = ['#3b82f6', '#1d4ed8'];
 
   useEffect(() => {
     if (!session) return;
@@ -40,7 +41,7 @@ export default function Dashboard() {
           fetch(`${baseUrl}?filter=${cancellationFilter}`),
         ]);
   
-        const [overviewData, patientData, typeData] = await Promise.all([
+        const [overviewData, typeData] = await Promise.all([
           overviewRes.json(),
           patientRes.json(),
           typeRes.json(),
@@ -48,10 +49,9 @@ export default function Dashboard() {
         ]);
   
         if (overviewRes.ok) setData(overviewData);
-        if (patientRes.ok) setPatientStats([{ name: appointmentFilter, patients: patientData.patientsSeen }]);
+        // if (patientRes.ok) setPatientStats([{ name: appointmentFilter, patients: patientData.patientsSeen }]);
         if (typeRes.ok) setAppointmentTypeStats(typeData.appointmentTypeStats || []);
         
-  
       } catch (error) {
         console.error("Erreur lors du chargement des données :", error);
       } finally {
@@ -91,87 +91,161 @@ export default function Dashboard() {
     }
   };
 
-  
-
-  if (!session) return <p>Veuillez vous connecter</p>;
-  if (loading) return <p>Chargement...</p>;
-  if (!data) return <p>Aucune donnée disponible.</p>;
+  if (!session) return <p className="p-6 text-center">Veuillez vous connecter pour accéder au tableau de bord</p>;
+  if (loading) return <LoadingSkeleton />;
+  if (!data) return <p className="p-6 text-center">Aucune donnée disponible pour le moment.</p>;
 
   return (
-    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card className="bg-white dark:bg-gray-800">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="p-2 bg-blue-500 rounded-full">
-              <Users className="text-white" />
-            </div>
-            <span className="text-gray-900 dark:text-gray-100">Patients du jour</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {data.patientsToday}
-          <span className="text-sm text-green-500 ml-2">+20% vs période précédente</span>
-        </CardContent>
-      </Card>
+    <div className="p-6 space-y-6">
+      {/* En-tête */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tableau de bord administratif</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Aperçu des statistiques et activités de l&apos;hôpital
+        </p>
+      </div>
 
-      <Card className="bg-white dark:bg-gray-800">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="p-2 bg-green-500 rounded-full">
-              <CalendarIcon className="text-white" />
-            </div>
-            <span className="text-gray-900 dark:text-gray-100">Rendez-vous confirmés</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-        {data.confirmedAppointments}
-          <span className="text-sm text-red-500 ml-2">-5% vs période précédente</span>
-        </CardContent>
-      </Card>
+      {/* Cartes de statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard 
+          title="Patients du jour" 
+          value={data.patientsToday} 
+          icon={<Users className="h-5 w-5" />} 
+          trend="+20% vs période précédente" 
+          trendPositive 
+          color="blue"
+        />
+        
+        <StatCard 
+          title="Rendez-vous confirmés" 
+          value={data.confirmedAppointments} 
+          icon={<CheckCircle className="h-5 w-5" />} 
+          trend="-5% vs période précédente" 
+          trendPositive={false}
+          color="green"
+        />
+        
+        <StatCard 
+          title="Consultations en attente" 
+          value={data.pendingAppointments} 
+          icon={<ClipboardList className="h-5 w-5" />} 
+          trend="+10% vs période précédente" 
+          trendPositive 
+          color="orange"
+        />
+      </div>
 
-      <Card className="bg-white dark:bg-gray-800">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="p-2 bg-red-500 rounded-full">
-              <ClipboardList className="text-white" />
+      {/* Graphiques principaux */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Évolution des patients */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Évolution des patients</CardTitle>
+              <Select value={appointmentFilter} onValueChange={setAppointmentFilter}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Période" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filterOptions.map(option => (
+                    <SelectItem key={option} value={option}>
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <span className="text-gray-900 dark:text-gray-100">Consultations en attente</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {data.pendingAppointments}
-          <span className="text-sm text-green-500 ml-2">+10% vs période précédente</span>
-        </CardContent>
-      </Card>
+            <CardDescription>Nombre de patients sur la période sélectionnée</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={data.weeklyPatients}>
+                <defs>
+                  <linearGradient id="colorPatients" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_GRADIENT[0]} stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor={CHART_GRADIENT[1]} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="date"
+                  stroke="#888"
+                  tickFormatter={(date) => format(new Date(date), "EEE", { locale: fr })}
+                />
+                <YAxis stroke="#888" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '8px' }}
+                  labelFormatter={(value) => format(new Date(value), "EEEE d MMMM", { locale: fr })}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke={CHART_GRADIENT[0]} 
+                  fillOpacity={1} 
+                  fill="url(#colorPatients)" 
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-       {/* Évolution des patients cette semaine */}
-       <Card className="md:col-span-2 bg-white dark:bg-gray-800">
+        {/* Répartition des rendez-vous */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Types de rendez-vous</CardTitle>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Période" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filterOptions.map(option => (
+                    <SelectItem key={option} value={option}>
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <CardDescription>Répartition par type de consultation</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie 
+                  data={appointmentTypeStats} 
+                  dataKey="count" 
+                  nameKey="type" 
+                  cx="50%" 
+                  cy="50%" 
+                  outerRadius={80}
+                  innerRadius={50}
+                  paddingAngle={5}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {appointmentTypeStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value, name, props) => [`${value} consultations`, props.payload.type]}
+                  contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '8px' }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Rendez-vous par jour */}
+      <Card>
         <CardHeader>
-          <CardTitle>Évolution des patients cette semaine</CardTitle>
+          <CardTitle>Rendez-vous par jour</CardTitle>
+          <CardDescription>Répartition quotidienne des consultations</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={data.weeklyPatients}>
-              <XAxis
-                dataKey="date"
-                stroke="#888"
-                tickFormatter={(date) => format(new Date(date), "EEE", { locale: fr })}
-              />
-              <YAxis stroke="#888" />
-              <Tooltip />
-              <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-       {/*Rendez-vous par jour  */}
-      <Card className="bg-white dark:bg-gray-800">
-        <CardHeader>
-          <CardTitle className="text-gray-900 dark:text-gray-100">Rendez-vous par jour</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.dailyAppointments}>
               <XAxis 
                 dataKey="day" 
@@ -182,200 +256,293 @@ export default function Dashboard() {
               <Tooltip 
                 formatter={(value) => [`${value} rendez-vous`, "Nombre"]}
                 labelFormatter={(day) => format(new Date(day), "EEEE d MMMM", { locale: fr })}
+                contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '8px' }}
               />
               <Bar 
                 dataKey="count" 
                 fill="#3b82f6" 
-                radius={[4, 4, 0, 0]} 
-              />
+                radius={[4, 4, 0, 0]}
+                animationDuration={2000}
+              >
+                {data.dailyAppointments.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-
-      <Card className="md:col-span-3 bg-white dark:bg-gray-800">
+      {/* Rendez-vous en attente */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <div className="p-2 bg-yellow-500 rounded-full">
-              <Clock className="text-white" />
-            </div>
-            <span className="text-gray-900 dark:text-gray-100">Rendez-vous en attente</span>
+            <Clock className="h-5 w-5 text-yellow-500" />
+            <span>Rendez-vous en attente</span>
           </CardTitle>
+          <CardDescription>Demandes nécessitant votre confirmation</CardDescription>
         </CardHeader>
         <CardContent>
           {data.pendingAppointmentsList?.length > 0 ? (
-            <ul className="space-y-2">
+            <div className="space-y-3">
               {data.pendingAppointmentsList.map((appointment) => (
-                <li key={appointment.id} className="flex justify-between items-center p-3 border rounded-md dark:border-gray-700">
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {appointment.patient}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {appointment.date} à {appointment.time}
-                    </span>
+                <div key={appointment.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <div className="flex items-center space-x-4 mb-2 sm:mb-0">
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full">
+                      <Stethoscope className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {appointment.patient}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {format(new Date(appointment.date), "EEEE d MMMM yyyy", { locale: fr })} à {appointment.time}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
+                  <div className="flex space-x-2 w-full sm:w-auto">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
                       onClick={() => handleAppointmentStatusUpdate(appointment.id, "CONFIRMED")}
-                      className="bg-green-500 text-white px-3 py-1 rounded flex items-center gap-1"
+                      className="flex items-center gap-1"
                     >
-                      <CheckCircle size={16} /> Accepter
-                    </button>
-                    <button
+                      <CheckCircle className="h-4 w-4" /> Confirmer
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
                       onClick={() => handleAppointmentStatusUpdate(appointment.id, "REJECTED")}
-                      className="bg-red-500 text-white px-3 py-1 rounded flex items-center gap-1"
+                      className="flex items-center gap-1"
                     >
-                      <XCircle size={16} /> Refuser
-                    </button>
+                      <XCircle className="h-4 w-4" /> Refuser
+                    </Button>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           ) : (
-            <div className="text-center py-8">
-              <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+            <div className="text-center py-8 space-y-2">
+              <UserCheck className="mx-auto h-10 w-10 text-gray-400" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 Aucun rendez-vous en attente
               </h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Vous n&apos;avez actuellement aucun rendez-vous à confirmer.
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Toutes les demandes ont été traitées
               </p>
             </div>
           )}
         </CardContent>
       </Card>
- 
 
-      <div className="md:col-span-3 grid grid-cols-2 gap-6">
-      {/* Section Avis des patients */}
-      <Card className="bg-white dark:bg-gray-800">
-      <CardHeader>
-        <CardTitle className="text-gray-900 dark:text-gray-100">
-          Avis patients
+      {/* Section inférieure */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Avis des patients */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              <span>Avis des patients</span>
+            </CardTitle>
+            <CardDescription>Retours sur les consultations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.reviews?.length > 0 ? (
+              <div className="space-y-4">
+                {data.reviews.map((review) => (
+                  <div key={review.id} className="border p-4 rounded-lg dark:border-gray-700">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          {review.patient}
+                        </p>
+                        <div className="flex items-center mt-1">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star 
+                              key={i} 
+                              className={`h-4 w-4 ${i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300 dark:text-gray-600'}`} 
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {format(new Date(review.createdAt), "dd/MM/yyyy", { locale: fr })}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                      {review.comment}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 space-y-2">
+                <Star className="mx-auto h-10 w-10 text-gray-400" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Aucun avis pour le moment
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Les patients n&apos;ont pas encore laissé de commentaires
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Disponibilités */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-purple-500" />
+              <span>Disponibilités à venir</span>
+            </CardTitle>
+            <CardDescription>Vos prochaines plages horaires disponibles</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.upcomingAvailabilities?.length > 0 ? (
+              <div className="space-y-3">
+                {data.upcomingAvailabilities.map((availability) => (
+                  <div key={availability.id} className="flex items-center justify-between p-4 border rounded-lg dark:border-gray-700">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-full ${availability.isActive ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                        <Activity className={`h-4 w-4 ${availability.isActive ? 'text-green-500' : 'text-gray-500'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          {availability.dayName}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {availability.startTime} - {availability.endTime}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+                      availability.isActive 
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                    }`}>
+                      {availability.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 space-y-2">
+                <Calendar className="mx-auto h-10 w-10 text-gray-400" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Aucune disponibilité programmée
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Ajoutez des créneaux pour recevoir des patients
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Composant de carte de statistique réutilisable
+function StatCard({ title, value, icon, trend, trendPositive, color }: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  trend: string;
+  trendPositive: boolean;
+  color: 'blue' | 'green' | 'orange' | 'red' | 'purple';
+}) {
+  const colorClasses = {
+    blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    green: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+    orange: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+    red: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          {title}
         </CardTitle>
+        <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
+          {icon}
+        </div>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-4">
-          {data.reviews?.length > 0 ? (
-            data.reviews.map((review) => (
-              <li key={review.id} className="border p-4 rounded-md dark:border-gray-700">
-                <div className="flex items-center mb-2">
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {review.patient}
-                  </span>
-                  <div className="flex items-center ml-2">
-                    {Array.from({ length: review.rating }, (_, i) => (
-                      <Star key={i} className="h-4 w-4 text-yellow-500" />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {review.comment}
-                </p>
-              </li>
-            ))
-          ) : (
-            <p className="text-gray-500">Aucun avis pour le moment.</p>
-          )}
-        </ul>
+        <div className="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
+        <p className={`text-xs ${trendPositive ? 'text-green-500' : 'text-red-500'}`}>
+          {trend}
+        </p>
       </CardContent>
     </Card>
+  );
+}
 
-      {/* Section Disponibilités à venir */}
-      <Card className="bg-white dark:bg-gray-800">
+// Squelette de chargement
+function LoadingSkeleton() {
+  return (
+    <div className="p-6 space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-[250px]" />
+        <Skeleton className="h-4 w-[300px]" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <Skeleton className="h-4 w-[100px]" />
+              <Skeleton className="h-10 w-10 rounded-lg" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-[80px] mb-1" />
+              <Skeleton className="h-3 w-[120px]" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <Skeleton className="h-6 w-[200px]" />
+            <Skeleton className="h-4 w-[250px]" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[300px] w-full" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-[200px]" />
+            <Skeleton className="h-4 w-[250px]" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[300px] w-full rounded-full" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-6 w-6 text-purple-500" />
-            <span className="text-gray-900 dark:text-gray-100">Mes disponibilités</span>
-          </CardTitle>
+          <Skeleton className="h-6 w-[200px]" />
         </CardHeader>
         <CardContent>
-          {data.upcomingAvailabilities?.length > 0 ? (
-            <div className="space-y-3">
-              {data.upcomingAvailabilities.map((availability) => (
-                <div key={availability.id} className="flex items-center justify-between p-3 border rounded-md dark:border-gray-700">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {availability.dayName}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {availability.startTime} - {availability.endTime}
-                    </p>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    availability.isActive 
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                  }`}>
-                    {availability.isActive ? "Active" : "Inactive"}
-                  </span>
-                </div>
-              ))}
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg mb-3">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[150px]" />
+                <Skeleton className="h-3 w-[100px]" />
+              </div>
             </div>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400">
-              Aucune disponibilité programmée
-            </p>
-          )}
+          ))}
         </CardContent>
       </Card>
-
-
-<div className="md:col-span-3 grid grid-cols-2 gap-6 mt-6">
-        {/* Patients vus */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md md:col-span-1">
-          <div className="flex justify-between mb-2">
-            <h2 className="font-bold text-gray-700 dark:text-gray-100">Patients vus</h2>
-            <select
-              value={appointmentFilter}
-              onChange={(e) => setAppointmentFilter(e.target.value)}
-              className="p-1 border rounded-md dark:bg-gray-700 dark:text-gray-100"
-            >
-              {filterOptions.map(f => (
-                <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={patientStats}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="patients" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Types de rendez-vous */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md md:col-span-1">
-          <div className="flex justify-between mb-2">
-            <h2 className="font-bold text-gray-700 dark:text-gray-100">Types de rendez-vous</h2>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="p-1 border rounded-md dark:bg-gray-700 dark:text-gray-100"
-            >
-              {filterOptions.map(f => (
-                <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={appointmentTypeStats} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label>
-                {appointmentTypeStats.map((entry, index) => (
-                  <Cell key={`cell-type-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444'][index % 4]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      </div>
     </div>
   );
 }
