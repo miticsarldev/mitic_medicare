@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { AppointmentTypeStatsItem, DashboardData } from "./types";
+import {  DashboardData } from "./types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export default function Dashboard() {
         cancelPromise,
       ]);
 
-      const [overviewData, typeData] = await Promise.all([
+      const [overviewData] = await Promise.all([
         overviewRes.json(),
         patientRes.json(),
         typeRes.json(),
@@ -56,7 +56,6 @@ export default function Dashboard() {
 
       
 
-    const [appointmentTypeStats, setAppointmentTypeStats] = useState<AppointmentTypeStatsItem[]>([]);
 
     } catch (error) {
       console.error("Erreur lors du chargement des données :", error);
