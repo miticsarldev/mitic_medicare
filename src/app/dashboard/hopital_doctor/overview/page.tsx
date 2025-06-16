@@ -1,12 +1,12 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import {  Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar, Star, Activity, Stethoscope, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { DashboardData } from "./types";
+import { AppointmentTypeStatsItem, DashboardData } from "./types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,8 @@ import { Button } from "@/components/ui/button";
 export default function Dashboard() {
   const filterOptions = ['jour', 'semaine', 'mois', 'année'];
   const [appointmentFilter, setAppointmentFilter] = useState("semaine");
-  const [typeFilter, setTypeFilter] = useState("mois");
+  const [typeFilter] = useState("mois");
   const [cancellationFilter] = useState("mois");
-  const [appointmentTypeStats, setAppointmentTypeStats] = useState([]);
   const { data: session } = useSession(); 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,41 +25,49 @@ export default function Dashboard() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
   const CHART_GRADIENT = ['#3b82f6', '#1d4ed8'];
 
-  useEffect(() => {
-    if (!session) return;
-  
-    const fetchAllData = async () => {
-      setLoading(true);
-      try {
-        const baseUrl = `/api/hospital_doctor/overview`;
-  
-        const [overviewRes, patientRes, typeRes, cancelRes] = await Promise.all([
-          fetch(baseUrl),
-          fetch(`${baseUrl}?filter=${appointmentFilter}`),
-          fetch(`${baseUrl}?filter=${typeFilter}`),
-          fetch(`${baseUrl}?filter=${cancellationFilter}`),
-        ]);
-  
-        const [overviewData, typeData] = await Promise.all([
-          overviewRes.json(),
-          patientRes.json(),
-          typeRes.json(),
-          cancelRes.json(),
-        ]);
-  
-        if (overviewRes.ok) setData(overviewData);
-        // if (patientRes.ok) setPatientStats([{ name: appointmentFilter, patients: patientData.patientsSeen }]);
-        if (typeRes.ok) setAppointmentTypeStats(typeData.appointmentTypeStats || []);
-        
-      } catch (error) {
-        console.error("Erreur lors du chargement des données :", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    fetchAllData();
-  }, [session, appointmentFilter, typeFilter, cancellationFilter]);
+ useEffect(() => {
+  if (!session) return;
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      const baseUrl = `/api/hospital_doctor/overview`;
+
+      const overviewPromise = fetch(baseUrl);
+      const patientPromise = fetch(`${baseUrl}?filter=${appointmentFilter}`);
+      const typePromise = fetch(`${baseUrl}?filter=${typeFilter}`);
+      const cancelPromise = fetch(`${baseUrl}?filter=${cancellationFilter}`);
+
+      const [overviewRes, patientRes, typeRes, cancelRes] = await Promise.all([
+        overviewPromise,
+        patientPromise,
+        typePromise,
+        cancelPromise,
+      ]);
+
+      const [overviewData, typeData] = await Promise.all([
+        overviewRes.json(),
+        patientRes.json(),
+        typeRes.json(),
+        cancelRes.json(),
+      ]);
+
+      if (overviewRes.ok) setData(overviewData);
+
+      
+
+    const [appointmentTypeStats, setAppointmentTypeStats] = useState<AppointmentTypeStatsItem[]>([]);
+
+    } catch (error) {
+      console.error("Erreur lors du chargement des données :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAllData();
+
+}, [session, appointmentFilter, typeFilter, cancellationFilter]);
 
   const handleAppointmentStatusUpdate = async (appointmentId: string, status: "CONFIRMED" | "REJECTED") => {
     try {
@@ -136,7 +143,7 @@ export default function Dashboard() {
       </div>
 
       {/* Graphiques principaux */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Évolution des patients */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -189,53 +196,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Répartition des rendez-vous */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Types de rendez-vous</CardTitle>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Période" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filterOptions.map(option => (
-                    <SelectItem key={option} value={option}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <CardDescription>Répartition par type de consultation</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie 
-                  data={appointmentTypeStats} 
-                  dataKey="count" 
-                  nameKey="type" 
-                  cx="50%" 
-                  cy="50%" 
-                  outerRadius={80}
-                  innerRadius={50}
-                  paddingAngle={5}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {appointmentTypeStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value, name, props) => [`${value} consultations`, props.payload.type]}
-                  contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '8px' }}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        
       </div>
 
       {/* Rendez-vous par jour */}

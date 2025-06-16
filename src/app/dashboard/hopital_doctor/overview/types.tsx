@@ -48,3 +48,12 @@ export interface WeeklyPatients {
       isActive: boolean;
     }[];
   }
+
+ export  type AppointmentTypeStatsItem = {
+          type: string;
+          count: number;
+        };
+  
+    export    type TypeDataResponse = {
+          appointmentTypeStats: AppointmentTypeStatsItem[];
+        };
