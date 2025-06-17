@@ -12,6 +12,9 @@ import {
     User2,
     History,
     Stethoscope,
+    Mail,
+    Edit,
+    Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +28,9 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CreateMedicalHistoryModal } from "../CreateMedicalHistoryModal";
+import { toast } from "@/hooks/use-toast";
+import { EditMedicalHistoryModal } from "../EditMedicalHistoryModal";
+import { DeleteMedicalHistoryModal } from "../DeleteMedicalHistoryModal";
 
 interface Appointment {
     id: string;
@@ -93,6 +99,9 @@ interface PatientCardProps {
 export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) => {
     const [showHistory, setShowHistory] = useState(false);
     const [patient, setPatient] = useState<Patient>(initialPatient);
+    // Ajoutez ces états dans le composant PatientCard
+    const [editingHistory, setEditingHistory] = useState<MedicalHistory | null>(null);
+    const [deletingHistory, setDeletingHistory] = useState<MedicalHistory | null>(null);
     const initials = patient.name
         .split(" ")
         .map((n) => n[0])
@@ -111,6 +120,33 @@ export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) =
             medicalHistories: [...prev.medicalHistories, history]
         }));
         setShowHistory(true);
+    };
+
+    // Ajoutez ces méthodes dans le composant PatientCard
+    const updateHistorique = (updatedHistory: MedicalHistory) => {
+        setPatient(prev => ({
+            ...prev,
+            medicalHistories: prev.medicalHistories.map(history =>
+                history.id === updatedHistory.id ? updatedHistory : history
+            )
+        }));
+        toast({
+            title: "Succès",
+            description: "L'historique médical a été mis à jour avec succès.",
+            variant: "default",
+        });
+    };
+
+    const removeHistorique = (historyId: string) => {
+        setPatient(prev => ({
+            ...prev,
+            medicalHistories: prev.medicalHistories.filter(history => history.id !== historyId)
+        }));
+        toast({
+            title: "Succès",
+            description: "L'historique médical a été supprimé avec succès.",
+            variant: "default",
+        });
     };
 
     return (
@@ -154,10 +190,13 @@ export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) =
                                     Dernier RDV: {format(new Date(patient.lastAppointment), "dd/MM/yyyy")}
                                 </Badge>
                             )}
-                            <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
-                                <MapPin className="w-4 h-4" />
-                                <span>{patient.address || "Adresse inconnue"}</span>
+                            <div className="flex items-center gap-1 col-span-2 sm:col-span-1 overflow-hidden">
+                                <Mail className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate block max-w-full" title={patient.email || "Email inconnue"}>
+                                    {patient.email || "Email inconnue"}
+                                </span>
                             </div>
+
                             <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
                                 <Phone className="w-4 h-4" />
                                 <span>{patient.phone || "N° inconnu"}</span>
@@ -211,7 +250,35 @@ export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) =
 
                                                 {/* Carte d'historique compacte */}
                                                 <div className="flex-1 pb-6">
-                                                    <div className="space-y-2 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                                                    <div className="relative space-y-2 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                onClick={() => setEditingHistory(history)}
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-red-600 hover:text-red-700"
+                                                                onClick={() => setDeletingHistory(history)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+
+                                                        <div className="flex justify-between items-start">
+                                                            <h3 className="font-medium text-base">{history.title}</h3>
+                                                            <div className="flex flex-col items-end text-xs text-muted-foreground">
+                                                                <span>{format(new Date(history.createdAt), "dd MMM yyyy")}</span>
+                                                                {history.updatedAt !== history.createdAt && (
+                                                                    <span className="text-xs">(modifié)</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                         <div className="flex justify-between items-start">
                                                             <h3 className="font-medium text-base">{history.title}</h3>
                                                             <div className="flex flex-col items-end text-xs text-muted-foreground">
@@ -271,6 +338,24 @@ export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) =
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal d'édition */}
+            {editingHistory && (
+                <EditMedicalHistoryModal
+                    history={editingHistory}
+                    onClose={() => setEditingHistory(null)}
+                    onUpdate={updateHistorique}
+                />
+            )}
+
+            {/* Modal de suppression */}
+            {deletingHistory && (
+                <DeleteMedicalHistoryModal
+                    history={deletingHistory}
+                    onClose={() => setDeletingHistory(null)}
+                    onDelete={removeHistorique}
+                />
+            )}
         </>
     );
 };

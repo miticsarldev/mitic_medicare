@@ -378,7 +378,7 @@ export default function HospitalAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hospital-admin/doctors">
+              <a href="/dashboard/hopital_admin/doctors/list">
                 <Users className="h-6 w-6 text-blue-500" />
                 <span>Gérer les Médecins</span>
               </a>
@@ -388,7 +388,7 @@ export default function HospitalAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hospital-admin/patients">
+              <a href="/dashboard/hopital_admin/patients/list">
                 <User className="h-6 w-6 text-green-500" />
                 <span>Gérer les Patients</span>
               </a>
@@ -398,9 +398,9 @@ export default function HospitalAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hospital-admin/support">
+              <a href="/dashboard/hopital_admin/management/services">
                 <LifeBuoy className="h-6 w-6 text-cyan-500" />
-                <span>Support</span>
+                <span>Services</span>
               </a>
             </Button>
             <Button
@@ -408,9 +408,9 @@ export default function HospitalAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hospital-admin/settings">
+              <a href="/dashboard/hopital_admin/settings/profile">
                 <Settings className="h-6 w-6 text-gray-500" />
-                <span>Paramètres</span>
+                <span>Profil</span>
               </a>
             </Button>
           </div>

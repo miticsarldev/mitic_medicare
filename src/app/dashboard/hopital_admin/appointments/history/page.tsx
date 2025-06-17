@@ -58,15 +58,18 @@ interface Appointment {
 const STATUS_COLORS = {
     CONFIRMED: "bg-green-200 text-green-900 dark:bg-green-800/30 dark:text-green-300",
     PENDING: "bg-yellow-200 text-yellow-900 dark:bg-yellow-800/30 dark:text-yellow-300",
-    CANCELLED: "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300",
+    CANCELED: "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300",
     COMPLETED: "bg-blue-200 text-blue-900 dark:bg-blue-800/30 dark:text-blue-300",
+    NO_SHOW: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
+    DEFAULT: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 } as const
 
 const STATUS_TRANSLATIONS = {
     CONFIRMED: "Confirmé",
-    CANCELLED: "Annulé",
+    CANCELED: "Annulé",
     PENDING: "En attente",
     COMPLETED: "Terminé",
+    NO_SHOW: "Non présenté"
 } as const
 
 export default function AppointmentCalendarView() {

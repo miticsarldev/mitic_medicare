@@ -33,6 +33,7 @@ type Doctor = {
   averageRating: number
   patientsCount: number
   phone: string
+  email: string;
   address?: string
   department?: {
     id: string

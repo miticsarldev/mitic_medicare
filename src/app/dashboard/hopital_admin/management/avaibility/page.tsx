@@ -451,14 +451,14 @@ export default function DoctorAvailabilityPage() {
                                         <Plus className="mr-2 h-4 w-4" />
                                         Ajouter une disponibilité
                                     </Button>
-                                    <Button
+                                    {/* <Button
                                         onClick={() => setOpenSlotDialog(true)}
                                         variant="outline"
                                         size="sm"
                                     >
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Modifier créneaux du medecin
-                                    </Button>
+                                    </Button> */}
                                     <Button
                                         onClick={() => {
                                             setMultiDoctorFormData({

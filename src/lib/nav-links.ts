@@ -313,16 +313,16 @@ export const hospitalAdminNavItems = [
     ],
   },
   {
-    title: "Gestion des Docteurs",
+    title: "Gestion des Medecins",
     icon: Stethoscope,
     url: "/dashboard/hopital_admin/doctors",
     items: [
       {
-        title: "Liste des Docteurs",
+        title: "Liste des Medecins",
         url: "/dashboard/hopital_admin/doctors/list",
       },
       {
-        title: "Planning des Docteurs",
+        title: "Planning des Medecins",
         url: "/dashboard/hopital_admin/doctors/schedule",
       },
     ],

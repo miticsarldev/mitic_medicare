@@ -13,6 +13,7 @@ import {
 import {
   MoreVertical, MapPin, Star, Phone, CheckCircle,
    Briefcase, BookOpen, DollarSign, User, Calendar,
+   Mail,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +30,7 @@ export interface Doctor {
   averageRating: number;
   patientsCount: number;
   phone: string;
+  email: string;
   availableForChat?: boolean;
   address?: string;
   isVerified?: boolean;
@@ -151,8 +153,8 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
           </div>
 
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="truncate">{doctor.address || "Non renseigné"}</span>
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            <span className="truncate">{doctor.email || "Non renseigné"}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -233,12 +235,10 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                         <Phone className="h-5 w-5 text-primary" />
                         <span>{doctor.phone}</span>
                       </div>
-                      {doctor.address && (
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-5 w-5 text-primary mt-0.5" />
-                          <span>{doctor.address}</span>
+                      <div className="flex items-start gap-3">
+                          <Mail className="h-5 w-5 text-primary mt-0.5" />
+                          <span>{doctor.email}</span>
                         </div>
-                      )}
                     </div>
                   </div>
 
@@ -252,12 +252,6 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                           <span className="text-muted-foreground text-sm ml-2">({doctor.patientsCount} patients)</span>
                         </div>
                       </div>
-                      {doctor.consultationFee && (
-                        <div className="flex items-center gap-3">
-                          <DollarSign className="h-5 w-5 text-green-500" />
-                          <span>Frais de consultation: {doctor.consultationFee}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
