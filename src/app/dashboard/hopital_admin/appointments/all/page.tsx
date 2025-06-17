@@ -25,10 +25,11 @@ import { Button } from "@/components/ui/button"
 import { CalendarDays, User, Stethoscope, ClipboardList, Mail, Phone, Droplets, AlertCircle, Building2, FileText, File, FileImage, FileArchive, FileVideo, Download, FilePlus2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { format } from "date-fns"
-import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { fr } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 
 
 //interface pour prescription
@@ -43,7 +44,6 @@ interface Prescription {
     startDate: string
     endDate: string
 }
-
 
 interface Attachment {
     id: string
@@ -65,7 +65,6 @@ interface MedicalRecord {
     attachments: Attachment[]
     prescriptions: Prescription[]
 }
-
 interface Doctor {
     id: string
     name: string
@@ -83,7 +82,6 @@ interface Patient {
     allergies: string
     medicalNotes: string
 }
-
 interface Appointment {
     id: string
     scheduledAt: string
@@ -94,7 +92,6 @@ interface Appointment {
     patient: Patient
     medicalRecord: MedicalRecord | null
 }
-
 interface PaginationData {
     currentPage: number
     pageSize: number
@@ -103,7 +100,8 @@ interface PaginationData {
     hasNextPage: boolean
     hasPreviousPage: boolean
 }
-
+// Use the DateRange type from react-day-picker to ensure compatibility
+import type { DateRange } from "react-day-picker";
 const ITEMS_PER_PAGE = 9
 
 const STATUS_OPTIONS = [
@@ -141,7 +139,7 @@ export default function AppointmentsTable() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
     const [statusFilter, setStatusFilter] = useState<string>("all")
-    const [dateFilter, setDateFilter] = useState<string>("")
+    const [dateRange, setDateRange] = useState<DateRange | undefined>()
     const [pagination, setPagination] = useState<PaginationData>({
         currentPage: 1,
         pageSize: ITEMS_PER_PAGE,
@@ -161,22 +159,33 @@ export default function AppointmentsTable() {
             if (statusFilter !== "all") {
                 url.searchParams.set("status", statusFilter)
             }
-            if (dateFilter) {
-                url.searchParams.set("date", dateFilter)
-            }
 
             const res = await fetch(url.toString())
             const data = await res.json()
 
             if (!res.ok) throw new Error(data.error || "Erreur lors du chargement")
 
-            setAppointments(data.appointments || [])
+            // Filtrage côté client si dateRange est défini
+            let filteredAppointments = data.appointments || []
+            if (dateRange?.from && dateRange?.to) {
+                filteredAppointments = filteredAppointments.filter((appt: Appointment) => {
+                    const appointmentDate = new Date(appt.scheduledAt)
+                    return appointmentDate >= dateRange.from! && appointmentDate <= dateRange.to!
+                })
+            }
+
+            setAppointments(filteredAppointments)
             if (data.pagination) {
+                // Ajuster la pagination pour le filtrage client
+                const totalFilteredItems = dateRange?.from && dateRange?.to
+                    ? filteredAppointments.length
+                    : data.pagination.totalItems
+
                 setPagination({
                     currentPage: data.pagination.currentPage,
                     pageSize: data.pagination.pageSize,
-                    totalItems: data.pagination.totalItems,
-                    totalPages: data.pagination.totalPages,
+                    totalItems: totalFilteredItems,
+                    totalPages: Math.ceil(totalFilteredItems / ITEMS_PER_PAGE),
                     hasNextPage: data.pagination.hasNextPage,
                     hasPreviousPage: data.pagination.hasPreviousPage,
                 })
@@ -192,7 +201,7 @@ export default function AppointmentsTable() {
         } finally {
             setLoading(false)
         }
-    }, [statusFilter, dateFilter])
+    }, [statusFilter, dateRange]) // Ajoutez dateRange aux dépendances
 
     useEffect(() => {
         fetchAppointments()
@@ -205,7 +214,7 @@ export default function AppointmentsTable() {
 
     const resetFilters = useCallback(() => {
         setStatusFilter("all")
-        setDateFilter("")
+        setDateRange(undefined)
         fetchAppointments(1)
     }, [fetchAppointments])
 
@@ -257,13 +266,34 @@ export default function AppointmentsTable() {
                     </div>
 
                     <div className="w-full sm:w-auto">
-                        <Input
-                            type="date"
-                            value={dateFilter}
-                            onChange={(e) => setDateFilter(e.target.value)}
-                            className="w-[200px]"
-                            disabled={loading}
-                        />
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-[250px] justify-start text-left font-normal">
+                                    <CalendarDays className="mr-2 h-4 w-4" />
+                                    {dateRange?.from && dateRange?.to
+                                        ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
+                                        : "Période spécifique"}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="range"
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                />
+                                <div className="p-2 border-t">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full"
+                                        onClick={() => setDateRange(undefined)}
+                                    >
+                                        Effacer la sélection
+                                    </Button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     <Button
@@ -502,7 +532,7 @@ export default function AppointmentsTable() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <p className="font-semibold">Date</p>
-                                                    <p>{format(new Date(selectedAppointment.scheduledAt), 'PPpp', {locale : fr})}</p>
+                                                    <p>{format(new Date(selectedAppointment.scheduledAt), 'PPpp', { locale: fr })}</p>
                                                 </div>
                                                 <div>
                                                     <p className="font-semibold">Motif</p>
@@ -565,14 +595,14 @@ export default function AppointmentsTable() {
                                                             <p className="mt-2">
                                                                 <span className="font-semibold">Date de suivi: </span>
                                                                 {selectedAppointment.medicalRecord.followUpDate
-                                                                    ? format(new Date(selectedAppointment.medicalRecord.followUpDate), "PPpp", {locale: fr})
+                                                                    ? format(new Date(selectedAppointment.medicalRecord.followUpDate), "PPpp", { locale: fr })
                                                                     : "Non précisée"}
                                                             </p>
                                                         )}
                                                     </div>
                                                     <div>
                                                         <p className="font-semibold">Dernière mise à jour</p>
-                                                        <p>{format(new Date(selectedAppointment.medicalRecord.updatedAt), "PPpp",{locale: fr})}</p>
+                                                        <p>{format(new Date(selectedAppointment.medicalRecord.updatedAt), "PPpp", { locale: fr })}</p>
                                                     </div>
                                                 </div>
 
@@ -590,7 +620,7 @@ export default function AppointmentsTable() {
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="font-medium truncate">{file.fileName}</p>
                                                                         <p className="text-xs text-muted-foreground">
-                                                                            {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), "PP", {locale: fr})}
+                                                                            {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), "PP", { locale: fr })}
                                                                         </p>
                                                                     </div>
                                                                     <Button

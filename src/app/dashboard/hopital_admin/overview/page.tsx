@@ -32,6 +32,7 @@ import {
   Pie,
   Cell,
 } from "@/components/ui/charts";
+import Link from "next/link";
 
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
@@ -78,11 +79,11 @@ export default function HospitalAdminOverviewPage() {
       const statsResponse = await fetch('/api/hospital_admin/dashboard/analytics');
       if (!statsResponse.ok) throw new Error("Failed to fetch stats");
       const statsData = await statsResponse.json();
-      
+
       // Fetch consultation types
       const consultationResponse = await fetch('/api/hospital_admin/dashboard/graphique?type=consultationTypesAllTime');
       const consultationData = await consultationResponse.json();
-      
+
       // Fetch patients by department
       const departmentResponse = await fetch('/api/hospital_admin/dashboard/graphique?type=patientsByDepartment');
       const departmentData = await departmentResponse.json();
@@ -97,7 +98,7 @@ export default function HospitalAdminOverviewPage() {
       setDoctors(statsData.doctors || []);
       setConsultationTypeData(consultationData || []);
       setPatientDepartementData(departmentData || []);
-      
+
     } catch (err) {
       console.error(err);
       setError("Erreur lors de la récupération des données");
@@ -160,7 +161,7 @@ export default function HospitalAdminOverviewPage() {
             de votre plateforme.
           </p>
         </div>
-        
+
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
             variant="outline"
@@ -223,7 +224,7 @@ export default function HospitalAdminOverviewPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [`${value}`, "Consultations"]}
                   />
                 </RechartsPieChart>
@@ -278,7 +279,7 @@ export default function HospitalAdminOverviewPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [`${value}`, "Patients"]}
                   />
                 </RechartsPieChart>
@@ -312,13 +313,13 @@ export default function HospitalAdminOverviewPage() {
           <div className="flex-1 gap-5">
             <CardTitle>Médecins de l&apos;Hôpital</CardTitle>
             <CardDescription>
-              Liste des médecins et leurs activités du jour
+              Liste des médecin et leurs activités du jour
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" asChild>
-            <a href="/dashboard/hospital-admin/doctors">
+            <Link href="/dashboard/hopital_admin/doctors/list">
               Voir tout <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
+            </Link>
           </Button>
         </CardHeader>
         <CardContent>
@@ -378,40 +379,43 @@ export default function HospitalAdminOverviewPage() {
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/doctors/list">
+              <Link href="/dashboard/hopital_admin/doctors/list">
                 <Users className="h-6 w-6 text-blue-500" />
                 <span>Gérer les Médecins</span>
-              </a>
+              </Link>
             </Button>
+
             <Button
               variant="outline"
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/patients/list">
+              <Link href="/dashboard/hopital_admin/patients/list">
                 <User className="h-6 w-6 text-green-500" />
                 <span>Gérer les Patients</span>
-              </a>
+              </Link>
             </Button>
+
             <Button
               variant="outline"
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/management/services">
+              <Link href="/dashboard/hopital_admin/management/services">
                 <LifeBuoy className="h-6 w-6 text-cyan-500" />
                 <span>Services</span>
-              </a>
+              </Link>
             </Button>
+
             <Button
               variant="outline"
               className="h-auto flex-col items-center justify-center p-4 gap-2"
               asChild
             >
-              <a href="/dashboard/hopital_admin/settings/profile">
+              <Link href="/dashboard/hopital_admin/settings/profile">
                 <Settings className="h-6 w-6 text-gray-500" />
                 <span>Profil</span>
-              </a>
+              </Link>
             </Button>
           </div>
         </CardContent>

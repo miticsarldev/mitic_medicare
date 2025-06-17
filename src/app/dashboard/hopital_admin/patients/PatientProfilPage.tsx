@@ -451,19 +451,19 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
 
                     {patient.vitalSigns?.length ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {patient.vitalSigns.map((vs) => (
-                          <Card key={vs.id} className="p-4 border bg-muted/50">
-                            <div>Température : {vs.temperature} °C</div>
-                            <div>Pression artérielle : {vs.bloodPressureDiastolic}</div>
-                            <div>Fréquence respiratoire : {vs.respiratoryRate} /min</div>
-                            <div>Oxygénation : {vs.oxygenSaturation} %</div>
-                            <div>Poids : {vs.weight} kg</div>
-                            <div>Taille : {vs.height} cm</div>
-                            <div>Fréquence cardiaque : {vs.heartRate} bpm</div>
-                            <div>Autres Infos : {vs.notes}</div>
-                            <div className="text-xs mt-2">Relevé le : {new Date(vs.createdAt).toLocaleDateString()}</div>
-                          </Card>
-                        ))}
+                        <Card className="p-4 border bg-muted/50">
+                          <div>Température : {patient.vitalSigns[0].temperature} °C</div>
+                          <div>Pression artérielle : {patient.vitalSigns[0].bloodPressureDiastolic}</div>
+                          <div>Fréquence respiratoire : {patient.vitalSigns[0].respiratoryRate} /min</div>
+                          <div>Oxygénation : {patient.vitalSigns[0].oxygenSaturation} %</div>
+                          <div>Poids : {patient.vitalSigns[0].weight} kg</div>
+                          <div>Taille : {patient.vitalSigns[0].height} cm</div>
+                          <div>Fréquence cardiaque : {patient.vitalSigns[0].heartRate} bpm</div>
+                          <div>Autres Infos : {patient.vitalSigns[0].notes}</div>
+                          <div className="text-xs mt-2">
+                            Relevé le : {new Date(patient.vitalSigns[0].createdAt).toLocaleDateString()}
+                          </div>
+                        </Card>
                       </div>
                     ) : (
                       <div className="text-center py-10 space-y-2">
@@ -473,6 +473,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                     )}
                   </div>
                 </TabsContent>
+
 
                 {/* Historique médical */}
                 <TabsContent value="medicalHistory">

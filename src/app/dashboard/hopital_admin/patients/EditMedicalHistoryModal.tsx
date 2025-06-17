@@ -42,10 +42,10 @@ interface EditMedicalHistoryModalProps {
     onUpdate: (history: MedicalHistory) => void;
 }
 
-export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({ 
-    history, 
+export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
+    history,
     onClose,
-    onUpdate 
+    onUpdate
 }) => {
     const { toast } = useToast();
     const [formData, setFormData] = useState({
@@ -58,7 +58,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleChange = (field: string, value: any) => {
+    const handleChange = (field: string, value: string | Date | null) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -75,34 +75,34 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-        
+
         if (!formData.title.trim()) {
             newErrors.title = "Le titre est requis";
         }
-        
+
         if (!formData.condition.trim()) {
             newErrors.condition = "La condition est requise";
         }
-        
+
         if (!formData.status) {
             newErrors.status = "Le statut est requis";
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
 
         setIsSubmitting(true);
-        
+
         try {
-            const response = await fetch("/api/medical-history", {
+            const response = await fetch("/api/hospital_admin/medical-history/modifier", {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -132,6 +132,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
                 description: "Une erreur est survenue lors de la mise à jour.",
                 variant: "destructive",
             });
+            console.log("l'erreur est la suivante " + error)
         } finally {
             setIsSubmitting(false);
         }
@@ -141,7 +142,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
         <Dialog open={true} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle>Modifier l'historique médical</DialogTitle>
+                    <DialogTitle>Modifier l&apos;historique médical</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -152,7 +153,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
                         />
                         {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
                     </div>
-                    
+
                     <div>
                         <label className="block text-sm font-medium mb-1">Condition*</label>
                         <Input
@@ -161,7 +162,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
                         />
                         {errors.condition && <p className="text-sm text-red-500 mt-1">{errors.condition}</p>}
                     </div>
-                    
+
                     <div>
                         <label className="block text-sm font-medium mb-1">Date de diagnostic</label>
                         <Popover>
@@ -185,7 +186,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
                                 <Calendar
                                     mode="single"
                                     selected={formData.diagnosedDate || undefined}
-                                    onSelect={(date) => handleChange("diagnosedDate", date)}
+                                    onSelect={(date) => handleChange("diagnosedDate", date ?? null)}
                                     disabled={(date) =>
                                         date > new Date() || date < new Date("1900-01-01")
                                     }
@@ -194,7 +195,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
                             </PopoverContent>
                         </Popover>
                     </div>
-                    
+
                     <div>
                         <label className="block text-sm font-medium mb-1">Statut*</label>
                         <select
@@ -207,7 +208,7 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
                         </select>
                         {errors.status && <p className="text-sm text-red-500 mt-1">{errors.status}</p>}
                     </div>
-                    
+
                     <div>
                         <label className="block text-sm font-medium mb-1">Détails</label>
                         <Textarea
@@ -216,17 +217,17 @@ export const EditMedicalHistoryModal: FC<EditMedicalHistoryModalProps> = ({
                             className="min-h-[100px]"
                         />
                     </div>
-                    
+
                     <div className="flex justify-end gap-2">
-                        <Button 
-                            type="button" 
-                            variant="outline" 
+                        <Button
+                            type="button"
+                            variant="outline"
                             onClick={onClose}
                             disabled={isSubmitting}
                         >
                             Annuler
                         </Button>
-                        <Button 
+                        <Button
                             type="submit"
                             disabled={isSubmitting}
                         >

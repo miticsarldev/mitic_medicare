@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast";
-import { Loader2, User, Mail, Phone, MapPin, Info, Globe, Save, ScrollText } from "lucide-react"
+import { Loader2, User, Mail, Phone, MapPin, Info, Globe, Save, ScrollText, Cake } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 type AdminData = {
@@ -17,6 +17,7 @@ type AdminData = {
     email: string
     phone: string
     role: string
+    dateOfBirth: string | null // Format ISO-8601 (ex: "1990-01-01T00:00:00.000Z")
     profile: {
         address: string
         city: string
@@ -45,42 +46,50 @@ export default function ProfilePage() {
         state: '',
         zipCode: '',
         country: '',
+        dateOfBirth: '',
     })
 
+    // Synchronise le formulaire quand les données admin changent
     useEffect(() => {
-        const fetchAdminData = async () => {
-            try {
-                setLoading(true)
-                const res = await fetch('/api/hospital_admin/profil')
-                
-                if (!res.ok) throw new Error('Failed to fetch admin data')
-                
-                const data = await res.json()
-                setAdmin(data.admin)
-                setForm({
-                    name: data.admin.name || '',
-                    email: data.admin.email || '',
-                    phone: data.admin.phone || '',
-                    genre: data.admin.profile.genre || '',
-                    bio: data.admin.profile.bio || '',
-                    address: data.admin.profile.address || '',
-                    city: data.admin.profile.city || '',
-                    state: data.admin.profile.state || '',
-                    zipCode: data.admin.profile.zipCode || '',
-                    country: data.admin.profile.country || '',
-                })
-            } catch (error) {
-                console.error('Error fetching admin data:', error)
-                toast({
-                    title: "Erreur ❌",
-                    description: "Impossible de charger les données du profil.",
-                    variant: "destructive",
-                })
-            } finally {
-                setLoading(false)
-            }
+        if (admin) {
+            setForm({
+                name: admin.name,
+                email: admin.email,
+                phone: admin.phone,
+                genre: admin.profile.genre,
+                bio: admin.profile.bio,
+                address: admin.profile.address,
+                city: admin.profile.city,
+                state: admin.profile.state,
+                zipCode: admin.profile.zipCode,
+                country: admin.profile.country,
+                dateOfBirth: admin.dateOfBirth ? admin.dateOfBirth.split('T')[0] : '',
+            })
         }
+    }, [admin])
 
+    const fetchAdminData = async () => {
+        try {
+            setLoading(true)
+            const res = await fetch('/api/hospital_admin/profil')
+
+            if (!res.ok) throw new Error('Failed to fetch admin data')
+
+            const data = await res.json()
+            setAdmin(data.admin)
+        } catch (error) {
+            console.error('Error fetching admin data:', error)
+            toast({
+                title: "Erreur ❌",
+                description: "Impossible de charger les données du profil.",
+                variant: "destructive",
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
         fetchAdminData()
     }, [])
 
@@ -91,16 +100,25 @@ export default function ProfilePage() {
     const handleSubmit = async () => {
         setSaving(true)
         try {
+            // Formatage de la date pour l'envoyer au serveur
+            const formattedData = {
+                ...form,
+                dateOfBirth: form.dateOfBirth ? `${form.dateOfBirth}T00:00:00.000Z` : null
+            }
+
             const res = await fetch('/api/hospital_admin/profil/modify', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
+                body: JSON.stringify(formattedData),
             })
-            
+
             if (!res.ok) {
                 const data = await res.json()
                 throw new Error(data.error || 'Erreur lors de la mise à jour')
             }
+
+            // Rafraîchir les données après la mise à jour
+            await fetchAdminData()
 
             toast({
                 title: "Profil mis à jour ✅",
@@ -150,7 +168,7 @@ export default function ProfilePage() {
                                 <Skeleton className="h-6 w-48" />
                             </CardHeader>
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {[...Array(4)].map((_, i) => (
+                                {[...Array(5)].map((_, i) => (
                                     <div key={i} className="space-y-2">
                                         <Skeleton className="h-4 w-24" />
                                         <Skeleton className="h-10 w-full" />
@@ -192,7 +210,7 @@ export default function ProfilePage() {
     if (!admin) return (
         <div className="p-6 text-center">
             <p className="text-red-500">Impossible de charger les données du profil</p>
-            <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+            <Button variant="outline" className="mt-4" onClick={fetchAdminData}>
                 Réessayer
             </Button>
         </div>
@@ -206,7 +224,7 @@ export default function ProfilePage() {
             <p className="text-muted-foreground">Gérez vos informations personnelles et médicales</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Left column */}
+                {/* Left column - Aperçu */}
                 <Card className="col-span-1">
                     <CardContent className="flex flex-col items-center text-center py-8">
                         <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-xl font-semibold text-gray-600">
@@ -215,14 +233,29 @@ export default function ProfilePage() {
                         <h2 className="mt-4 text-xl font-semibold">{admin.name}</h2>
                         <p className="text-sm text-muted-foreground">Membre depuis {new Date(admin.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p>
                         <div className="mt-4 text-sm text-gray-500 space-y-1">
-                            <div className="flex items-center gap-2"><Phone className="h-4 w-4" /> {admin.phone}</div>
-                            <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {admin.profile.city}, {admin.profile.country}</div>
-                            <div className="flex items-center gap-2"><User className="h-4 w-4" /> 38 ans</div>
+                            <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4" />
+                                {admin.phone || 'Non renseigné'}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                {admin.profile.city ? `${admin.profile.city}, ${admin.profile.country}` : 'Adresse non renseignée'}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                {admin.profile.genre === 'MALE' ? 'Homme' : admin.profile.genre === 'FEMALE' ? 'Femme' : 'Non spécifié'}
+                            </div>
+                            {admin.dateOfBirth && (
+                                <div className="flex items-center gap-2">
+                                    <Cake className="h-4 w-4" />
+                                    {new Date(admin.dateOfBirth).toLocaleDateString('fr-FR')}
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Right column */}
+                {/* Right column - Formulaire */}
                 <div className="col-span-1 md:col-span-2 space-y-6">
                     {/* Personal info */}
                     <Card>
@@ -232,25 +265,49 @@ export default function ProfilePage() {
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <Label><User className="inline w-4 h-4 mr-1" /> Nom complet</Label>
-                                <Input value={form.name} onChange={e => handleChange('name', e.target.value)} />
+                                <Input
+                                    value={form.name}
+                                    onChange={e => handleChange('name', e.target.value)}
+                                />
                             </div>
                             <div>
                                 <Label><Mail className="inline w-4 h-4 mr-1" /> Email</Label>
-                                <Input value={form.email} onChange={e => handleChange('email', e.target.value)} disabled />
+                                <Input
+                                    value={form.email}
+                                    onChange={e => handleChange('email', e.target.value)}
+                                    disabled
+                                />
                             </div>
                             <div>
                                 <Label><Phone className="inline w-4 h-4 mr-1" /> Téléphone</Label>
-                                <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} disabled />
+                                <Input
+                                    value={form.phone}
+                                    onChange={e => handleChange('phone', e.target.value)}
+                                />
                             </div>
                             <div>
                                 <Label>Genre</Label>
-                                <Select value={form.genre} onValueChange={value => handleChange('genre', value)}>
-                                    <SelectTrigger><SelectValue placeholder="Genre" /></SelectTrigger>
+                                <Select
+                                    value={form.genre}
+                                    onValueChange={value => handleChange('genre', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Sélectionnez votre genre" />
+                                    </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="MALE">Homme</SelectItem>
                                         <SelectItem value="FEMALE">Femme</SelectItem>
+                                        <SelectItem value="OTHER">Autre</SelectItem>
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div>
+                                <Label><Cake className="inline w-4 h-4 mr-1" /> Date de naissance</Label>
+                                <Input
+                                    type="date"
+                                    value={form.dateOfBirth}
+                                    onChange={e => handleChange('dateOfBirth', e.target.value)}
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -263,23 +320,43 @@ export default function ProfilePage() {
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <Label>Adresse</Label>
-                                <Input value={form.address} onChange={e => handleChange('address', e.target.value)} />
+                                <Input
+                                    value={form.address}
+                                    onChange={e => handleChange('address', e.target.value)}
+                                    placeholder="123 Rue Principale"
+                                />
                             </div>
                             <div>
                                 <Label>Ville</Label>
-                                <Input value={form.city} onChange={e => handleChange('city', e.target.value)} />
+                                <Input
+                                    value={form.city}
+                                    onChange={e => handleChange('city', e.target.value)}
+                                    placeholder="Paris"
+                                />
                             </div>
                             <div>
                                 <Label>Code postal</Label>
-                                <Input value={form.zipCode} onChange={e => handleChange('zipCode', e.target.value)} />
+                                <Input
+                                    value={form.zipCode}
+                                    onChange={e => handleChange('zipCode', e.target.value)}
+                                    placeholder="75000"
+                                />
                             </div>
                             <div>
                                 <Label>Pays</Label>
-                                <Input value={form.country} onChange={e => handleChange('country', e.target.value)} />
+                                <Input
+                                    value={form.country}
+                                    onChange={e => handleChange('country', e.target.value)}
+                                    placeholder="France"
+                                />
                             </div>
                             <div>
                                 <Label>État / Région</Label>
-                                <Input value={form.state} onChange={e => handleChange('state', e.target.value)} />
+                                <Input
+                                    value={form.state}
+                                    onChange={e => handleChange('state', e.target.value)}
+                                    placeholder="Île-de-France"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -290,14 +367,14 @@ export default function ProfilePage() {
                             <CardTitle className="flex items-center gap-2"><ScrollText className="w-5 h-5" /> Bio</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <Textarea 
-                                value={form.bio} 
-                                onChange={e => handleChange('bio', e.target.value)} 
-                                placeholder="Passionné(e) de..." 
+                            <Textarea
+                                value={form.bio}
+                                onChange={e => handleChange('bio', e.target.value)}
+                                placeholder="Décrivez-vous en quelques mots..."
                                 className="min-h-[120px]"
                             />
                             <p className="text-sm text-muted-foreground mt-1">
-                                Vous pouvez mentionner vos intérêts, mode de vie, ou toute information pertinente pour vos médecins.
+                                Vous pouvez mentionner vos centres d&apos;intérêt, votre parcours, ou toute information pertinente.
                             </p>
                         </CardContent>
                     </Card>
@@ -308,7 +385,7 @@ export default function ProfilePage() {
                             {saving ? (
                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</>
                             ) : (
-                                <><Save className="mr-2 h-4 w-4" /> Enregistrer</>
+                                <><Save className="mr-2 h-4 w-4" /> Enregistrer les modifications</>
                             )}
                         </Button>
                     </div>

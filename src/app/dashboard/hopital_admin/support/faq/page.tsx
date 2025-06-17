@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 type FAQ = {
     question: string
@@ -96,7 +97,11 @@ export default function FAQAdmin() {
 
             <div className="text-center pt-6">
                 <p className="mb-2 text-gray-500">Vous ne trouvez pas la réponse ?</p>
-                <Button>Contactez-nous</Button>
+                <Button>
+                    <Link href={'/dashboard/hopital_admin/support/contact'}>
+                     Contactez-nous
+                    </Link>
+                </Button>
             </div>
         </div>
     )

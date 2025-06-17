@@ -7,7 +7,6 @@ import {
 import {
     Calendar,
     CalendarDays,
-    MapPin,
     Phone,
     User2,
     History,
@@ -268,16 +267,6 @@ export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) =
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
-                                                        </div>
-
-                                                        <div className="flex justify-between items-start">
-                                                            <h3 className="font-medium text-base">{history.title}</h3>
-                                                            <div className="flex flex-col items-end text-xs text-muted-foreground">
-                                                                <span>{format(new Date(history.createdAt), "dd MMM yyyy")}</span>
-                                                                {history.updatedAt !== history.createdAt && (
-                                                                    <span className="text-xs">(modifié)</span>
-                                                                )}
-                                                            </div>
                                                         </div>
                                                         <div className="flex justify-between items-start">
                                                             <h3 className="font-medium text-base">{history.title}</h3>

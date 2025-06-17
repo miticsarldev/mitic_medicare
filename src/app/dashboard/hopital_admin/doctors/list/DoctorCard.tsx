@@ -11,8 +11,8 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  MoreVertical, MapPin, Star, Phone, CheckCircle,
-   Briefcase, BookOpen, DollarSign, User, Calendar,
+  MoreVertical, Star, Phone, CheckCircle,
+   Briefcase, BookOpen, User, Calendar,
    Mail,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

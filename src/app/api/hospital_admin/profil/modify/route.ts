@@ -18,6 +18,7 @@ export async function PATCH(req: Request) {
         const {
             name,
             phone,
+            dateOfBirth,
             address,
             city,
             state,
@@ -34,6 +35,7 @@ export async function PATCH(req: Request) {
             data: {
                 name,
                 phone,
+                dateOfBirth,
                 profile: {
                     update: {
                         address,
@@ -60,6 +62,7 @@ export async function PATCH(req: Request) {
                 email: true,
                 phone: true,
                 role: true,
+                dateOfBirth : true,
                 emailVerified: true,
                 isApproved: true,
                 isActive: true,
