@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -30,6 +31,20 @@ export default function PatientsList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
+  const getBloodTypeInfo = (bloodType: string) => {
+  const bloodTypeMap: Record<string, { display: string; variant: 'default' | 'destructive' | 'outline' | 'secondary' }> = {
+    'A_POSITIVE': { display: 'A+', variant: 'destructive' },
+    'A_NEGATIVE': { display: 'A-', variant: 'outline' },
+    'B_POSITIVE': { display: 'B+', variant: 'destructive' },
+    'B_NEGATIVE': { display: 'B-', variant: 'outline' },
+    'AB_POSITIVE': { display: 'AB+', variant: 'destructive' },
+    'AB_NEGATIVE': { display: 'AB-', variant: 'outline' },
+    'O_POSITIVE': { display: 'O+', variant: 'destructive' },
+    'O_NEGATIVE': { display: 'O-', variant: 'outline' }
+  };
+  
+  return bloodTypeMap[bloodType] || { display: bloodType, variant: 'secondary' };
+};
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -143,7 +158,9 @@ export default function PatientsList() {
                         {appointment.patientPhone}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {appointment.bloodType}
+                        <Badge variant={getBloodTypeInfo(appointment.bloodType).variant}>
+                          {getBloodTypeInfo(appointment.bloodType).display}
+                        </Badge>
                       </td>
                       
                       <td className="px-6 py-4 whitespace-nowrap">

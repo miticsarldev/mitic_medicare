@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast"
-import { Appointment, AppointmentsResponse, } from "@/types/appointment";
+import { Appointment, AppointmentsResponse } from "@/types/appointment";
 import { AppointmentStatus } from "@prisma/client";
 import { ConfirmModal } from "../components/confirm-modal";
 import { CancelModal } from "../components/cancel-modal";
 import { CompleteModal } from "../components/complete-modal";
 import { DetailsModal } from "../components/details-modal";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 const statusOptions = [
   { value: "ALL", label: "Tous les statuts" },
@@ -40,8 +44,8 @@ export default function AppointmentsPage() {
   const [filters, setFilters] = useState({
     status: "ALL",
     patientName: "",
-    date: null as Date | null,
   });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -54,7 +58,7 @@ export default function AppointmentsPage() {
   useEffect(() => {
     fetchAppointments();
     fetchStats();
-  }, [pagination.currentPage, filters]);
+  }, [pagination.currentPage, filters, dateRange]);
 
   const fetchAppointments = async () => {
     try {
@@ -67,8 +71,11 @@ export default function AppointmentsPage() {
       if (filters.patientName) {
         url += `&patientName=${encodeURIComponent(filters.patientName)}`;
       }
-      if (filters.date) {
-        url += `&date=${filters.date.toISOString().split('T')[0]}`;
+      if (dateRange?.from) {
+        url += `&startDate=${dateRange.from.toISOString()}`;
+      }
+      if (dateRange?.to) {
+        url += `&endDate=${dateRange.to.toISOString()}`;
       }
 
       const res = await fetch(url);
@@ -102,11 +109,9 @@ export default function AppointmentsPage() {
     }
   };
 
-  
   const handleStatusUpdate = async (data: {
     appointmentId: string;
     action: "confirm" | "canceled" | "complete";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     medicalRecord?: any;
   }) => {
     try {
@@ -140,14 +145,12 @@ export default function AppointmentsPage() {
     }
   };
 
-
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       setPagination(prev => ({ ...prev, currentPage: newPage }));
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleFilterChange = (key: keyof typeof filters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPagination(prev => ({ ...prev, currentPage: 1 }));
@@ -157,8 +160,8 @@ export default function AppointmentsPage() {
     setFilters({
       status: "ALL",
       patientName: "",
-      date: null,
     });
+    setDateRange(undefined);
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
@@ -266,13 +269,38 @@ export default function AppointmentsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Date</label>
-              <Input
-                type="date"
-                value={filters.date ? filters.date.toISOString().split('T')[0] : ""}
-                onChange={(e) => handleFilterChange("date", e.target.value ? new Date(e.target.value) : null)}
-                className="w-full"
-              />
+              <label className="block text-sm font-medium mb-1">Période</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "dd MMM yyyy", { locale: fr })} -{" "}
+                          {format(dateRange.to, "dd MMM yyyy", { locale: fr })}
+                        </>
+                      ) : (
+                        format(dateRange.from, "dd MMM yyyy", { locale: fr })
+                      )
+                    ) : (
+                      <span>Sélectionner une période</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardContent>
@@ -379,7 +407,6 @@ export default function AppointmentsPage() {
   );
 }
 
-// Composant Carte de Statistique
 function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode; }) {
   return (
     <Card>
@@ -394,7 +421,6 @@ function StatCard({ title, value, icon }: { title: string; value: number; icon: 
   );
 }
 
-// Composant Carte de Rendez-vous
 function AppointmentCard({
   appointment,
   onAction,
@@ -448,16 +474,13 @@ function AppointmentCard({
                   <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
                     <FileText className="mr-2 h-4 w-4" /> Compléter
                   </DropdownMenuItem>
-
                   <DropdownMenuItem
                     onClick={() => onAction("cancel", appointment)}
                     className="text-red-600"
                   >
                     <X className="mr-2 h-4 w-4" /> Annuler
                   </DropdownMenuItem>
-
                 </>
-
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -465,7 +488,7 @@ function AppointmentCard({
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-2 mb-2">
-          <Calendar className="h-4 w-4 text-gray-500" />
+          <CalendarIcon className="h-4 w-4 text-gray-500" />
           <span className="text-sm">
             {new Date(appointment.scheduledAt).toLocaleDateString("fr-FR", {
               weekday: "short",
@@ -520,7 +543,6 @@ function AppointmentCard({
             </>
           )}
           {appointment.status === "CONFIRMED" && (
-
             <>
               <Button
                 size="sm"
@@ -528,7 +550,6 @@ function AppointmentCard({
               >
                 <FileText className="mr-2 h-4 w-4" /> Compléter
               </Button>
-
               <Button
                 variant="destructive"
                 size="sm"

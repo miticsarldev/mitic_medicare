@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Loader } from '@/components/loader';
 
 interface PatientDetails {
   id: string;
@@ -24,8 +25,9 @@ interface PatientDetails {
     name: string;
     email: string;
     phone: string;
+    dateOfBirth: Date;
   };
-  dateOfBirth: Date;
+  
   bloodType?: string;
   allergies?: string;
   emergencyContact?: string;
@@ -145,7 +147,12 @@ export default function PatientMedicalRecord() {
   const [height, setHeight] = useState<number | undefined>();
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [recordData, setRecordData] = useState<MedicalRecord | null>(null);
-
+  const [isAddingHistory, setIsAddingHistory] = useState(false);
+  const [isUpdatingHistory, setIsUpdatingHistory] = useState(false);
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false);
+  const [isUpdatingVitals, setIsUpdatingVitals] = useState(false);
+  const [isAddingPrescription, setIsAddingPrescription] = useState(false);
+  const [isViewingRecord, setIsViewingRecord] = useState(false);
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
@@ -169,44 +176,158 @@ export default function PatientMedicalRecord() {
     fetchPatientData();
   }, [patientId]);
 
-  const formatDate = (date: Date) => new Date(date).toLocaleDateString();
-  const formatBloodType = (type?: string) => type ? type.replace('_', ' ') : 'Non spécifié';
+  const formatDate = (date: Date | string | undefined) => {
+      if (!date) return 'Date inconnue';
+      
+      try {
+        const parsedDate = new Date(date);
+        if (isNaN(parsedDate.getTime())) return 'Date invalide';
+        return parsedDate.toLocaleDateString('fr-FR');
+      } catch {
+        return 'Date invalide';
+      }
+    };
 
-  const completedAppointments = Array.isArray(patient?.appointments)
-  ? patient.appointments
-      .filter(app => app.status === 'COMPLETED')
-      .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime())
-  : [];
+    const formatBloodType = (type?: string) => {
+      const bloodTypeMap: Record<string, string> = {
+        'A_POSITIVE': 'A+',
+        'A_NEGATIVE': 'A-',
+        'B_POSITIVE': 'B+',
+        'B_NEGATIVE': 'B-',
+        'AB_POSITIVE': 'AB+',
+        'AB_NEGATIVE': 'AB-',
+        'O_POSITIVE': 'O+',
+        'O_NEGATIVE': 'O-'
+      };
+      
+      return type ? bloodTypeMap[type] || type : 'Non spécifié';
+    };
 
-  const prescriptions = completedAppointments
-    .flatMap(app => app.medicalRecord?.prescriptions || [])
-    .filter(pres => pres);
+    const completedAppointments = Array.isArray(patient?.appointments)
+    ? patient.appointments
+        .filter(app => app.status === 'COMPLETED')
+        .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime())
+    : [];
 
-  const latestVitalSigns = useMemo(() => {
-    if (!patient?.vitalSigns || patient.vitalSigns.length === 0) return null;
-    return patient.vitalSigns.reduce((latest, current) =>
-      new Date(current.recordedAt) > new Date(latest.recordedAt) ? current : latest
-    );
-  }, [patient?.vitalSigns]);
+    const prescriptions = completedAppointments
+      .flatMap(app => app.medicalRecord?.prescriptions || [])
+      .filter(pres => pres);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const latestVitalSigns = useMemo(() => {
+      if (!patient?.vitalSigns || patient.vitalSigns.length === 0) return null;
+      return patient.vitalSigns.reduce((latest, current) =>
+        new Date(current.recordedAt) > new Date(latest.recordedAt) ? current : latest
+      );
+    }, [patient?.vitalSigns]);
+
+    // Ajoutez ces fonctions dans votre composant
+  const [editingHistory, setEditingHistory] = useState<PatientDetails['medicalHistories'][0] | null>(null);
+
+  const handleEditHistory = (history: PatientDetails['medicalHistories'][0]) => {
+    setEditingHistory(history);
+    setTitle(history.title);
+    setCondition(history.condition);
+    setDetails(history.details || '');
+    setDiagnosedDate(history.diagnosedDate ? new Date(history.diagnosedDate).toISOString().split('T')[0] : '');
+    setIsModalOpen(true);
+  };
+
+  // const handleUpdateHistory = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (!editingHistory) return;
+
+  //   try {
+  //     const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`, {
+  //       method: 'PUT',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ 
+  //         title, 
+  //         condition, 
+  //         details, 
+  //         diagnosedDate: diagnosedDate || undefined, 
+  //         status: editingHistory.status 
+  //       })
+  //     });
+
+  //     if (response.ok) {
+  //       const updatedPatient = await response.json();
+  //       setPatient(updatedPatient);
+  //       setIsModalOpen(false);
+  //       resetForm();
+  //     }
+  //   } catch (err) {
+  //     console.error("Erreur lors de la mise à jour de l'historique", err);
+  //   }
+  // };
+
+  const handleDeleteHistory = async (historyId: string) => {
+  if (!confirm("Êtes-vous sûr de vouloir supprimer cet antécédent ?")) return;
+  setIsDeletingHistory(true);
+
     try {
-      const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, condition, details, diagnosedDate: diagnosedDate || undefined, status: 'ACTIVE' })
+      const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`, {
+        method: 'DELETE'
       });
+
       if (response.ok) {
         const updatedPatient = await response.json();
         setPatient(updatedPatient);
-        setIsModalOpen(false);
       }
     } catch (err) {
-      console.error("Erreur lors de l'ajout de l'historique", err);
+      console.error("Erreur lors de la suppression de l'historique", err);
     }
+    finally {
+    setIsDeletingHistory(false);
+  }
   };
+
+  const resetForm = () => {
+    setEditingHistory(null);
+    setTitle('');
+    setCondition('');
+    setDetails('');
+    setDiagnosedDate('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const isEditing = !!editingHistory;
+  isEditing ? setIsUpdatingHistory(true) : setIsAddingHistory(true);
+  
+  try {
+    const endpoint = editingHistory 
+      ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
+      : `/api/hospital_doctor/patient/${patientId}/medical-history`;
+
+    const method = editingHistory ? 'PUT' : 'POST';
+
+    const response = await fetch(endpoint, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        title, 
+        condition, 
+        details, 
+        diagnosedDate: diagnosedDate || undefined, 
+        status: 'ACTIVE' 
+      })
+    });
+
+    if (response.ok) {
+      const updatedPatient = await response.json();
+      setPatient(updatedPatient);
+      setIsModalOpen(false);
+      resetForm();
+    }
+      } catch (err) {
+        console.error("Erreur lors de l'opération sur l'historique", err);
+      }
+      finally {
+        isEditing ? setIsUpdatingHistory(false) : setIsAddingHistory(false);
+      }
+    };
   const handleViewDiagnosis = async (appointmentId: string) => {
+  setIsViewingRecord(true);
     try {
     const res = await fetch(`/api/hospital_doctor/history/record?appointmentId=${appointmentId}`);
     const data = await res.json();
@@ -214,6 +335,9 @@ export default function PatientMedicalRecord() {
     setIsRecordModalOpen(true);
   } catch (error) {
     console.error("Erreur lors de la récupération du dossier médical:", error);
+  }
+  finally {
+    setIsViewingRecord(false);
   }
     };
 
@@ -230,7 +354,8 @@ export default function PatientMedicalRecord() {
   return statusTranslations[status] || status;
 };
   const handlePrescriptionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  setIsAddingPrescription(true);
     try {
       const lastAppointment = completedAppointments[0];
       const medicalRecordId = lastAppointment?.medicalRecord?.id;
@@ -249,10 +374,14 @@ export default function PatientMedicalRecord() {
     } catch (err) {
       console.error("Erreur lors de l'ajout de la prescription", err);
     }
+    finally {
+    setIsAddingPrescription(false);
+  }
   };
 
 const handleVitalSignsSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+  setIsUpdatingVitals(true);
   try {
     const response = await fetch(`/api/hospital_doctor/patient/${patientId}/vital-signs`, {
       method: 'PUT',
@@ -278,6 +407,9 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
     }
   } catch (err) {
     console.error("Erreur réseau lors de la mise à jour des signes vitaux", err);
+  }
+  finally {
+    setIsUpdatingVitals(false);
   }
 };
   const statusColors = {
@@ -324,8 +456,13 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
                   {patient.user?.name || "Nom inconnu"}
                 </h1>                
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Date de naissance: {formatDate(patient.dateOfBirth)} | Groupe sanguin : {formatBloodType(patient.bloodType)}
-                </p>
+                Date de naissance: {patient.user ? formatDate(patient.user.dateOfBirth) : 'Non spécifiée'} | Groupe sanguin : <Badge 
+                variant="outline" 
+                className="border-blue-500 text-blue-500 dark:border-blue-300 dark:text-blue-300"
+              >
+                {formatBloodType(patient.bloodType)}
+              </Badge>
+              </p>
               </div>
             </CardTitle>
           </div>
@@ -343,7 +480,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-green-500" />
               <p className="text-sm text-gray-900 dark:text-gray-100">
-                Dernière consultation : {formatDate(completedAppointments[0].scheduledAt)} avec Dr. {completedAppointments[0].doctor.user.name}
+                Dernière consultation : {formatDate(completedAppointments[0].scheduledAt)} avec {completedAppointments[0].doctor.user.name}
               </p>
             </div>
           )}
@@ -351,7 +488,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
       </Card>
 
       {/* Système d'onglets */}
-      <Tabs defaultValue="medical-history" className="w-full">
+      <Tabs defaultValue="infos" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="infos">
             <User2 className="w-4 h-4 mr-2" />
@@ -407,11 +544,18 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
             <div className="space-y-2">
               <div className="flex items-start gap-3">
                 <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Date de naissance:</span>
-                <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(patient.dateOfBirth)}</p>
+               <p className="text-sm text-gray-900 dark:text-gray-100">
+                {patient.user ? formatDate(patient.user.dateOfBirth) : 'Date de naissance non disponible'}
+              </p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Groupe sanguin:</span>
-                <p className="text-sm text-gray-900 dark:text-gray-100">{formatBloodType(patient.bloodType)}</p>
+                <Badge 
+                variant="outline" 
+                className="border-blue-500 text-blue-500 dark:border-blue-300 dark:text-blue-300"
+              >
+                {formatBloodType(patient.bloodType)}
+              </Badge>
               </div>
               {patient.allergies && (
                 <div className="flex items-start gap-3">
@@ -488,20 +632,47 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
               {patient.medicalHistories?.length > 0 ? (
                 <ul className="space-y-3">
                   {patient.medicalHistories.map((history) => (
-                    <li key={history.id} className="flex items-center gap-4 p-3 border rounded-md dark:border-gray-700">
-                      <Badge variant="outline" className="shrink-0">
-                        {translateStatus(history.status)}
-                      </Badge>
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{history.title} - {history.condition}</p>
-                        {history.diagnosedDate && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Diagnostiqué le: {formatDate(history.diagnosedDate)}
-                          </p>
-                        )}
-                        {history.details && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{history.details}</p>
-                        )}
+                    <li key={history.id} className="flex justify-between items-start gap-4 p-3 border rounded-md dark:border-gray-700">
+                      <div className="flex items-center gap-4 flex-1">
+                        <Badge variant="outline" className="shrink-0">
+                          {translateStatus(history.status)}
+                        </Badge>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{history.title} - {history.condition}</p>
+                          {history.diagnosedDate && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Diagnostiqué le: {formatDate(history.diagnosedDate)}
+                            </p>
+                          )}
+                          {history.details && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{history.details}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditHistory(history)}
+                      disabled={isAddingHistory || isUpdatingHistory || isDeletingHistory}
+                    >
+                      {isUpdatingHistory && editingHistory?.id === history.id ? (
+                        <Loader className="mr-2 h-4 w-4" />
+                      ) : null}
+                      Modifier
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteHistory(history.id)}
+                      disabled={isDeletingHistory || isAddingHistory || isUpdatingHistory}
+                    >
+                      {isDeletingHistory ? (
+                        <Loader className="mr-2 h-4 w-4" />
+                      ) : null}
+                      Supprimer
+                    </Button>
                       </div>
                     </li>
                   ))}
@@ -514,73 +685,73 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
         </TabsContent>
 
         {/* Contenu de l'onglet Signes vitaux */}
-<TabsContent value="vital-signs">
-  <Card className="bg-white dark:bg-gray-800 shadow-sm">
-    <CardHeader>
-      <div className="flex items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-          <Activity className="w-6 h-6 text-orange-500" />
-          Signes vitaux
-        </CardTitle>
-        <Button onClick={() => setIsVitalModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> 
-          {latestVitalSigns ? 'Modifier' : 'Ajouter'}
-        </Button>
-      </div>
-    </CardHeader>
-    <CardContent>
-      {latestVitalSigns ? (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {latestVitalSigns.temperature !== undefined && (
-              <div className="border rounded-md p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
-                <p className="font-medium">{latestVitalSigns.temperature}°C</p>
-              </div>
-            )}
-            {latestVitalSigns.bloodPressureSystolic !== undefined && latestVitalSigns.bloodPressureDiastolic !== undefined && (
-              <div className="border rounded-md p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
-                <p className="font-medium">
-                  {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
+      <TabsContent value="vital-signs">
+        <Card className="bg-white dark:bg-gray-800 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                <Activity className="w-6 h-6 text-orange-500" />
+                Signes vitaux
+              </CardTitle>
+              <Button onClick={() => setIsVitalModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> 
+                {latestVitalSigns ? 'Modifier' : 'Ajouter'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {latestVitalSigns ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {latestVitalSigns.temperature !== undefined && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
+                      <p className="font-medium">{latestVitalSigns.temperature}°C</p>
+                    </div>
+                  )}
+                  {latestVitalSigns.bloodPressureSystolic !== undefined && latestVitalSigns.bloodPressureDiastolic !== undefined && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
+                      <p className="font-medium">
+                        {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
+                      </p>
+                    </div>
+                  )}
+                  {latestVitalSigns.heartRate !== undefined && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
+                      <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
+                    </div>
+                  )}
+                  {latestVitalSigns.oxygenSaturation !== undefined && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
+                      <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
+                    </div>
+                  )}
+                  {latestVitalSigns.weight !== undefined && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Poids</p>
+                      <p className="font-medium">{latestVitalSigns.weight} kg</p>
+                    </div>
+                  )}
+                  {latestVitalSigns.height !== undefined && (
+                    <div className="border rounded-md p-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Taille</p>
+                      <p className="font-medium">{latestVitalSigns.height} cm</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Mesuré le: {formatDate(latestVitalSigns.recordedAt)}
                 </p>
-              </div>
+              </>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400">Aucun signe vital enregistré</p>
             )}
-            {latestVitalSigns.heartRate !== undefined && (
-              <div className="border rounded-md p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
-                <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
-              </div>
-            )}
-            {latestVitalSigns.oxygenSaturation !== undefined && (
-              <div className="border rounded-md p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
-                <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
-              </div>
-            )}
-            {latestVitalSigns.weight !== undefined && (
-              <div className="border rounded-md p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Poids</p>
-                <p className="font-medium">{latestVitalSigns.weight} kg</p>
-              </div>
-            )}
-            {latestVitalSigns.height !== undefined && (
-              <div className="border rounded-md p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Taille</p>
-                <p className="font-medium">{latestVitalSigns.height} cm</p>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Mesuré le: {formatDate(latestVitalSigns.recordedAt)}
-          </p>
-        </>
-      ) : (
-        <p className="text-gray-500 dark:text-gray-400">Aucun signe vital enregistré</p>
-      )}
-    </CardContent>
-  </Card>
-</TabsContent>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
         {/* Contenu de l'onglet Prescriptions */}
         <TabsContent value="prescriptions">
@@ -670,14 +841,19 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
                                 </Badge>
                                 {appt.medicalRecord && (
                                   <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2"
-                          onClick={() => handleViewDiagnosis(appt.id)}
-                                  >
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => handleViewDiagnosis(appt.id)}
+                                  disabled={isViewingRecord}
+                                >
+                                  {isViewingRecord ? (
+                                    <Loader className="h-4 w-4" />
+                                  ) : (
                                     <FileSearch className="h-4 w-4" />
-                                    Voir dossier
-                                  </Button>
+                                  )}
+                                  Voir dossier
+                                </Button>
                                 )}
                               </div>
                             </div>
@@ -695,12 +871,19 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
       </Tabs>
 
       {/* Modal pour ajouter un historique médical */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        if (!open) resetForm();
+        setIsModalOpen(open);
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter un historique médical</DialogTitle>
+            <DialogTitle>
+              {editingHistory ? "Modifier l'historique médical" : "Ajouter un historique médical"}
+            </DialogTitle>
             <DialogDescription>
-              Renseignez les détails de la condition médicale du patient.
+              {editingHistory 
+                ? "Modifiez les détails de la condition médicale du patient."
+                : "Renseignez les détails de la condition médicale du patient."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -743,10 +926,26 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsModalOpen(false)}
+                disabled={isAddingHistory || isUpdatingHistory}
+              >
                 Annuler
               </Button>
-              <Button type="submit">Enregistrer</Button>
+              <Button 
+                type="submit"
+                disabled={isAddingHistory || isUpdatingHistory}
+              >
+                {isAddingHistory || isUpdatingHistory ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  "Enregistrer"
+                )}
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -811,7 +1010,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
             type="number"
             value={oxygenSaturation || ''}
             onChange={(e) => setOxy(e.target.value ? parseInt(e.target.value) : undefined)}
-            placeholder="Ex: 98"
+            placeholder="Ex: 98 %"
             min="0"
             max="100"
           />
@@ -843,7 +1042,12 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
         <Button variant="outline" onClick={() => setIsVitalModalOpen(false)}>
           Annuler
         </Button>
-        <Button type="submit">Enregistrer</Button>
+        <Button type="submit" disabled={isUpdatingVitals}>
+          {isUpdatingVitals ? (
+            <Loader className="mr-2 h-4 w-4" />
+          ) : null}
+          Enregistrer
+        </Button>
       </div>
     </form>
   </DialogContent>
@@ -1013,7 +1217,12 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
               <Button variant="outline" onClick={() => setIsPrescriptionModalOpen(false)}>
                 Annuler
               </Button>
-              <Button type="submit">Prescrire</Button>
+              <Button type="submit" disabled={isAddingPrescription}>
+              {isAddingPrescription ? (
+                <Loader className="mr-2 h-4 w-4" />
+              ) : null}
+              Prescrire
+            </Button>
             </div>
           </form>
         </DialogContent>
