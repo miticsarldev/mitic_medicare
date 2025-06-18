@@ -245,10 +245,14 @@ export const patientNavItems = [
         title: "Voir Mon Dossier",
         url: "/dashboard/patient/medical-records/view",
       },
+      {
+        title: "Mes antécédents médicaux",
+        url: "/dashboard/patient/medical-records/medical-history",
+      },
     ],
   },
   {
-    title: "Médecins & Centres",
+    title: "Médecins & Hôpitaux",
     icon: Users,
     url: "/dashboard/patient/doctors",
     items: [
@@ -257,7 +261,7 @@ export const patientNavItems = [
         url: "/dashboard/patient/doctors/search",
       },
       {
-        title: "Centres Médicaux",
+        title: "Hôpitaux",
         url: "/dashboard/patient/doctors/hospitals",
       },
     ],
@@ -335,7 +339,7 @@ export const hospitalAdminNavItems = [
       {
         title: "Liste des Patients",
         url: "/dashboard/hopital_admin/patients/list",
-      }
+      },
     ],
   },
   {
@@ -468,11 +472,15 @@ export const hospitalDoctorNavItems = [
     icon: Settings,
     url: "/dashboard/hopital_admin/settings",
     items: [
-      { title: "Mon Profil", url: "/dashboard/hopital_doctor/settings/profile" },
+      {
+        title: "Mon Profil",
+        url: "/dashboard/hopital_doctor/settings/profile",
+      },
       {
         title: "Sécurité & Confidentialité",
         url: "/dashboard/hopital_doctor/settings/security",
-      },{
+      },
+      {
         title: "Avis & Feedback",
         url: "/dashboard/hopital_doctor/settings/reviews",
       },

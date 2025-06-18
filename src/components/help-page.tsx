@@ -29,8 +29,65 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function HelpCenterComponent() {
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/patient/general-contact-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        toast({
+          title: "Message envoyé avec succès !",
+          description:
+            "Nous avons bien reçu votre message et nous vous répondrons dans les plus brefs délais.",
+          variant: "default",
+        });
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Une erreur s'est produite. Veuillez réessayer.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   // Animation variants
   const fadeInUp = {
     hidden: { opacity: 0, y: 30 },
@@ -511,7 +568,7 @@ export default function HelpCenterComponent() {
                     dans les plus brefs délais
                   </p>
 
-                  <div className="space-y-4">
+                  <form className="space-y-4" onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -520,10 +577,17 @@ export default function HelpCenterComponent() {
                         transition={{ delay: 0.1, duration: 0.4 }}
                         className="space-y-2"
                       >
-                        <label htmlFor="name" className="text-sm font-medium">
+                        <Label htmlFor="name" className="text-sm font-medium">
                           Nom complet
-                        </label>
-                        <Input id="name" placeholder="Votre nom" />
+                        </Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          placeholder="Votre nom"
+                          className="border-gray-300 dark:border-gray-700"
+                        />
                       </motion.div>
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -532,13 +596,17 @@ export default function HelpCenterComponent() {
                         transition={{ delay: 0.2, duration: 0.4 }}
                         className="space-y-2"
                       >
-                        <label htmlFor="email" className="text-sm font-medium">
+                        <Label htmlFor="email" className="text-sm font-medium">
                           Email
-                        </label>
+                        </Label>
                         <Input
                           id="email"
                           type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
                           placeholder="votre@email.com"
+                          className="border-gray-300 dark:border-gray-700"
                         />
                       </motion.div>
                     </div>
@@ -550,12 +618,16 @@ export default function HelpCenterComponent() {
                       transition={{ delay: 0.3, duration: 0.4 }}
                       className="space-y-2"
                     >
-                      <label htmlFor="subject" className="text-sm font-medium">
+                      <Label htmlFor="subject" className="text-sm font-medium">
                         Sujet
-                      </label>
+                      </Label>
                       <Input
                         id="subject"
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleChange}
                         placeholder="Comment pouvons-nous vous aider ?"
+                        className="border-gray-300 dark:border-gray-700"
                       />
                     </motion.div>
 
@@ -569,12 +641,15 @@ export default function HelpCenterComponent() {
                       <label htmlFor="message" className="text-sm font-medium">
                         Message
                       </label>
-                      <textarea
+                      <Textarea
                         id="message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
                         rows={5}
                         className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                         placeholder="Décrivez votre problème en détail..."
-                      ></textarea>
+                      ></Textarea>
                     </motion.div>
 
                     <motion.div
@@ -585,11 +660,15 @@ export default function HelpCenterComponent() {
                       viewport={{ once: true }}
                       transition={{ delay: 0.5, duration: 0.4 }}
                     >
-                      <Button className="w-full bg-primary hover:bg-primary/90">
-                        Envoyer le message
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-primary hover:bg-primary/90"
+                      >
+                        {loading ? "Envoi en cours..." : "Envoyer le message"}
                       </Button>
                     </motion.div>
-                  </div>
+                  </form>
                 </motion.div>
 
                 <motion.div

@@ -164,10 +164,10 @@ const LoginForm = () => {
         >
           {showPassword ? <EyeOff /> : <Eye />}
         </button>
-        {errors.password && (
-          <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-        )}
       </div>
+      {errors.password && (
+        <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+      )}
       <Button
         type="submit"
         className="w-full bg-[#107ACA]"

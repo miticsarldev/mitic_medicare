@@ -36,6 +36,7 @@ import {
   PaginationItem,
   PaginationLink,
 } from "@/components/ui/pagination";
+import { useSession } from "next-auth/react";
 
 interface DepartmentDoctorsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,6 +49,7 @@ export default function DepartmentDoctors({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const { status } = useSession();
   const doctorsPerPage = 5;
 
   // Get initials for avatar fallback
@@ -381,25 +383,29 @@ export default function DepartmentDoctors({
                               )}
                             </div>
 
-                            <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
-                              {doctor.user.phone && (
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />{" "}
-                                  {doctor.user.phone}
-                                </span>
-                              )}
-                              {doctor.user.email && (
-                                <span className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />{" "}
-                                  {doctor.user.email}
-                                </span>
-                              )}
-                            </div>
+                            {status === "authenticated" && (
+                              <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
+                                {doctor.user.phone && (
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />{" "}
+                                    {doctor.user.phone}
+                                  </span>
+                                )}
+                                {doctor.user.email && (
+                                  <span className="flex items-center gap-1">
+                                    <Mail className="h-3 w-3" />{" "}
+                                    {doctor.user.email}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         <div className="md:ml-auto p-4 flex flex-col justify-center gap-3 bg-muted/30 border-t md:border-t-0 md:border-l">
-                          <Link href={`/doctors/${doctor.id}`}>
+                          <Link
+                            href={`/dashboard/patient/doctors/${doctor.id}`}
+                          >
                             <Button className="w-full">Voir le profil</Button>
                           </Link>
                           <Link

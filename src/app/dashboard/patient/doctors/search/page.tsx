@@ -693,13 +693,6 @@ export default function DoctorSearchPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex items-center justify-between border-t p-4">
-                <div className="font-medium">
-                  {new Intl.NumberFormat("fr-ML", {
-                    style: "currency",
-                    currency: "XOF",
-                    minimumFractionDigits: 0,
-                  }).format(doctor.consultationFee)}
-                </div>
                 <Link
                   href={`/dashboard/patient/appointments/book/${doctor.id}`}
                   onClick={(e) => e.stopPropagation()}
@@ -776,13 +769,6 @@ export default function DoctorSearchPage() {
                     </div>
                   </CardContent>
                   <CardFooter className="flex items-center justify-between border-t p-2">
-                    <div className="font-medium">
-                      {new Intl.NumberFormat("fr-ML", {
-                        style: "currency",
-                        currency: "XOF",
-                        minimumFractionDigits: 0,
-                      }).format(doctor.consultationFee)}
-                    </div>
                     <Button
                       size="sm"
                       onClick={(e) => {

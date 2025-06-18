@@ -6,7 +6,6 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Building2,
-  Calendar,
   Heart,
   MapPin,
   Phone,
@@ -71,7 +70,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
 
 type HospitalRatingDistribution = {
   star: number; // 1 → 5
@@ -324,7 +322,7 @@ export default function HospitalsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
-            Centres Médicaux
+            Recherher un Hôpital
           </h2>
           <p className="text-muted-foreground">
             Trouvez des hôpitaux, cliniques et centres médicaux près de chez
@@ -963,22 +961,6 @@ export default function HospitalsPage() {
                           </span>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Link href={`tel:${selectedHospital.phone}`}>
-                        <Button>
-                          <Phone className="mr-2 h-4 w-4" /> Appeler
-                        </Button>
-                      </Link>
-                      <Link
-                        href={`/dashboard/patient/appointments/book/hospital/${selectedHospital.id}`}
-                      >
-                        <Button variant="outline">
-                          <Calendar className="mr-2 h-4 w-4" /> Prendre
-                          rendez-vous
-                        </Button>
-                      </Link>
                     </div>
                   </div>
                 </div>

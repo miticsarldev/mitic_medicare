@@ -1,10 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import {
-  ArrowRight,
   Award,
   Calendar,
   CheckCircle2,
@@ -15,14 +14,12 @@ import {
   Users,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export function CareGiver() {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
-  const [isHovered, setIsHovered] = useState(false);
 
   const benefits = [
     {
@@ -144,28 +141,6 @@ export function CareGiver() {
                     </div>
                   </motion.div>
                 ))}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <motion.div
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    size="lg"
-                    className="bg-primary hover:bg-primary/90 gap-2 px-6 py-6 rounded-xl text-lg font-medium"
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
-                  >
-                    Découvrir MediCare Pro
-                    <motion.div
-                      animate={{ x: isHovered ? 5 : 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <ArrowRight className="h-5 w-5" />
-                    </motion.div>
-                  </Button>
-                </motion.div>
               </div>
 
               <div className="mt-8 flex items-center gap-2">

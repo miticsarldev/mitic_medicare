@@ -49,7 +49,11 @@ export function PatientHealthSummary({
                                   : "bg-blue-100 text-blue-700"
                             )}
                           >
-                            {history.status}
+                            {history.status === "ACTIVE"
+                              ? "Actif"
+                              : history.status === "RESOLVED"
+                                ? "Résolu"
+                                : "Inconnu"}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -83,7 +87,12 @@ export function PatientHealthSummary({
                               {history.condition}
                             </p>
                             <p>
-                              <strong>Statut :</strong> {history.status}
+                              <strong>Statut :</strong>{" "}
+                              {history.status === "ACTIVE"
+                                ? "Actif"
+                                : history.status === "RESOLVED"
+                                  ? "Résolu"
+                                  : "Inconnu"}
                             </p>
                             {history.diagnosedDate && (
                               <p>

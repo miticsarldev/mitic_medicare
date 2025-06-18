@@ -33,6 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { HospitalWithDetails } from "@/types/ui-actions.types";
+import { useSession } from "next-auth/react";
 
 interface HospitalDetailProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,6 +42,7 @@ interface HospitalDetailProps {
 
 export default function HospitalDetail({ hospital }: HospitalDetailProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const { status } = useSession();
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -238,14 +240,18 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                                   {hospital.state}, {hospital.zipCode}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 text-sm">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                <span>{hospital.phone}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
-                                <span>{hospital.email}</span>
-                              </div>
+                              {status === "authenticated" && (
+                                <>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Phone className="h-4 w-4 text-muted-foreground" />
+                                    <span>{hospital.phone}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Mail className="h-4 w-4 text-muted-foreground" />
+                                    <span>{hospital.email}</span>
+                                  </div>
+                                </>
+                              )}
                               {hospital.website && (
                                 <div className="flex items-center gap-2 text-sm">
                                   <Globe className="h-4 w-4 text-muted-foreground" />
@@ -372,7 +378,7 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                                           />
                                         ))}
                                         <span className="ml-1 text-xs text-muted-foreground">
-                                          ({doctor?.reviews?.length})
+                                          ({doctor?.reviews?.length} avis)
                                         </span>
                                       </div>
                                     </div>
@@ -469,7 +475,7 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                                             ))}
                                             <span className="ml-1 text-sm">
                                               {doctor.avgRating.toFixed(1)} (
-                                              {doctor?.reviews?.length})
+                                              {doctor?.reviews?.length} avis)
                                             </span>
                                           </div>
                                         </div>
@@ -817,25 +823,29 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <Phone className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Téléphone</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {hospital.phone}
-                      </p>
-                    </div>
-                  </div>
+                  {status === "authenticated" && (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <Phone className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <h3 className="font-medium">Téléphone</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {hospital.phone}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-3">
-                    <Mail className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Email</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {hospital.email}
-                      </p>
-                    </div>
-                  </div>
+                      <div className="flex items-start gap-3">
+                        <Mail className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <h3 className="font-medium">Email</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {hospital.email}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {hospital.website && (
                     <div className="flex items-start gap-3">

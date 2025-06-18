@@ -46,6 +46,15 @@ export type Prescription = Prisma.PrescriptionGetPayload<{
   doctorName: string;
 };
 
+export type PrescriptionOrder = Prisma.PrescriptionOrderGetPayload<{
+  include: {
+    doctor: { include: { user: true } };
+    prescriptions: true;
+  };
+}> & {
+  doctorName: string;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type VitalSign = Prisma.VitalSignGetPayload<{}>;
 
@@ -60,6 +69,7 @@ export type PatientOverviewData = {
   nextAppointment: Appointment | null;
   recentAppointments: Appointment[];
   latestMedicalRecord: MedicalRecord | null;
+  latestPrescriptionOrder: PrescriptionOrder | null;
   activePrescriptions: Prescription[];
   vitalSigns: VitalSign[];
   medicalHistory: MedicalHistory[];
