@@ -54,13 +54,16 @@ export default function DepartmentsTable() {
     hasPreviousPage: false,
   })
   const [isLoading, setIsLoading] = useState(true)
-  const [processing, setProcessing] = useState(false)
+  const [processing, setProcessing] = useState(false) // For Add/Edit operations
 
-  // State pour les modals
+  // State for modals
   const [openAddModal, setOpenAddModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
+  const [openDeleteModal, setOpenDeleteModal] = useState(false) // New state for delete confirmation modal
   const [currentDepartment, setCurrentDepartment] = useState<Department | null>(null)
+  const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null) // New state to store department for deletion
   const [formData, setFormData] = useState({ name: "", description: "" })
+  const [isDeleting, setIsDeleting] = useState(false) // New state for delete operation loading
 
   const fetchDepartments = useCallback(async (page: number = 1, searchQuery: string = "") => {
     setIsLoading(true)
@@ -185,11 +188,19 @@ export default function DepartmentsTable() {
     }
   }
 
-  const handleDeleteDepartment = async (departmentId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce département ?")) return
-    setProcessing(true)
+  // Function to open the delete confirmation modal
+  const openDeleteConfirmationModal = (dep: Department) => {
+    setDepartmentToDelete(dep)
+    setOpenDeleteModal(true)
+  }
+
+  // Function to perform the actual deletion after confirmation
+  const confirmDeleteDepartment = async () => {
+    if (!departmentToDelete) return // Should not happen if modal is opened correctly
+
+    setIsDeleting(true) // Start loading state for modal's delete button
     try {
-      const response = await fetch(`/api/hospital_admin/department/delete/${departmentId}`, {
+      const response = await fetch(`/api/hospital_admin/department/delete/${departmentToDelete.id}`, {
         method: "DELETE",
       })
 
@@ -199,9 +210,12 @@ export default function DepartmentsTable() {
         title: "Succès",
         description: "Département supprimé avec succès",
       })
+      setOpenDeleteModal(false) // Close modal on success
+      setDepartmentToDelete(null) // Clear department to delete
+
       // Réajuster la pagination si nécessaire
-      const newPage = departments.length === 1 && pagination.currentPage > 1 
-        ? pagination.currentPage - 1 
+      const newPage = departments.length === 1 && pagination.currentPage > 1
+        ? pagination.currentPage - 1
         : pagination.currentPage
       fetchDepartments(newPage, search)
     } catch (error) {
@@ -212,7 +226,7 @@ export default function DepartmentsTable() {
       })
       console.error("Erreur:", error)
     } finally {
-      setProcessing(false)
+      setIsDeleting(false) // End loading state
     }
   }
 
@@ -331,7 +345,7 @@ export default function DepartmentsTable() {
                           <Button 
                             size="sm" 
                             variant="destructive" 
-                            onClick={() => handleDeleteDepartment(dep.id)}
+                            onClick={() => openDeleteConfirmationModal(dep)}
                             disabled={processing || isLoading}
                           >
                             Supprimer
@@ -421,6 +435,39 @@ export default function DepartmentsTable() {
             <Button onClick={handleEditDepartment} disabled={processing}>
               {processing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {processing ? "En cours..." : "Enregistrer les modifications"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* NOUVEAU: Modal de confirmation de suppression */}
+      <Dialog open={openDeleteModal} onOpenChange={setOpenDeleteModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le département{" "}
+              <span className="font-semibold text-red-600">
+                {departmentToDelete?.name}
+              </span>
+              ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenDeleteModal(false)}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteDepartment}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isDeleting ? "Suppression..." : "Supprimer"}
             </Button>
           </DialogFooter>
         </DialogContent>

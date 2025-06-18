@@ -14,7 +14,6 @@ import {
   Star,
   CheckCircle2,
   Building2,
-  Award,
   Briefcase,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,24 +137,6 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                   </p>
                 </div>
               </div>
-
-              {doctor.isIndependent && (
-                <div className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      {new Intl.NumberFormat("fr-ML", {
-                        style: "currency",
-                        currency: "XOF",
-                        minimumFractionDigits: 0,
-                      }).format(doctor.consultationFee?.toNumber() || 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Tarif consultation
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -202,10 +183,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                         <Clock className="w-4 h-4" />
                         {doctor.experience} ans d&apos;expérience
                       </div>
-                      <div className="flex items-center gap-2">
-                        <BadgeCheck className="w-4 h-4 text-green-500" />
-                        {doctor.consultationFee ? `${doctor.consultationFee} FCFA` : "Tarif non défini"}
-                      </div>
+                      
                     </div>
                   </CardContent>
                 </TabsContent>

@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+
 
 // Définir le nombre d'éléments par page
 const ITEMS_PER_PAGE = 10;
@@ -49,6 +51,7 @@ export async function GET(request: Request) {
             ...(searchQuery && {
                 name: {
                     contains: searchQuery,
+                    mode: Prisma.QueryMode.insensitive,
                 }
             })
         };

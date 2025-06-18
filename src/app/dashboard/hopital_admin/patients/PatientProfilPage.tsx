@@ -153,9 +153,9 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
 
   // historique statu "ACTIVE", "RESOLVED", "CHRONIC"
   const historiqueColors = {
-    ACTIVE : "bg-green-100 text-green-800",
-    RESOLVED : "bg-blue-100 text-blue-800",
-    CHRONIC : "bg-yellow-100 text-yellow-800",
+    ACTIVE: "bg-green-100 text-green-800",
+    RESOLVED: "bg-blue-100 text-blue-800",
+    CHRONIC: "bg-yellow-100 text-yellow-800",
   }
 
   // Traduction des statuts de l'istorique 
@@ -312,9 +312,9 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                     </div>
                   </div>
 
-                  {appointments?.length ? (
-                    <div className="space-y-4">
-                      {appointments.map((appt) => (
+                  <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4">
+                    {appointments?.length ? (
+                      appointments.map((appt) => (
                         <Card key={appt.id} className="hover:shadow-md transition-shadow">
                           <CardContent className="p-4">
                             <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -331,11 +331,14 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                   </span>
                                   <span className="mx-2">•</span>
                                   <span>
-                                    {new Date(appt.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(appt.scheduledAt).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
                                   </span>
                                 </div>
                                 <div className="text-sm text-muted-foreground">
-                                  Motif : {appt.reason || 'Non spécifié'}
+                                  Motif : {appt.reason || "Non spécifié"}
                                 </div>
                               </div>
                               <div className="flex flex-col sm:items-end gap-2">
@@ -357,15 +360,18 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                             </div>
                           </CardContent>
                         </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 space-y-2">
-                      <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Aucun rendez-vous trouvé</p>
-                    </div>
-                  )}
+                      ))
+                    ) : (
+                      <div className="text-center py-10 space-y-2">
+                        <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Aucun rendez-vous trouvé
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
+
 
                 {/* Informations du patient */}
                 <TabsContent value="about">
@@ -445,19 +451,19 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
 
                     {patient.vitalSigns?.length ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {patient.vitalSigns.map((vs) => (
-                          <Card key={vs.id} className="p-4 border bg-muted/50">
-                            <div>Température : {vs.temperature} °C</div>
-                            <div>Pression artérielle : {vs.bloodPressureDiastolic}</div>
-                            <div>Fréquence respiratoire : {vs.respiratoryRate} /min</div>
-                            <div>Oxygénation : {vs.oxygenSaturation} %</div>
-                            <div>Poids : {vs.weight} kg</div>
-                            <div>Taille : {vs.height} cm</div>
-                            <div>Fréquence cardiaque : {vs.heartRate} bpm</div>
-                            <div>Autres Infos : {vs.notes}</div>
-                            <div className="text-xs mt-2">Relevé le : {new Date(vs.createdAt).toLocaleDateString()}</div>
-                          </Card>
-                        ))}
+                        <Card className="p-4 border bg-muted/50">
+                          <div>Température : {patient.vitalSigns[0].temperature} °C</div>
+                          <div>Pression artérielle : {patient.vitalSigns[0].bloodPressureDiastolic}</div>
+                          <div>Fréquence respiratoire : {patient.vitalSigns[0].respiratoryRate} /min</div>
+                          <div>Oxygénation : {patient.vitalSigns[0].oxygenSaturation} %</div>
+                          <div>Poids : {patient.vitalSigns[0].weight} kg</div>
+                          <div>Taille : {patient.vitalSigns[0].height} cm</div>
+                          <div>Fréquence cardiaque : {patient.vitalSigns[0].heartRate} bpm</div>
+                          <div>Autres Infos : {patient.vitalSigns[0].notes}</div>
+                          <div className="text-xs mt-2">
+                            Relevé le : {new Date(patient.vitalSigns[0].createdAt).toLocaleDateString()}
+                          </div>
+                        </Card>
                       </div>
                     ) : (
                       <div className="text-center py-10 space-y-2">
@@ -467,6 +473,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                     )}
                   </div>
                 </TabsContent>
+
 
                 {/* Historique médical */}
                 <TabsContent value="medicalHistory">

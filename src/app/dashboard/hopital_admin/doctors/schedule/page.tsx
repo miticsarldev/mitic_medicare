@@ -110,7 +110,7 @@ export default function WeeklySchedule() {
                 ...doc,
                 schedule: doc.weeklyAppointments[selectedWeek] || []
             }))
-            .filter(doc => !selectedDoctor || doc.id === selectedDoctor)
+            .filter(doc => selectedDoctor === null || doc.id === selectedDoctor)
             .map(doc => ({
                 ...doc,
                 schedule: doc.schedule.filter(apt => !selectedDay || apt.day === selectedDay)
@@ -240,7 +240,7 @@ export default function WeeklySchedule() {
                     <div className="space-y-1">
                         <Label htmlFor="doctor-select">Médecin</Label>
                         <Select
-                            onValueChange={setSelectedDoctor}
+                            onValueChange={(value) => setSelectedDoctor(value === "ALL" ? null : value)}
                             value={selectedDoctor || "ALL"}
                         >
                             <SelectTrigger id="doctor-select" className="w-full">

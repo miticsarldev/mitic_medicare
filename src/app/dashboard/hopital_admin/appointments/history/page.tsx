@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/hooks/use-toast"
 import { AppointmentStatus } from "@prisma/client"
 import { EventClickArg } from '@fullcalendar/core'
+import { fr } from "date-fns/locale"
 
 interface Doctor {
     id: string
@@ -58,15 +59,18 @@ interface Appointment {
 const STATUS_COLORS = {
     CONFIRMED: "bg-green-200 text-green-900 dark:bg-green-800/30 dark:text-green-300",
     PENDING: "bg-yellow-200 text-yellow-900 dark:bg-yellow-800/30 dark:text-yellow-300",
-    CANCELLED: "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300",
+    CANCELED: "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300",
     COMPLETED: "bg-blue-200 text-blue-900 dark:bg-blue-800/30 dark:text-blue-300",
+    NO_SHOW: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
+    DEFAULT: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 } as const
 
 const STATUS_TRANSLATIONS = {
     CONFIRMED: "Confirmé",
-    CANCELLED: "Annulé",
+    CANCELED: "Annulé",
     PENDING: "En attente",
     COMPLETED: "Terminé",
+    NO_SHOW: "Non présenté"
 } as const
 
 export default function AppointmentCalendarView() {
@@ -100,6 +104,11 @@ export default function AppointmentCalendarView() {
     useEffect(() => {
         fetchAppointments()
     }, [fetchAppointments])
+
+    const formatDateRange = useCallback((range: DateRange | undefined): string => {
+        if (!range?.from || !range?.to) return "Période spécifique"
+        return `${format(range.from, "dd/MM/yyyy")} - ${format(range.to, "dd/MM/yyyy")}`
+    }, [])
 
     const filteredAppointments = useMemo(() => {
         let result = [...appointments]
@@ -174,9 +183,12 @@ export default function AppointmentCalendarView() {
                             <PopoverTrigger asChild>
                                 <Button variant="outline" className="w-[250px] justify-start text-left font-normal">
                                     <CalendarDays className="mr-2 h-4 w-4" />
-                                    {dateRange?.from && dateRange?.to
-                                        ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
-                                        : "Période spécifique"}
+                                    {formatDateRange(dateRange)}
+                                    {dateRange?.from && dateRange?.to && (
+                                        <Badge variant="secondary" className="ml-2">
+                                            Filtre actif
+                                        </Badge>
+                                    )}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -224,9 +236,21 @@ export default function AppointmentCalendarView() {
                                 slotMaxTime="20:00:00"
                                 headerToolbar={{
                                     start: 'prev,next today',
-                                    center: 'title',
+                                    center: dateRange?.from && dateRange?.to ? 'customTitle' : 'title',
                                     end: 'dayGridMonth,timeGridWeek,timeGridDay',
                                 }}
+                                customButtons={{
+                                    customTitle: {
+                                        text: dateRange?.from && dateRange?.to
+                                            ? formatDateRange(dateRange)
+                                            : '', // sinon vide, car le `title` s'affiche tout seul
+                                        click: () => { }, // bouton non cliquable
+                                    },
+                                }}
+                                titleFormat={dateRange?.from && dateRange?.to
+                                    ? { year: 'numeric', month: 'short' } // quelque chose de neutre ou court
+                                    : { year: 'numeric', month: 'long' }
+                                }
                                 views={{
                                     dayGridMonth: { buttonText: 'Mois' },
                                     timeGridWeek: { buttonText: 'Semaine' },
@@ -279,7 +303,7 @@ export default function AppointmentCalendarView() {
                                 <div className="pl-6 space-y-1 text-sm">
                                     <p className="flex items-center gap-1">
                                         <Clock className="w-4 h-4" />
-                                        {format(new Date(selectedAppointment.scheduledAt), 'PPpp')}
+                                        {format(new Date(selectedAppointment.scheduledAt), 'PPpp', {locale: fr})}
                                     </p>
                                     <p>
                                         <strong>Motif :</strong> {selectedAppointment.reason}

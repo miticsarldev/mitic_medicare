@@ -36,7 +36,6 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
         licenseNumber: '',
         education: '',
         experience: '',
-        consultationFee: '',
         departmentId: '',
         address: '',
         city: '',
@@ -44,7 +43,6 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
         zipCode: '',
         country: '',
         bio: '',
-        avatarUrl: '',
         genre: '',
     });
 
@@ -104,7 +102,6 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
                 licenseNumber: '',
                 education: '',
                 experience: '',
-                consultationFee: '',
                 departmentId: '',
                 address: '',
                 city: '',
@@ -112,7 +109,6 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
                 zipCode: '',
                 country: '',
                 bio: '',
-                avatarUrl: '',
                 genre: '',
             });
 
@@ -237,19 +233,6 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
                             </div>
 
                             <div>
-                                <Label htmlFor="consultationFee">Frais de consultation (FCFA)*</Label>
-                                <Input
-                                    id="consultationFee"
-                                    name="consultationFee"
-                                    type="number"
-                                    value={form.consultationFee}
-                                    onChange={handleChange}
-                                    required
-                                    min="0"
-                                />
-                            </div>
-
-                            <div>
                                 <Label htmlFor="genre">Genre</Label>
                                 <Input
                                     id="genre"
@@ -257,17 +240,6 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
                                     value={form.genre}
                                     onChange={handleChange}
                                     placeholder="Homme, Femme, Autre"
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="avatarUrl">Photo de profil (URL)</Label>
-                                <Input
-                                    id="avatarUrl"
-                                    name="avatarUrl"
-                                    type="url"
-                                    value={form.avatarUrl}
-                                    onChange={handleChange}
                                 />
                             </div>
 
