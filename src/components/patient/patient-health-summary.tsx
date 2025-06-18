@@ -12,6 +12,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { MedicalHistory } from "@/app/dashboard/patient/types";
+import Link from "next/link";
+import { Button } from "../ui/button";
 
 interface PatientHealthSummaryProps {
   medicalHistory: MedicalHistory[];
@@ -26,8 +28,20 @@ export function PatientHealthSummary({
     <>
       <Card className={className}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">Résumé de Santé</CardTitle>
-          <Heart className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="flex items-center justify-between text-base font-semibold">
+            <p className="text-sm text-muted-foreground">Résumé de santé</p>
+          </CardTitle>
+
+          <div className="flex items-center justify-center gap-4">
+            <div className="bg-card">
+              <Link href="/dashboard/patient/medical-records/medical-history">
+                <Button variant="default" size="lg">
+                  Voir tout
+                </Button>
+              </Link>
+            </div>
+            <Heart className="h-4 w-4 text-muted-foreground" />
+          </div>
         </CardHeader>
         <CardContent>
           {medicalHistory.length > 0 ? (
