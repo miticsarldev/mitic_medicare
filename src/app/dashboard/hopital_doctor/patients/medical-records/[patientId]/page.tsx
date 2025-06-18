@@ -177,31 +177,31 @@ export default function PatientMedicalRecord() {
   }, [patientId]);
 
   const formatDate = (date: Date | string | undefined) => {
-      if (!date) return 'Date inconnue';
-      
-      try {
-        const parsedDate = new Date(date);
-        if (isNaN(parsedDate.getTime())) return 'Date invalide';
-        return parsedDate.toLocaleDateString('fr-FR');
-      } catch {
-        return 'Date invalide';
-      }
-    };
+  if (!date) return 'Date inconnue';
+  
+  try {
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) return 'Date invalide';
+    return parsedDate.toLocaleDateString('fr-FR');
+  } catch {
+    return 'Date invalide';
+  }
+};
 
     const formatBloodType = (type?: string) => {
-      const bloodTypeMap: Record<string, string> = {
-        'A_POSITIVE': 'A+',
-        'A_NEGATIVE': 'A-',
-        'B_POSITIVE': 'B+',
-        'B_NEGATIVE': 'B-',
-        'AB_POSITIVE': 'AB+',
-        'AB_NEGATIVE': 'AB-',
-        'O_POSITIVE': 'O+',
-        'O_NEGATIVE': 'O-'
-      };
-      
-      return type ? bloodTypeMap[type] || type : 'Non spécifié';
-    };
+  const bloodTypeMap: Record<string, string> = {
+    'A_POSITIVE': 'A+',
+    'A_NEGATIVE': 'A-',
+    'B_POSITIVE': 'B+',
+    'B_NEGATIVE': 'B-',
+    'AB_POSITIVE': 'AB+',
+    'AB_NEGATIVE': 'AB-',
+    'O_POSITIVE': 'O+',
+    'O_NEGATIVE': 'O-'
+  };
+  
+  return type ? bloodTypeMap[type] || type : 'Non spécifié';
+};
 
     const completedAppointments = Array.isArray(patient?.appointments)
     ? patient.appointments
@@ -289,43 +289,53 @@ export default function PatientMedicalRecord() {
     setDiagnosedDate('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const isEditing = !!editingHistory;
-  isEditing ? setIsUpdatingHistory(true) : setIsAddingHistory(true);
-  
-  try {
-    const endpoint = editingHistory 
-      ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
-      : `/api/hospital_doctor/patient/${patientId}/medical-history`;
+   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const isEditing = !!editingHistory;
+   if (isEditing) {
+    setIsUpdatingHistory(true);
+  } else {
+    setIsAddingHistory(true);
+  }
 
-    const method = editingHistory ? 'PUT' : 'POST';
+    
+    try {
+      const endpoint = editingHistory 
+        ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
+        : `/api/hospital_doctor/patient/${patientId}/medical-history`;
 
-    const response = await fetch(endpoint, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        title, 
-        condition, 
-        details, 
-        diagnosedDate: diagnosedDate || undefined, 
-        status: 'ACTIVE' 
-      })
-    });
+      const method = editingHistory ? 'PUT' : 'POST';
 
-    if (response.ok) {
-      const updatedPatient = await response.json();
-      setPatient(updatedPatient);
-      setIsModalOpen(false);
-      resetForm();
+      const response = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title, 
+          condition, 
+          details, 
+          diagnosedDate: diagnosedDate || undefined, 
+          status: 'ACTIVE' 
+        })
+      });
+
+      if (response.ok) {
+        const updatedPatient = await response.json();
+        setPatient(updatedPatient);
+        setIsModalOpen(false);
+        resetForm();
+      }
+    } catch (err) {
+      console.error("Erreur lors de l'opération sur l'historique", err);
+    } finally {
+      if (isEditing) {
+  setIsUpdatingHistory(true);
+} else {
+  setIsAddingHistory(true);
+}
+
     }
-      } catch (err) {
-        console.error("Erreur lors de l'opération sur l'historique", err);
-      }
-      finally {
-        isEditing ? setIsUpdatingHistory(false) : setIsAddingHistory(false);
-      }
-    };
+  };
+
   const handleViewDiagnosis = async (appointmentId: string) => {
   setIsViewingRecord(true);
     try {

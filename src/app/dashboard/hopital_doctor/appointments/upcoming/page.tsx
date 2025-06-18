@@ -22,6 +22,13 @@ import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+type MedicalRecordInput = {
+  diagnosis: string;
+  treatment: string;
+  notes?: string;
+  followUpNeeded?: boolean;
+  ffollowUpDate?: Date | string | undefined; 
+};
 const statusOptions = [
   { value: "ALL", label: "Tous les statuts" },
   { value: "PENDING", label: "En attente" },
@@ -42,9 +49,14 @@ export default function AppointmentsPage() {
     canceled: 0,
   });
   const [filters, setFilters] = useState({
-    status: "ALL",
-    patientName: "",
-  });
+  status: "ALL",
+  patientName: "",
+});
+type Filters = {
+  status: string;
+  patientName: string;
+};
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -112,7 +124,7 @@ export default function AppointmentsPage() {
   const handleStatusUpdate = async (data: {
     appointmentId: string;
     action: "confirm" | "canceled" | "complete";
-    medicalRecord?: any;
+    medicalRecord?: MedicalRecordInput;
   }) => {
     try {
       const response = await fetch("/api/hospital_doctor/appointments/update-status", {
@@ -151,10 +163,14 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handleFilterChange = (key: keyof typeof filters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-  };
+  const handleFilterChange = <K extends keyof Filters>(
+  key: K,
+  value: Filters[K]
+) => {
+  setFilters(prev => ({ ...prev, [key]: value }));
+  setPagination(prev => ({ ...prev, currentPage: 1 }));
+};
+
 
   const resetFilters = () => {
     setFilters({
