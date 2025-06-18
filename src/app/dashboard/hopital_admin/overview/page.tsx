@@ -10,6 +10,10 @@ import {
   Settings,
   User,
   Users,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,13 +28,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-
 import {
   Tooltip,
   ResponsiveContainer,
   PieChart as RechartsPieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
 } from "@/components/ui/charts";
 import Link from "next/link";
 
@@ -47,9 +56,16 @@ interface Doctor {
   avatar?: string;
 }
 
-type ConsultationType = {
-  name: string;
-  value: number;
+type AppointmentData = {
+  name?: string;
+  period?: string;
+  value?: number;
+  appointments?: number;
+  status?: string;
+  specialization?: string;
+  totalAppointments?: number;
+  cancelledAppointments?: number;
+  cancellationRate?: number;
 };
 
 type DepartmentData = {
@@ -66,10 +82,16 @@ export default function HospitalAdminOverviewPage() {
     totalPrescriptionsToday: 0,
   });
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [consultationTypeData, setConsultationTypeData] = useState<ConsultationType[]>([]);
+  const [appointmentData, setAppointmentData] = useState<{
+    statusDistribution?: AppointmentData[];
+    timeSeries?: AppointmentData[];
+    topDoctors?: AppointmentData[];
+    cancellationRate?: AppointmentData;
+  }>({});
   const [patientDepartementData, setPatientDepartementData] = useState<DepartmentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeAppointmentTab, setActiveAppointmentTab] = useState("status");
 
   const fetchData = async () => {
     setLoading(true);
@@ -80,9 +102,20 @@ export default function HospitalAdminOverviewPage() {
       if (!statsResponse.ok) throw new Error("Failed to fetch stats");
       const statsData = await statsResponse.json();
 
-      // Fetch consultation types
-      const consultationResponse = await fetch('/api/hospital_admin/dashboard/graphique?type=consultationTypesAllTime');
-      const consultationData = await consultationResponse.json();
+      // Fetch appointment data
+      const appointmentResponses = await Promise.all([
+        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=statusDistribution'),
+        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=timeSeries&range=weekly'),
+        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=topDoctors'),
+        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=cancellationRate'),
+      ]);
+
+      const [
+        statusData,
+        timeSeriesData,
+        topDoctorsData,
+        cancellationRateData,
+      ] = await Promise.all(appointmentResponses.map(res => res.json()));
 
       // Fetch patients by department
       const departmentResponse = await fetch('/api/hospital_admin/dashboard/graphique?type=patientsByDepartment');
@@ -96,7 +129,12 @@ export default function HospitalAdminOverviewPage() {
       });
 
       setDoctors(statsData.doctors || []);
-      setConsultationTypeData(consultationData || []);
+      setAppointmentData({
+        statusDistribution: statusData,
+        timeSeries: timeSeriesData,
+        topDoctors: topDoctorsData,
+        cancellationRate: cancellationRateData,
+      });
       setPatientDepartementData(departmentData || []);
 
     } catch (err) {
@@ -142,6 +180,22 @@ export default function HospitalAdminOverviewPage() {
       color: "bg-amber-500",
     },
   ];
+
+  const statusIcons = {
+    PENDING: <Clock className="h-4 w-4 text-yellow-500" />,
+    CONFIRMED: <CheckCircle className="h-4 w-4 text-green-500" />,
+    CANCELLED: <XCircle className="h-4 w-4 text-red-500" />,
+    COMPLETED: <CheckCircle className="h-4 w-4 text-blue-500" />,
+    NO_SHOW: <AlertCircle className="h-4 w-4 text-orange-500" />,
+  };
+
+  const STATUS_TRANSLATIONS = {
+    PENDING: "En attente",
+    CONFIRMED: "Confirmé",
+    COMPLETED: "Terminé",
+    CANCELED: "Annulé",
+    NO_SHOW: "Non presente",
+  };
 
   if (loading && !isRefreshing) {
     return <div className="text-center py-8">Chargement en cours...</div>;
@@ -195,117 +249,298 @@ export default function HospitalAdminOverviewPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-        {/* Consultation Types Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Types de Consultations</CardTitle>
-            <CardDescription>Répartition des consultations du jour</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px] flex items-center justify-center">
-            {consultationTypeData.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucune donnée disponible</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <Pie
-                    data={consultationTypeData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                  >
-                    {consultationTypeData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value}`, "Consultations"]}
-                  />
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-          {consultationTypeData.length > 0 && (
-            <CardFooter className="border-t px-6 py-3">
-              <div className="w-full space-y-1">
-                {consultationTypeData.map((entry, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div
-                        className="h-3 w-3 rounded-full mr-2"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <span className="text-sm">{entry.name}</span>
-                    </div>
-                    <span className="text-sm font-medium">{entry.value}</span>
-                  </div>
-                ))}
-              </div>
-            </CardFooter>
-          )}
-        </Card>
+      {/* Appointments Dashboard */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Statistiques des Rendez-vous</CardTitle>
+          <CardDescription>
+            Analyse des rendez-vous et consultations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex space-x-2 mb-4">
+            <Button
+              variant={activeAppointmentTab === "status" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveAppointmentTab("status")}
+            >
+              Par Statut
+            </Button>
+            <Button
+              variant={activeAppointmentTab === "evolution" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveAppointmentTab("evolution")}
+            >
+              Évolution
+            </Button>
+            <Button
+              variant={activeAppointmentTab === "doctors" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveAppointmentTab("doctors")}
+            >
+              Top Médecins
+            </Button>
+            <Button
+              variant={activeAppointmentTab === "cancellation" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveAppointmentTab("cancellation")}
+            >
+              Annulations
+            </Button>
+          </div>
 
-        {/* Patients by Department Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Répartition des Patients</CardTitle>
-            <CardDescription>Nombre de patients par département</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px] flex items-center justify-center">
-            {patientDepartementData.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucune donnée disponible</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <Pie
-                    data={patientDepartementData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                  >
-                    {patientDepartementData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value}`, "Patients"]}
-                  />
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-          {patientDepartementData.length > 0 && (
-            <CardFooter className="border-t px-6 py-3">
-              <div className="w-full space-y-1">
-                {patientDepartementData.map((entry, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div
-                        className="h-3 w-3 rounded-full mr-2"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <span className="text-sm">{entry.name}</span>
-                    </div>
-                    <span className="text-sm font-medium">{entry.value}</span>
+          {activeAppointmentTab === "status" && (
+            <div className="bg-card border rounded-xl shadow-sm p-4 h-[400px] flex flex-col">
+              {appointmentData.statusDistribution?.length ? (
+                <>
+                  <div className="flex-1 min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={appointmentData.statusDistribution}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) =>
+                            `${STATUS_TRANSLATIONS[name as keyof typeof STATUS_TRANSLATIONS] || name} ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {appointmentData.statusDistribution.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) => [`${value}`, "Rendez-vous"]}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
-            </CardFooter>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 overflow-y-auto">
+                    {appointmentData.statusDistribution.map((entry, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <div className="flex-shrink-0">
+                          {statusIcons[entry.name as keyof typeof statusIcons]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {STATUS_TRANSLATIONS[entry.name as keyof typeof STATUS_TRANSLATIONS] || entry.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {entry.value} rdv
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-muted-foreground">Aucune donnée disponible</p>
+                </div>
+              )}
+            </div>
           )}
-        </Card>
-      </div>
+
+
+          {activeAppointmentTab === "evolution" && (
+            <div className="h-[400px]">
+              {appointmentData.timeSeries?.length ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={appointmentData.timeSeries}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="period" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="appointments" fill="#8884d8" name="Rendez-vous" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-muted-foreground">Aucune donnée disponible</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeAppointmentTab === "doctors" && (
+            <div className="h-[400px]">
+              {appointmentData.topDoctors?.length ? (
+                <>
+                  <ResponsiveContainer width="100%" height="80%">
+                    <BarChart
+                      layout="vertical"
+                      data={appointmentData.topDoctors}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20, // Réduit la marge gauche
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        width={80} // Réduit la largeur
+                        tick={{ fontSize: 12 }} // Réduit la taille de police
+                        tickFormatter={(value) => {
+                          const maxLength = 15;
+                          return value.length > maxLength
+                            ? `${value.substring(0, maxLength)}...`
+                            : value;
+                        }}
+                      />
+                      <Tooltip
+                        formatter={(value) => [`${value}`, "Rendez-vous"]}
+                        labelFormatter={(value) => `Dr. ${value}`}
+                      />
+                      <Legend />
+                      <Bar
+                        dataKey="appointments"
+                        fill="#8884d8"
+                        name="Rendez-vous"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  {/* <div className="mt-4 space-y-2">
+                    {appointmentData.topDoctors.map((doctor, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="overflow-hidden">
+                          <p
+                            className="font-medium truncate"
+                            title={doctor.name}
+                          >
+                            {doctor.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {doctor.specialization}
+                          </p>
+                        </div>
+                        <span className="font-medium whitespace-nowrap ml-2">
+                          {doctor.appointments} rdv
+                        </span>
+                      </div>
+                    ))}
+                  </div> */}
+                </>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-muted-foreground">Aucune donnée disponible</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeAppointmentTab === "cancellation" && (
+            <div className="h-[400px] flex flex-col items-center justify-center">
+              {appointmentData.cancellationRate ? (
+                <>
+                  <div className="text-4xl font-bold mb-2">
+                    {appointmentData.cancellationRate.cancellationRate?.toFixed(1)}%
+                  </div>
+                  <p className="text-lg text-muted-foreground mb-6">
+                    Taux d&apos;annulation
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total RDV</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {appointmentData.cancellationRate.totalAppointments}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Annulations</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold text-red-500">
+                          {appointmentData.cancellationRate.cancelledAppointments}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Aucune donnée disponible</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Patients by Department Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Répartition des Patients</CardTitle>
+          <CardDescription>Nombre de patients par département</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px] flex items-center justify-center">
+          {patientDepartementData.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Aucune donnée disponible</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsPieChart>
+                <Pie
+                  data={patientDepartementData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
+                >
+                  {patientDepartementData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => [`${value}`, "Patients"]}
+                />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+        {patientDepartementData.length > 0 && (
+          <CardFooter className="border-t px-6 py-3">
+            <div className="w-full space-y-1">
+              {patientDepartementData.map((entry, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div
+                      className="h-3 w-3 rounded-full mr-2"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className="text-sm">{entry.name}</span>
+                  </div>
+                  <span className="text-sm font-medium">{entry.value}</span>
+                </div>
+              ))}
+            </div>
+          </CardFooter>
+        )}
+      </Card>
 
       {/* Doctors List */}
       <Card>
