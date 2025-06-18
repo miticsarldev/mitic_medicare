@@ -152,7 +152,7 @@ export default function BookAppointmentByDoctorIdPage({
     <div className="container p-4">
       <div className="mb-6 flex items-center">
         <Button
-          variant="ghost"
+          variant="default"
           size="sm"
           className="mr-4"
           onClick={() => router.back()}

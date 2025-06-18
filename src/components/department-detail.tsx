@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DepartmentWithDetails } from "@/types/ui-actions.types";
+import { useSession } from "next-auth/react";
 
 interface DepartmentDetailProps {
   department: DepartmentWithDetails;
@@ -37,6 +38,7 @@ export default function DepartmentDetail({
   department,
 }: DepartmentDetailProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const { status } = useSession();
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -246,7 +248,7 @@ export default function DepartmentDetail({
                                           />
                                         ))}
                                         <span className="ml-1 text-xs text-muted-foreground">
-                                          ({doctor?.reviews?.length})
+                                          ({doctor?.reviews?.length} avis)
                                         </span>
                                       </div>
                                     </div>
@@ -375,20 +377,22 @@ export default function DepartmentDetail({
                                           )}
                                         </div>
 
-                                        <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
-                                          {doctor.user.phone && (
-                                            <span className="flex items-center gap-1">
-                                              <Phone className="h-3 w-3" />{" "}
-                                              {doctor.user.phone}
-                                            </span>
-                                          )}
-                                          {doctor.user.email && (
-                                            <span className="flex items-center gap-1">
-                                              <Mail className="h-3 w-3" />{" "}
-                                              {doctor.user.email}
-                                            </span>
-                                          )}
-                                        </div>
+                                        {status === "authenticated" && (
+                                          <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
+                                            {doctor.user.phone && (
+                                              <span className="flex items-center gap-1">
+                                                <Phone className="h-3 w-3" />{" "}
+                                                {doctor.user.phone}
+                                              </span>
+                                            )}
+                                            {doctor.user.email && (
+                                              <span className="flex items-center gap-1">
+                                                <Mail className="h-3 w-3" />{" "}
+                                                {doctor.user.email}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
 

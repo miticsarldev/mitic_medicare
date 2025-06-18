@@ -19,6 +19,7 @@ import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 type RoleStyle = {
   name: string;
@@ -99,77 +100,79 @@ export function TeamSwitcher() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton
-          size="lg"
-          className="group overflow-hidden transition-all duration-300 hover:shadow-md"
-        >
-          {/* Fond avec dégradé qui apparaît au survol */}
-          <div
-            className={cn(
-              "absolute inset-0 opacity-0 bg-gradient-to-r transition-opacity duration-300 group-hover:opacity-10",
-              roleStyle?.gradient
-            )}
-          />
-
-          {/* Avatar avec bordure colorée */}
-          <div className="relative">
-            <Avatar
+        <Link href="/" className="no-underline">
+          <SidebarMenuButton
+            size="lg"
+            className="group overflow-hidden transition-all duration-300 hover:shadow-md"
+          >
+            {/* Fond avec dégradé qui apparaît au survol */}
+            <div
               className={cn(
-                "size-8 ring-2 ring-offset-2 transition-all duration-300",
-                `ring-${roleStyle?.borderColor}`,
-                "group-hover:ring-offset-4"
+                "absolute inset-0 opacity-0 bg-gradient-to-r transition-opacity duration-300 group-hover:opacity-10",
+                roleStyle?.gradient
               )}
-            >
-              <AvatarImage
-                src={user?.userProfile?.avatarUrl ?? undefined}
-                alt={`${user?.name}'s Image`}
-              />
-              <AvatarFallback
+            />
+
+            {/* Avatar avec bordure colorée */}
+            <div className="relative">
+              <Avatar
                 className={cn(
-                  "bg-gradient-to-br text-white font-medium",
+                  "size-8 ring-2 ring-offset-2 transition-all duration-300",
+                  `ring-${roleStyle?.borderColor}`,
+                  "group-hover:ring-offset-4"
+                )}
+              >
+                <AvatarImage
+                  src={user?.userProfile?.avatarUrl ?? undefined}
+                  alt={`${user?.name}'s Image`}
+                />
+                <AvatarFallback
+                  className={cn(
+                    "bg-gradient-to-br text-white font-medium",
+                    roleStyle?.gradient
+                  )}
+                >
+                  {user?.name
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("") ?? "MC"}
+                </AvatarFallback>
+              </Avatar>
+
+              {/* Icône de rôle en bas à droite de l'avatar */}
+              <div
+                className={cn(
+                  "absolute -bottom-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center",
+                  "border-2 border-background",
+                  "bg-gradient-to-br text-white",
                   roleStyle?.gradient
                 )}
               >
-                {user?.name
-                  ?.split(" ")
-                  .map((n) => n[0])
-                  .join("") ?? "MC"}
-              </AvatarFallback>
-            </Avatar>
-
-            {/* Icône de rôle en bas à droite de l'avatar */}
-            <div
-              className={cn(
-                "absolute -bottom-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center",
-                "border-2 border-background",
-                "bg-gradient-to-br text-white",
-                roleStyle?.gradient
-              )}
-            >
-              {RoleIcon && <RoleIcon className="h-3 w-3" />}
+                {RoleIcon && <RoleIcon className="h-3 w-3" />}
+              </div>
             </div>
-          </div>
 
-          {/* Informations utilisateur */}
-          <div className="grid flex-1 text-left text-sm leading-tight ml-3">
-            <span className="truncate font-semibold">{user?.name}</span>
-            <div className="flex items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "px-2 py-0.5 text-xs font-normal transition-colors duration-300",
-                  roleStyle?.bgColor,
-                  roleStyle?.textColor,
-                  roleStyle?.borderColor,
-                  "group-hover:bg-white"
-                )}
-              >
-                {RoleIcon && <RoleIcon className="h-3 w-3 mr-1" />}
-                {roleStyle?.name}
-              </Badge>
+            {/* Informations utilisateur */}
+            <div className="grid flex-1 text-left text-sm leading-tight ml-3">
+              <span className="truncate font-semibold">{user?.name}</span>
+              <div className="flex items-center gap-1.5">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "px-2 py-0.5 text-xs font-normal transition-colors duration-300",
+                    roleStyle?.bgColor,
+                    roleStyle?.textColor,
+                    roleStyle?.borderColor,
+                    "group-hover:bg-white"
+                  )}
+                >
+                  {RoleIcon && <RoleIcon className="h-3 w-3 mr-1" />}
+                  {roleStyle?.name}
+                </Badge>
+              </div>
             </div>
-          </div>
-        </SidebarMenuButton>
+          </SidebarMenuButton>
+        </Link>
       </SidebarMenuItem>
     </SidebarMenu>
   );

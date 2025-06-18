@@ -419,7 +419,9 @@ export default function HospitalDoctors({ hospital }: HospitalDoctorsProps) {
                           >
                             <Button className="w-full">Voir le profil</Button>
                           </Link>
-                          <Link href={`/appointments/book/${doctor.id}`}>
+                          <Link
+                            href={`/dashboard/patient/appointments/book/${doctor.id}`}
+                          >
                             <Button variant="outline" className="w-full">
                               <Calendar className="mr-2 h-4 w-4" /> Prendre RDV
                             </Button>

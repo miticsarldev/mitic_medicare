@@ -105,6 +105,7 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
         endDate: {
           gte: now,
         },
+        prescriptionOrderId: null,
       },
       include: {
         doctor: {
@@ -116,7 +117,23 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       orderBy: {
         startDate: "desc",
       },
-      take: 3,
+    });
+
+    const latestPrescriptionOrder = await prisma.prescriptionOrder.findFirst({
+      where: {
+        patientId: patient.id,
+      },
+      include: {
+        doctor: {
+          include: {
+            user: true,
+          },
+        },
+        prescriptions: true,
+      },
+      orderBy: {
+        issuedAt: "desc",
+      },
     });
 
     // Get vital signs
@@ -177,11 +194,20 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       createdByName: history.createdByUser.name,
     }));
 
+    const transformedPrescriptionOrder = latestPrescriptionOrder
+      ? {
+          ...latestPrescriptionOrder,
+          doctorName: latestPrescriptionOrder.doctor.user.name,
+          prescriptions: latestPrescriptionOrder.prescriptions,
+        }
+      : null;
+
     return {
       patient: patient ?? {},
       nextAppointment: transformedNextAppointment ?? null,
       recentAppointments: transformedRecentAppointments ?? [],
       latestMedicalRecord: transformedLatestMedicalRecord ?? null,
+      latestPrescriptionOrder: transformedPrescriptionOrder ?? null,
       activePrescriptions: transformedActivePrescriptions ?? [],
       vitalSigns: vitalSigns ?? [],
       medicalHistory: transformedMedicalHistory ?? [],
@@ -196,6 +222,7 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       recentAppointments: [],
       latestMedicalRecord: null,
       activePrescriptions: [],
+      latestPrescriptionOrder: null,
       vitalSigns: [],
       medicalHistory: [],
     };
@@ -3201,4 +3228,265 @@ export async function getFavoriteHospitalIds() {
   });
 
   return favorites?.favoriteHospitals.map((d) => d.id) ?? [];
+}
+
+export interface MedicalRecordWithDetails {
+  id: string;
+  diagnosis: string;
+  treatment: string | null;
+  notes: string | null;
+  followUpNeeded: boolean;
+  followUpDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  doctor: {
+    id: string;
+    specialization: string;
+    user: {
+      name: string;
+    };
+  };
+  hospital: {
+    id: string;
+    name: string;
+  } | null;
+  appointment: {
+    id: string;
+    scheduledAt: Date;
+    type: string | null;
+    reason: string | null;
+  } | null;
+  attachments: {
+    id: string;
+    fileName: string;
+    fileType: string;
+    fileUrl: string;
+    fileSize: number;
+    uploadedAt: Date;
+  }[];
+  prescriptionOrder: {
+    id: string;
+    issuedAt: Date;
+    notes: string | null;
+    prescriptions: {
+      id: string;
+      medicationName: string;
+      dosage: string;
+      frequency: string;
+      duration: string | null;
+      instructions: string | null;
+      isActive: boolean;
+      startDate: Date;
+      endDate: Date | null;
+    }[];
+  }[];
+}
+
+export async function getMedicalRecordsByPatientId(): Promise<
+  MedicalRecordWithDetails[]
+> {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user.id;
+
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
+  try {
+    const medicalRecords = await prisma.medicalRecord.findMany({
+      where: {
+        patientId: userId,
+      },
+      include: {
+        doctor: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        appointment: {
+          select: {
+            id: true,
+            scheduledAt: true,
+            type: true,
+            reason: true,
+          },
+        },
+        attachments: {
+          select: {
+            id: true,
+            fileName: true,
+            fileType: true,
+            fileUrl: true,
+            fileSize: true,
+            uploadedAt: true,
+          },
+        },
+        prescriptionOrder: {
+          include: {
+            prescriptions: {
+              select: {
+                id: true,
+                medicationName: true,
+                dosage: true,
+                frequency: true,
+                duration: true,
+                instructions: true,
+                isActive: true,
+                startDate: true,
+                endDate: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return medicalRecords;
+  } catch (error) {
+    console.error("Error fetching medical records:", error);
+    throw new Error("Failed to fetch medical records");
+  }
+}
+
+export interface MedicalHistoryItem {
+  id: string;
+  title: string;
+  condition: string;
+  status: string;
+  diagnosedDate: string | null;
+  details: string | null;
+  createdAt: string;
+  updatedAt: string;
+  doctor: {
+    id: string;
+    name: string;
+    specialization: string;
+    hospital?: {
+      name: string;
+    };
+  } | null;
+  createdBy: {
+    id: string;
+    name: string;
+    role: string;
+  };
+}
+
+export interface GetMedicalHistoryResult {
+  success: boolean;
+  history?: MedicalHistoryItem[];
+  error?: string;
+}
+
+export async function getPatientMedicalHistory(): Promise<GetMedicalHistoryResult> {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get patient data
+    const patient = await prisma.patient.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    // Get medical history with related data
+    const medicalHistory = await prisma.medicalHistory.findMany({
+      where: {
+        patientId: patient.id,
+      },
+      include: {
+        doctor: {
+          include: {
+            user: true,
+            hospital: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: [
+        {
+          status: "asc", // Active conditions first
+        },
+        {
+          diagnosedDate: "desc", // Most recent first
+        },
+        {
+          createdAt: "desc",
+        },
+      ],
+    });
+
+    // Transform the data
+    const transformed: MedicalHistoryItem[] = medicalHistory.map((item) => ({
+      id: item.id,
+      title: item.title,
+      condition: item.condition,
+      status: item.status,
+      diagnosedDate: item.diagnosedDate?.toISOString() || null,
+      details: item.details,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      doctor: item.doctor
+        ? {
+            id: item.doctor.id,
+            name: item.doctor.user.name,
+            specialization: item.doctor.specialization,
+            hospital: item.doctor.hospital
+              ? {
+                  name: item.doctor.hospital.name,
+                }
+              : undefined,
+          }
+        : null,
+      createdBy: {
+        id: item.createdByUser.id,
+        name: item.createdByUser.name,
+        role: item.createdByUser.role,
+      },
+    }));
+
+    return {
+      success: true,
+      history: transformed,
+    };
+  } catch (error) {
+    console.error("Error fetching medical history:", error);
+    return {
+      success: false,
+      error:
+        "Une erreur s'est produite lors du chargement de l'historique médical",
+    };
+  }
 }

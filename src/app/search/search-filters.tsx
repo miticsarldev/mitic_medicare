@@ -30,6 +30,8 @@ import type {
   SearchResults as SearchResultsType,
   SearchFilters,
 } from "@/app/actions/ui-actions";
+import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 
 interface SearchResultsProps {
   results: SearchResultsType;
@@ -39,6 +41,7 @@ interface SearchResultsProps {
 
 export function SearchResults({ results, type, filters }: SearchResultsProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const { status } = useSession();
 
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
@@ -153,7 +156,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                               ))}
                               <span className="ml-1 text-sm">
                                 {doctor.avgRating.toFixed(1)} (
-                                {doctor.doctorReviews?.length})
+                                {doctor.doctorReviews} avis)
                               </span>
                             </div>
                           </div>
@@ -192,19 +195,22 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                             )}
                           </div>
 
-                          <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
-                            {doctor.user.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />{" "}
-                                {doctor.user.phone}
-                              </span>
-                            )}
-                            {doctor.user.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" /> {doctor.user.email}
-                              </span>
-                            )}
-                          </div>
+                          {status === "authenticated" && (
+                            <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
+                              {doctor.user.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />{" "}
+                                  {doctor.user.phone}
+                                </span>
+                              )}
+                              {doctor.user.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />{" "}
+                                  {doctor.user.email}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -256,19 +262,20 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                           <p className="text-muted-foreground">
                             {hospital.city}, {hospital.state}
                           </p>
-
-                          <div className="mt-2 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
-                            {hospital.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" /> {hospital.phone}
-                              </span>
-                            )}
-                            {hospital.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" /> {hospital.email}
-                              </span>
-                            )}
-                          </div>
+                          {status === "authenticated" && (
+                            <div className="mt-2 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
+                              {hospital.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" /> {hospital.phone}
+                                </span>
+                              )}
+                              {hospital.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" /> {hospital.email}
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
                             <Badge
@@ -381,12 +388,13 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
             <PaginationItem>
               <PaginationLink
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                // disabled={currentPage === 1}
-                className={
+                size="default"
+                className={cn(
+                  "bg-secondary",
                   currentPage === 1
                     ? "opacity-50 cursor-not-allowed"
                     : "cursor-pointer"
-                }
+                )}
               >
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 Précédent
@@ -423,15 +431,17 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                 onClick={() =>
                   setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                 }
+                size="default"
                 // disabled={currentPage === totalPages}
-                className={
+                className={cn(
+                  "bg-secondary",
                   currentPage === totalPages
                     ? "opacity-50 cursor-not-allowed"
                     : "cursor-pointer"
-                }
+                )}
               >
                 Suivant
-                <ChevronRight className="h-4 w-4 ml-2" />
+                <ChevronRight className="h-4 w-4 ml-1" />
               </PaginationLink>
             </PaginationItem>
           </PaginationContent>

@@ -194,6 +194,7 @@ export async function searchHealthcare(
       // Calculate average rating for each doctor
       doctors = doctors.map((doctor) => {
         const ratings = doctor.reviews.map((r) => r.rating);
+        const doctorReviews = doctor.reviews.length;
         const avgRating =
           ratings.length > 0
             ? ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length
@@ -202,6 +203,7 @@ export async function searchHealthcare(
         return {
           ...doctor,
           avgRating,
+          doctorReviews,
           experience: doctor.experience ?? undefined,
         };
       });

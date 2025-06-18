@@ -19,6 +19,8 @@ import { PatientVitalSignsCard } from "@/components/patient/patient-vital-signs-
 import RenderBloodType from "@/components/render-bloodtype";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { AppointmentStatus } from "@prisma/client";
+import { cn } from "@/lib/utils";
 
 export default function PatientOverviewPage() {
   return (
@@ -30,6 +32,21 @@ export default function PatientOverviewPage() {
 
 async function PatientOverviewContent() {
   const data = await getPatientOverview();
+
+  const statusMap: Record<AppointmentStatus, { label: string; color: string }> =
+    {
+      PENDING: { label: "En attente", color: "bg-yellow-100 text-yellow-700" },
+      CONFIRMED: { label: "Confirmée", color: "bg-blue-100 text-blue-700" },
+      COMPLETED: { label: "Terminée", color: "bg-green-100 text-green-700" },
+      CANCELED: { label: "Annulée", color: "bg-red-100 text-red-700" },
+      NO_SHOW: { label: "Absent", color: "bg-gray-200 text-gray-600" },
+    };
+
+  const newStatus = data?.nextAppointment?.status;
+  const { label, color } = (newStatus && statusMap[newStatus]) || {
+    label: "Inconnu",
+    color: "bg-muted text-muted-foreground",
+  };
 
   return (
     <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 p-4 sm:gap-4">
@@ -50,8 +67,13 @@ async function PatientOverviewContent() {
                     {data.nextAppointment.doctorName}
                   </span>
                 </div>
-                <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                  {data.nextAppointment.status}
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-1 text-xs font-medium",
+                    color
+                  )}
+                >
+                  {label}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -169,10 +191,6 @@ async function PatientOverviewContent() {
               {data.patient.allergies || "Aucune allergie connue"}
             </div>
             <div className="text-sm text-muted-foreground">
-              <span className="font-medium">Assurance:</span>{" "}
-              {data.patient.insuranceProvider || "Non spécifiée"}
-            </div>
-            <div className="text-sm text-muted-foreground">
               <span className="font-medium">Contact d&apos;urgence:</span>{" "}
               {data.patient.emergencyContact
                 ? `${data.patient.emergencyContact} (${data.patient.emergencyPhone})`
@@ -190,7 +208,10 @@ async function PatientOverviewContent() {
       </Card>
 
       <PatientVitalSignsCard vitalSigns={data.vitalSigns} />
-      <PatientMedicationCard prescriptions={data.activePrescriptions} />
+      <PatientMedicationCard
+        prescriptions={data.activePrescriptions}
+        latestPrescriptionOrder={data.latestPrescriptionOrder}
+      />
       <PatientAppointmentsCard appointments={data.recentAppointments} />
       <PatientHealthSummary
         className="md:col-span-2 lg:col-span-3"

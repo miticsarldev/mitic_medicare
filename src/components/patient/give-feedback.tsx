@@ -253,7 +253,9 @@ export default function GiveFeedbackPage() {
       selectedTab === "doctors" ||
       (selectedTab === "establishments" && reviewTitle.length >= 5);
 
-    return hasAllRatings && comment.length >= 10 && hasTitleIfNeeded;
+    const isValid = hasAllRatings && comment.length >= 10 && hasTitleIfNeeded;
+
+    return isValid;
   };
 
   // Go back to previous step

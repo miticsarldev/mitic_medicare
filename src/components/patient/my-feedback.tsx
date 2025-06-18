@@ -5,15 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type React from "react";
 
 import { useState, useEffect } from "react";
-import {
-  Star,
-  Edit,
-  Trash2,
-  Filter,
-  Search,
-  User,
-  Hospital,
-} from "lucide-react";
+import { Star, Filter, Search, User, Hospital } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +13,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -316,6 +307,7 @@ interface ReviewCardProps {
   renderStars: (rating: number) => React.ReactNode;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ReviewCard({ review, onDelete, renderStars }: ReviewCardProps) {
   return (
     <Card className="overflow-hidden transition-all hover:shadow-sm">
@@ -356,7 +348,7 @@ function ReviewCard({ review, onDelete, renderStars }: ReviewCardProps) {
         </div>
         <p className="text-sm">{review.comment}</p>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-end gap-2">
+      {/* <CardFooter className="p-4 pt-0 flex justify-end gap-2">
         <Button variant="outline" size="sm">
           <Edit className="h-4 w-4 mr-1" />
           Modifier
@@ -370,7 +362,7 @@ function ReviewCard({ review, onDelete, renderStars }: ReviewCardProps) {
           <Trash2 className="h-4 w-4 mr-1" />
           Supprimer
         </Button>
-      </CardFooter>
+      </CardFooter> */}
     </Card>
   );
 }
