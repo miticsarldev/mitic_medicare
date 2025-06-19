@@ -27,8 +27,32 @@ type MedicalRecordInput = {
   treatment: string;
   notes?: string;
   followUpNeeded?: boolean;
-  ffollowUpDate?: Date | string | undefined; 
+  followUpDate?: Date | string | undefined; 
 };
+interface MedicalRecordData {
+  diagnosis: string;
+  treatment: string;
+  notes?: string;
+  followUpNeeded: boolean;
+  followUpDate?: Date;
+  attachments?: {
+    fileName: string;
+    fileType: string;
+    fileUrl: string;
+    fileSize: number;
+  }[];
+  prescriptions?: {
+    medicationName: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    instructions?: string;
+    isActive: boolean;
+    startDate: string;
+    endDate: string;
+  }[];
+}
+
 const statusOptions = [
   { value: "ALL", label: "Tous les statuts" },
   { value: "PENDING", label: "En attente" },
@@ -41,6 +65,7 @@ const statusOptions = [
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [medicalRecordData, setMedicalRecordData] = useState<MedicalRecordData | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -65,7 +90,7 @@ type Filters = {
     totalPages: 1,
   });
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "details" | null>(null);
+const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord" | null>(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -343,6 +368,31 @@ type Filters = {
                 key={appointment.id}
                 appointment={appointment}
                 onAction={(type, apt) => {
+                  if (type === "edit") {
+                  // Appelle l'API pour récupérer les données du dossier
+                  fetch(`/api/hospital_doctor/medical-records/${apt.id}`)
+                  .then(res => {
+                    if (!res.ok) throw new Error("Dossier non trouvé");
+                    return res.json();
+                  })
+                  .then(data => {
+                    if (!data) throw new Error("Dossier vide");
+                    setMedicalRecordData(data);
+                    setModalType("edit");
+                  })
+                  .catch(() => {
+                    toast({
+                      title: "Erreur",
+                      description: "Le dossier médical n'existe plus ou a été supprimé.",
+                      variant: "destructive",
+                    });
+                    setModalType(null);
+                    setMedicalRecordData(null);
+                  });
+
+                } else {
+                  setModalType(type);
+                }
                   setSelectedAppointment(apt);
                   setModalType(type);
                 }}
@@ -387,6 +437,58 @@ type Filters = {
               });
             }}
           />
+          {modalType === "edit" && selectedAppointment && medicalRecordData?.diagnosis && (
+          <CompleteModal
+            open={true}
+            onOpenChange={(open) => {
+              if (!open) {
+                setModalType(null);
+                setMedicalRecordData(null);
+              }
+            }}
+            appointment={selectedAppointment}
+            onSubmit={(updatedData) => {
+              fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedData),
+              })
+                .then(res => {
+                  if (!res.ok) throw new Error("Erreur modification");
+                  toast({ title: "Succès", description: "Dossier modifié." });
+                  setModalType(null);
+                  fetchAppointments();
+                })
+                .catch(() =>
+                  toast({ title: "Erreur", description: "Modification échouée.", variant: "destructive" })
+                );
+            }}
+            // Injecte les valeurs existantes dans CompleteModal via defaultValues
+            defaultValues={medicalRecordData}
+          />
+        )}
+        {modalType === "deleteRecord" && selectedAppointment && (
+  <ConfirmModal
+    open={true}
+    onOpenChange={(open) => !open && setModalType(null)}
+    onConfirm={() => {
+      fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+        method: "DELETE",
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Erreur suppression");
+          toast({ title: "Succès", description: "Dossier supprimé." });
+          setModalType(null);
+          fetchAppointments();
+        })
+        .catch(() =>
+          toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
+        );
+    }}
+    title="Supprimer le dossier médical"
+    description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? Cette action est irréversible."
+  />
+)}
 
           <CancelModal
             open={modalType === "cancel"}
@@ -443,7 +545,8 @@ function AppointmentCard({
   getStatusBadge
 }: {
   appointment: Appointment;
-  onAction: (type: "confirm" | "cancel" | "complete" | "details", apt: Appointment) => void;
+  onAction: (
+  type: "confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord",apt: Appointment) => void;
   getStatusBadge: (status: AppointmentStatus) => React.ReactNode;
 }) {
   return (
@@ -495,6 +598,22 @@ function AppointmentCard({
                     className="text-red-600"
                   >
                     <X className="mr-2 h-4 w-4" /> Annuler
+                  </DropdownMenuItem>
+                </>
+              )}
+              {appointment.status === "COMPLETED" && (
+                <>
+                <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Ajouter un dossier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAction("edit", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Modifier le dossier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onAction("deleteRecord", appointment)}
+                    className="text-red-600"
+                  >
+                    <X className="mr-2 h-4 w-4" /> Supprimer le dossier
                   </DropdownMenuItem>
                 </>
               )}

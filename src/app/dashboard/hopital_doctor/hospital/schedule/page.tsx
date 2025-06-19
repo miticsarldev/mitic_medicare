@@ -74,6 +74,10 @@ export default function AppointmentCalendarView() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>()
     const [loading, setLoading] = useState(true)
     const [calendarView, setCalendarView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridWeek')
+    const formatDateRange = useCallback((range: DateRange | undefined): string => {
+    if (!range?.from || !range?.to) return "Période spécifique"
+    return `${format(range.from, "dd/MM/yyyy")} - ${format(range.to, "dd/MM/yyyy")}`
+    }, [])
 
     const fetchAppointments = useCallback(async () => {
         setLoading(true)
@@ -96,8 +100,9 @@ export default function AppointmentCalendarView() {
     }, [])
 
     useEffect(() => {
-        fetchAppointments()
-    }, [fetchAppointments])
+    fetchAppointments()
+    }, [fetchAppointments, dateRange])
+
 
     const filteredAppointments = useMemo(() => {
         let result = [...appointments]
@@ -196,10 +201,19 @@ export default function AppointmentCalendarView() {
                                 slotMinTime="07:00:00"
                                 slotMaxTime="20:00:00"
                                 headerToolbar={{
-                                    start: 'prev,next today',
-                                    center: 'title',
-                                    end: 'dayGridMonth,timeGridWeek,timeGridDay',
+    start: 'prev,next today',
+    center: dateRange?.from && dateRange?.to ? 'customTitle' : 'title',
+    end: 'dayGridMonth,timeGridWeek,timeGridDay',
                                 }}
+                                customButtons={{
+                                    customTitle: {
+                                    text: dateRange?.from && dateRange?.to
+                                        ? formatDateRange(dateRange)
+                                        : '',
+                                    click: () => {}, // bouton non cliquable
+                                    },
+                                }}
+
                                 views={{
                                     dayGridMonth: { buttonText: 'Mois' },
                                     timeGridWeek: { buttonText: 'Semaine' },

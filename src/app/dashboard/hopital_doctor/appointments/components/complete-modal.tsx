@@ -44,6 +44,7 @@ const formSchema = z.object({
         })
     ).optional(),
 });
+type MedicalFormValues = z.infer<typeof formSchema>;
 
 interface CompleteModalProps {
     open: boolean;
@@ -52,19 +53,25 @@ interface CompleteModalProps {
     onSubmit: (data: z.infer<typeof formSchema>) => void;
 }
 
-export function CompleteModal({ open, onOpenChange, appointment, onSubmit }: CompleteModalProps) {
-    // const [attachments, setAttachments] = useState<Array<{ fileName: string; fileType: string; fileUrl: string; fileSize: number }>>([]);
+export function CompleteModal({
+  open,
+  onOpenChange,
+  appointment,
+  onSubmit,
+  defaultValues,
+}: CompleteModalProps & { defaultValues?: MedicalFormValues }) {
+  const form = useForm<MedicalFormValues>({
+  resolver: zodResolver(formSchema),
+  defaultValues: defaultValues || {
+    diagnosis: "",
+    treatment: "",
+    notes: "",
+    followUpNeeded: false,
+    prescriptions: [],
+  },
+});
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            diagnosis: "",
-            treatment: "",
-            notes: "",
-            followUpNeeded: false,
-            prescriptions: [],
-        },
-    });
+
 
 
     // const handleRemoveAttachment = (index: number) => {

@@ -5,6 +5,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 interface ConfirmModalProps {
     open: boolean;
+    title?: string;
+    description?: string;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => void;
 }
