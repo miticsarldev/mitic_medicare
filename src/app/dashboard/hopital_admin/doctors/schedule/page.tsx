@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
-import { format, parseISO, getHours, startOfISOWeek, endOfISOWeek, getISOWeek, getISOWeekYear } from "date-fns";
+import { format, parseISO, getHours, startOfISOWeek, endOfISOWeek } from "date-fns";
 import { fr } from "date-fns/locale/fr";
 import {
     Select,
@@ -16,8 +16,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CalendarClock, User, Stethoscope, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 
 interface Appointment {
@@ -48,13 +46,6 @@ const formatWeekLabel = (weekStr: string) => {
     return `Semaine du ${format(start, "dd MMMM", { locale: fr })} au ${format(end, "dd MMMM", { locale: fr })}`;
 };
 
-const getWeekStringFromDate = (date: Date): string => {
-    const year = getISOWeekYear(date);
-    const week = getISOWeek(date);
-    return `${year}-S${week.toString().padStart(2, "0")}`;
-};
-
-
 
 export default function WeeklySchedule() {
     const [schedules, setSchedules] = useState<DoctorSchedule[]>([]);
@@ -82,21 +73,18 @@ export default function WeeklySchedule() {
 
             const sortedWeeks = Array.from(weeks).sort().reverse();
             setAvailableWeeks(sortedWeeks);
-            if (sortedWeeks.length > 0 && !selectedWeek) {
+            if (sortedWeeks.length > 0) {
                 setSelectedWeek(sortedWeeks[0]);
             }
         } catch (err) {
             console.error("Failed to fetch schedules", err);
             setError("Impossible de charger les plannings. Veuillez réessayer.");
-            toast({
-                title: "Erreur",
-                description: "Échec du chargement des plannings",
-                variant: "destructive"
-            });
+            console.log(availableWeeks);
+            
         } finally {
             setLoading(false);
         }
-    }, [selectedWeek]);
+    }, []);
 
     useEffect(() => {
         fetchSchedules();
@@ -118,22 +106,6 @@ export default function WeeklySchedule() {
             .filter(doc => doc.schedule.length > 0);
     }, [schedules, selectedWeek, selectedDoctor, selectedDay]);
 
-    const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const date = new Date(e.target.value);
-        if (!isNaN(date.getTime())) {
-            const weekStr = getWeekStringFromDate(date);
-            if (availableWeeks.includes(weekStr)) {
-                setSelectedWeek(weekStr);
-            } else {
-                toast({
-                    title: "Information",
-                    description: "Aucun rendez-vous pour cette semaine",
-                    variant: "default"
-                });
-            }
-        }
-    }, [availableWeeks]);
-
     const handleAppointmentClick = useCallback((appointment: Appointment & { doctor: string }) => {
         setSelectedAppointment(appointment);
     }, []);
@@ -153,7 +125,6 @@ export default function WeeklySchedule() {
         );
     }
 
-    //methode pour mettre le status en francais
     const translateStatus = (status: string) => {
         switch (status) {
             case "CONFIRMED":
@@ -232,11 +203,10 @@ export default function WeeklySchedule() {
         );
     });
 
-
     return (
         <div className="p-4 space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                     <div className="space-y-1">
                         <Label htmlFor="doctor-select">Médecin</Label>
                         <Select
@@ -255,16 +225,6 @@ export default function WeeklySchedule() {
                                 ))}
                             </SelectContent>
                         </Select>
-                    </div>
-
-                    <div className="space-y-1">
-                        <Label htmlFor="week-select">Semaine</Label>
-                        <Input
-                            id="week-select"
-                            type="date"
-                            onChange={handleDateChange}
-                            className="w-full"
-                        />
                     </div>
 
                     <div className="space-y-1">
@@ -403,7 +363,6 @@ export default function WeeklySchedule() {
                                                                 </Badge>
                                                             </div>
                                                         </div>
-
                                                     ))}
                                                 </div>
                                             </td>
