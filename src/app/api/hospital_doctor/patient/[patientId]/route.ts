@@ -35,6 +35,7 @@ export async function GET(
             name: true,
             email: true,
             phone: true,
+            dateOfBirth: true,
           },
         },
         medicalHistories: {

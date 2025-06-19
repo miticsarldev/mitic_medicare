@@ -26,7 +26,9 @@ export async function GET(request: Request) {
         );
         const statusFilter = searchParams.get("status") as AppointmentStatus | null;
         const patientName = searchParams.get("patientName");
-        const dateFilter = searchParams.get("date"); // Format attendu : YYYY-MM-DD
+        const startDate = searchParams.get("startDate");
+        const endDate = searchParams.get("endDate");
+
 
         if (isNaN(page) || page < 1 || isNaN(pageSize) || pageSize < 1) {
             return NextResponse.json(
@@ -61,14 +63,14 @@ export async function GET(request: Request) {
                       },
                   }
                 : {}),
-            ...(dateFilter
-                ? {
-                      scheduledAt: {
-                          gte: new Date(`${dateFilter}T00:00:00.000Z`),
-                          lt: new Date(`${dateFilter}T23:59:59.999Z`),
-                      },
-                  }
-                : {}),
+            ...(startDate && endDate
+            ? {
+                scheduledAt: {
+                    gte: new Date(startDate),
+                    lte: new Date(endDate),
+                },
+            }
+            : {}),
         };
 
         const [appointments, totalCount] = await Promise.all([

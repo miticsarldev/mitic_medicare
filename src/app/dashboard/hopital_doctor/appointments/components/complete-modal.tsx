@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -44,6 +44,7 @@ const formSchema = z.object({
         })
     ).optional(),
 });
+type MedicalFormValues = z.infer<typeof formSchema>;
 
 interface CompleteModalProps {
     open: boolean;
@@ -52,37 +53,30 @@ interface CompleteModalProps {
     onSubmit: (data: z.infer<typeof formSchema>) => void;
 }
 
-export function CompleteModal({ open, onOpenChange, appointment, onSubmit }: CompleteModalProps) {
-    const [attachments, setAttachments] = useState<Array<{ fileName: string; fileType: string; fileUrl: string; fileSize: number }>>([]);
+export function CompleteModal({
+  open,
+  onOpenChange,
+  appointment,
+  onSubmit,
+  defaultValues,
+}: CompleteModalProps & { defaultValues?: MedicalFormValues }) {
+  const form = useForm<MedicalFormValues>({
+  resolver: zodResolver(formSchema),
+  defaultValues: defaultValues || {
+    diagnosis: "",
+    treatment: "",
+    notes: "",
+    followUpNeeded: false,
+    prescriptions: [],
+  },
+});
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            diagnosis: "",
-            treatment: "",
-            notes: "",
-            followUpNeeded: false,
-            prescriptions: [],
-        },
-    });
 
-    const handleAddAttachment = () => {
-        // Ici vous implémenteriez la logique de téléchargement de fichier
-        // Pour l'exemple, nous ajoutons un fichier factice
-        setAttachments([
-            ...attachments,
-            {
-                fileName: "rapport-medical.pdf",
-                fileType: "application/pdf",
-                fileUrl: "https://example.com/rapport-medical.pdf",
-                fileSize: 1024,
-            },
-        ]);
-    };
 
-    const handleRemoveAttachment = (index: number) => {
-        setAttachments(attachments.filter((_, i) => i !== index));
-    };
+
+    // const handleRemoveAttachment = (index: number) => {
+    //     setAttachments(attachments.filter((_, i) => i !== index));
+    // };
 
     const handleAddPrescription = () => {
         form.setValue("prescriptions", [
@@ -221,7 +215,7 @@ export function CompleteModal({ open, onOpenChange, appointment, onSubmit }: Com
                             </div>
                         </div>
 
-                        <div>
+                        {/* <div>
                             <h3 className="text-lg font-medium mb-4">Pièces jointes</h3>
                             <div className="space-y-4">
                                 {attachments.map((attachment, index) => (
@@ -250,7 +244,7 @@ export function CompleteModal({ open, onOpenChange, appointment, onSubmit }: Com
                                     <Plus className="mr-2 h-4 w-4" /> Ajouter une pièce jointe
                                 </Button>
                             </div>
-                        </div>
+                        </div> */}
 
                         <div>
                             <div className="flex justify-between items-center mb-4">

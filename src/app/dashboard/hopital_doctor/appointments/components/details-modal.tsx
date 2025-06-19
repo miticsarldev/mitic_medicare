@@ -29,7 +29,7 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
             case "COMPLETED":
                 return <Badge className="bg-green-500 hover:bg-green-600 text-white">Terminé</Badge>;
             case "NO_SHOW":
-                return <Badge variant="outline" className="text-yellow-600">Absent</Badge>;
+                return <Badge variant="outline" className="text-yellow-600 dark:text-yellow-400">Absent</Badge>;
             default:
                 return <Badge variant="outline">Inconnu</Badge>;
         }
@@ -39,7 +39,9 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold text-gray-800">Détails du rendez-vous</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold text-gray-800 dark:text-white">
+                        Détails du rendez-vous
+                    </DialogTitle>
                     <Separator className="my-2" />
                 </DialogHeader>
 
@@ -48,7 +50,7 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
                         {/* Patient Card */}
                         <Card className="shadow-sm">
                             <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700 dark:text-white">
                                     <User className="h-5 w-5 text-blue-600" /> Informations patient
                                 </CardTitle>
                                 <Separator />
@@ -68,7 +70,7 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
                         <div className="space-y-6">
                             <Card className="shadow-sm">
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700 dark:text-white">
                                         <Stethoscope className="h-5 w-5 text-blue-600" /> Médecin
                                     </CardTitle>
                                     <Separator />
@@ -82,7 +84,7 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
 
                             <Card className="shadow-sm">
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700 dark:text-white">
                                         <Calendar className="h-5 w-5 text-blue-600" /> Rendez-vous
                                     </CardTitle>
                                     <Separator />
@@ -91,17 +93,17 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
                                     <InfoRow 
                                         label="Date" 
                                         value={format(new Date(appointment.scheduledAt), "PPP", { locale: fr })} 
-                                        icon={<Calendar className="h-4 w-4 text-gray-500" />}
+                                        icon={<Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
                                     />
                                     <InfoRow 
                                         label="Heure" 
                                         value={format(new Date(appointment.scheduledAt), "p", { locale: fr })} 
-                                        icon={<Clock className="h-4 w-4 text-gray-500" />}
+                                        icon={<Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
                                     />
                                     <InfoRow label="Type" value={appointment.type || "Non précisé"} />
                                     <InfoRow label="Motif" value={appointment.reason || "Non précisé"} />
                                     <div className="flex items-center gap-2">
-                                        <span className="font-medium text-sm text-gray-600">Statut :</span>
+                                        <span className="font-medium text-sm text-gray-600 dark:text-gray-300">Statut :</span>
                                         {getStatusBadge(appointment.status)}
                                     </div>
                                 </CardContent>
@@ -112,7 +114,7 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
                     {appointment.medicalRecord && (
                         <Card className="shadow-sm">
                             <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-700 dark:text-white">
                                     <FileText className="h-5 w-5 text-blue-600" /> Dossier Médical
                                 </CardTitle>
                                 <Separator />
@@ -131,38 +133,38 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
                                             <InfoRow 
                                                 label="Date de suivi" 
                                                 value={format(new Date(appointment.medicalRecord.followUpDate), "PPP", { locale: fr })}
-                                                icon={<Calendar className="h-4 w-4 text-gray-500" />} 
+                                                icon={<Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />} 
                                             />
                                         )}
                                         <InfoRow 
                                             label="Créé le" 
                                             value={format(new Date(appointment.medicalRecord.createdAt), "PPPp", { locale: fr })}
-                                            icon={<Calendar className="h-4 w-4 text-gray-500" />} 
+                                            icon={<Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />} 
                                         />
                                         <InfoRow 
                                             label="Dernière mise à jour" 
                                             value={format(new Date(appointment.medicalRecord.updatedAt), "PPPp", { locale: fr })}
-                                            icon={<Calendar className="h-4 w-4 text-gray-500" />} 
+                                            icon={<Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />} 
                                         />
                                     </div>
 
                                     {appointment.medicalRecord.prescriptions.length > 0 && (
                                         <div className="space-y-4">
-                                            <h4 className="font-medium flex items-center gap-2 text-gray-700">
+                                            <h4 className="font-medium flex items-center gap-2 text-gray-700 dark:text-white">
                                                 <Pill className="h-4 w-4 text-blue-600" /> Prescriptions
                                             </h4>
                                             <div className="space-y-3">
                                                 {appointment.medicalRecord.prescriptions.map((prescription, index) => (
                                                     <Card key={index} className="border p-4 rounded-lg shadow-xs">
                                                         <CardContent className="p-0 space-y-2">
-                                                            <p className="font-medium text-gray-800">{prescription.medicationName}</p>
+                                                            <p className="font-medium text-gray-800 dark:text-white">{prescription.medicationName}</p>
                                                             <InfoRowSmall label="Posologie" value={`${prescription.dosage} - ${prescription.frequency}`} />
                                                             <InfoRowSmall label="Durée" value={prescription.duration} />
                                                             {prescription.instructions && (
                                                                 <InfoRowSmall label="Instructions" value={prescription.instructions} />
                                                             )}
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-medium text-xs text-gray-600">Statut :</span>
+                                                                <span className="font-medium text-xs text-gray-600 dark:text-gray-300">Statut :</span>
                                                                 {prescription.isActive ? (
                                                                     <Badge variant="default" className="text-xs">Active</Badge>
                                                                 ) : (
@@ -183,15 +185,15 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
 
                                 {appointment.medicalRecord.attachments.length > 0 && (
                                     <div className="mt-6 space-y-4">
-                                        <h4 className="font-medium flex items-center gap-2 text-gray-700">
+                                        <h4 className="font-medium flex items-center gap-2 text-gray-700 dark:text-white">
                                             <File className="h-4 w-4 text-blue-600" /> Pièces jointes
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                             {appointment.medicalRecord.attachments.map((attachment, index) => (
                                                 <Card key={index} className="hover:shadow-md transition-shadow">
                                                     <CardContent className="p-4 space-y-2">
-                                                        <p className="font-medium text-sm truncate text-gray-800">{attachment.fileName}</p>
-                                                        <div className="flex justify-between text-xs text-gray-500">
+                                                        <p className="font-medium text-sm truncate text-gray-800 dark:text-white">{attachment.fileName}</p>
+                                                        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                                                             <span>{attachment.fileType}</span>
                                                             <span>{(attachment.fileSize / 1024).toFixed(2)} KB</span>
                                                         </div>
@@ -224,9 +226,9 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
         <div className="flex items-start gap-2">
             <div className="flex items-center gap-1 min-w-[120px]">
                 {icon}
-                <span className="font-medium text-sm text-gray-600">{label} :</span>
+                <span className="font-medium text-sm text-gray-600 dark:text-gray-300">{label} :</span>
             </div>
-            <span className="text-sm text-gray-800">{value}</span>
+            <span className="text-sm text-gray-800 dark:text-white">{value}</span>
         </div>
     );
 }
@@ -235,8 +237,8 @@ function InfoRow({ label, value, icon }: { label: string; value: string | React.
 function InfoRowSmall({ label, value }: { label: string; value: string | React.ReactNode }) {
     return (
         <div className="flex items-center gap-1">
-            <span className="font-medium text-xs text-gray-600">{label} :</span>
-            <span className="text-xs text-gray-700">{value}</span>
+            <span className="font-medium text-xs text-gray-600 dark:text-gray-300">{label} :</span>
+            <span className="text-xs text-gray-700 dark:text-gray-200">{value}</span>
         </div>
     );
 }

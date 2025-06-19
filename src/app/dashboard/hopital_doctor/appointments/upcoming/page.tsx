@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +10,48 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast"
-import { Appointment, AppointmentsResponse, } from "@/types/appointment";
+import { Appointment, AppointmentsResponse } from "@/types/appointment";
 import { AppointmentStatus } from "@prisma/client";
 import { ConfirmModal } from "../components/confirm-modal";
 import { CancelModal } from "../components/cancel-modal";
 import { CompleteModal } from "../components/complete-modal";
 import { DetailsModal } from "../components/details-modal";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+
+type MedicalRecordInput = {
+  diagnosis: string;
+  treatment: string;
+  notes?: string;
+  followUpNeeded?: boolean;
+  followUpDate?: Date | string | undefined; 
+};
+interface MedicalRecordData {
+  diagnosis: string;
+  treatment: string;
+  notes?: string;
+  followUpNeeded: boolean;
+  followUpDate?: Date;
+  attachments?: {
+    fileName: string;
+    fileType: string;
+    fileUrl: string;
+    fileSize: number;
+  }[];
+  prescriptions?: {
+    medicationName: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    instructions?: string;
+    isActive: boolean;
+    startDate: string;
+    endDate: string;
+  }[];
+}
 
 const statusOptions = [
   { value: "ALL", label: "Tous les statuts" },
@@ -30,6 +65,7 @@ const statusOptions = [
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [medicalRecordData, setMedicalRecordData] = useState<MedicalRecordData | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -38,10 +74,15 @@ export default function AppointmentsPage() {
     canceled: 0,
   });
   const [filters, setFilters] = useState({
-    status: "ALL",
-    patientName: "",
-    date: null as Date | null,
-  });
+  status: "ALL",
+  patientName: "",
+});
+type Filters = {
+  status: string;
+  patientName: string;
+};
+
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pagination, setPagination] = useState({
     currentPage: 1,
     pageSize: 10,
@@ -49,12 +90,12 @@ export default function AppointmentsPage() {
     totalPages: 1,
   });
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "details" | null>(null);
+const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord" | null>(null);
 
   useEffect(() => {
     fetchAppointments();
     fetchStats();
-  }, [pagination.currentPage, filters]);
+  }, [pagination.currentPage, filters, dateRange]);
 
   const fetchAppointments = async () => {
     try {
@@ -67,8 +108,11 @@ export default function AppointmentsPage() {
       if (filters.patientName) {
         url += `&patientName=${encodeURIComponent(filters.patientName)}`;
       }
-      if (filters.date) {
-        url += `&date=${filters.date.toISOString().split('T')[0]}`;
+      if (dateRange?.from) {
+        url += `&startDate=${dateRange.from.toISOString()}`;
+      }
+      if (dateRange?.to) {
+        url += `&endDate=${dateRange.to.toISOString()}`;
       }
 
       const res = await fetch(url);
@@ -102,12 +146,10 @@ export default function AppointmentsPage() {
     }
   };
 
-  
   const handleStatusUpdate = async (data: {
     appointmentId: string;
     action: "confirm" | "canceled" | "complete";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    medicalRecord?: any;
+    medicalRecord?: MedicalRecordInput;
   }) => {
     try {
       const response = await fetch("/api/hospital_doctor/appointments/update-status", {
@@ -140,25 +182,27 @@ export default function AppointmentsPage() {
     }
   };
 
-
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       setPagination(prev => ({ ...prev, currentPage: newPage }));
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleFilterChange = (key: keyof typeof filters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-  };
+  const handleFilterChange = <K extends keyof Filters>(
+  key: K,
+  value: Filters[K]
+) => {
+  setFilters(prev => ({ ...prev, [key]: value }));
+  setPagination(prev => ({ ...prev, currentPage: 1 }));
+};
+
 
   const resetFilters = () => {
     setFilters({
       status: "ALL",
       patientName: "",
-      date: null,
     });
+    setDateRange(undefined);
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
@@ -266,13 +310,38 @@ export default function AppointmentsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Date</label>
-              <Input
-                type="date"
-                value={filters.date ? filters.date.toISOString().split('T')[0] : ""}
-                onChange={(e) => handleFilterChange("date", e.target.value ? new Date(e.target.value) : null)}
-                className="w-full"
-              />
+              <label className="block text-sm font-medium mb-1">Période</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "dd MMM yyyy", { locale: fr })} -{" "}
+                          {format(dateRange.to, "dd MMM yyyy", { locale: fr })}
+                        </>
+                      ) : (
+                        format(dateRange.from, "dd MMM yyyy", { locale: fr })
+                      )
+                    ) : (
+                      <span>Sélectionner une période</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardContent>
@@ -299,6 +368,31 @@ export default function AppointmentsPage() {
                 key={appointment.id}
                 appointment={appointment}
                 onAction={(type, apt) => {
+                  if (type === "edit") {
+                  // Appelle l'API pour récupérer les données du dossier
+                  fetch(`/api/hospital_doctor/medical-records/${apt.id}`)
+                  .then(res => {
+                    if (!res.ok) throw new Error("Dossier non trouvé");
+                    return res.json();
+                  })
+                  .then(data => {
+                    if (!data) throw new Error("Dossier vide");
+                    setMedicalRecordData(data);
+                    setModalType("edit");
+                  })
+                  .catch(() => {
+                    toast({
+                      title: "Erreur",
+                      description: "Le dossier médical n'existe plus ou a été supprimé.",
+                      variant: "destructive",
+                    });
+                    setModalType(null);
+                    setMedicalRecordData(null);
+                  });
+
+                } else {
+                  setModalType(type);
+                }
                   setSelectedAppointment(apt);
                   setModalType(type);
                 }}
@@ -343,6 +437,58 @@ export default function AppointmentsPage() {
               });
             }}
           />
+          {modalType === "edit" && selectedAppointment && medicalRecordData?.diagnosis && (
+          <CompleteModal
+            open={true}
+            onOpenChange={(open) => {
+              if (!open) {
+                setModalType(null);
+                setMedicalRecordData(null);
+              }
+            }}
+            appointment={selectedAppointment}
+            onSubmit={(updatedData) => {
+              fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedData),
+              })
+                .then(res => {
+                  if (!res.ok) throw new Error("Erreur modification");
+                  toast({ title: "Succès", description: "Dossier modifié." });
+                  setModalType(null);
+                  fetchAppointments();
+                })
+                .catch(() =>
+                  toast({ title: "Erreur", description: "Modification échouée.", variant: "destructive" })
+                );
+            }}
+            // Injecte les valeurs existantes dans CompleteModal via defaultValues
+            defaultValues={medicalRecordData}
+          />
+        )}
+        {modalType === "deleteRecord" && selectedAppointment && (
+  <ConfirmModal
+    open={true}
+    onOpenChange={(open) => !open && setModalType(null)}
+    onConfirm={() => {
+      fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+        method: "DELETE",
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Erreur suppression");
+          toast({ title: "Succès", description: "Dossier supprimé." });
+          setModalType(null);
+          fetchAppointments();
+        })
+        .catch(() =>
+          toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
+        );
+    }}
+    title="Supprimer le dossier médical"
+    description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? Cette action est irréversible."
+  />
+)}
 
           <CancelModal
             open={modalType === "cancel"}
@@ -379,7 +525,6 @@ export default function AppointmentsPage() {
   );
 }
 
-// Composant Carte de Statistique
 function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode; }) {
   return (
     <Card>
@@ -394,14 +539,14 @@ function StatCard({ title, value, icon }: { title: string; value: number; icon: 
   );
 }
 
-// Composant Carte de Rendez-vous
 function AppointmentCard({
   appointment,
   onAction,
   getStatusBadge
 }: {
   appointment: Appointment;
-  onAction: (type: "confirm" | "cancel" | "complete" | "details", apt: Appointment) => void;
+  onAction: (
+  type: "confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord",apt: Appointment) => void;
   getStatusBadge: (status: AppointmentStatus) => React.ReactNode;
 }) {
   return (
@@ -448,16 +593,29 @@ function AppointmentCard({
                   <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
                     <FileText className="mr-2 h-4 w-4" /> Compléter
                   </DropdownMenuItem>
-
                   <DropdownMenuItem
                     onClick={() => onAction("cancel", appointment)}
                     className="text-red-600"
                   >
                     <X className="mr-2 h-4 w-4" /> Annuler
                   </DropdownMenuItem>
-
                 </>
-
+              )}
+              {appointment.status === "COMPLETED" && (
+                <>
+                <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Ajouter un dossier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAction("edit", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Modifier le dossier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onAction("deleteRecord", appointment)}
+                    className="text-red-600"
+                  >
+                    <X className="mr-2 h-4 w-4" /> Supprimer le dossier
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -465,7 +623,7 @@ function AppointmentCard({
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-2 mb-2">
-          <Calendar className="h-4 w-4 text-gray-500" />
+          <CalendarIcon className="h-4 w-4 text-gray-500" />
           <span className="text-sm">
             {new Date(appointment.scheduledAt).toLocaleDateString("fr-FR", {
               weekday: "short",
@@ -520,7 +678,6 @@ function AppointmentCard({
             </>
           )}
           {appointment.status === "CONFIRMED" && (
-
             <>
               <Button
                 size="sm"
@@ -528,7 +685,6 @@ function AppointmentCard({
               >
                 <FileText className="mr-2 h-4 w-4" /> Compléter
               </Button>
-
               <Button
                 variant="destructive"
                 size="sm"

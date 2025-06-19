@@ -445,10 +445,10 @@ export const hospitalDoctorNavItems = [
         title: "Mes Rendez-vous",
         url: "/dashboard/hopital_doctor/appointments/upcoming",
       },
-      {
-        title: "Historique des Rendez-vous",
-        url: "/dashboard/hopital_doctor/appointments/history",
-      },
+      // {
+      //   title: "Historique des Rendez-vous",
+      //   url: "/dashboard/hopital_doctor/appointments/history",
+      // },
     ],
   },
   {

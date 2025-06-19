@@ -9,19 +9,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
-  Activity,
   //   CalendarIcon,
   Camera,
   Check,
   ChevronsUpDown,
-  Droplets,
-  Heart,
   //   Info,
   Loader2,
   MapPin,
   Phone,
   Save,
-  Thermometer,
   User,
 } from "lucide-react";
 
@@ -68,7 +64,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
+// import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -164,7 +160,7 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [vitalsData, setVitalsData] = useState<any>(null);
+  // const [vitalsData, setVitalsData] = useState<any>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   const profileForm = useForm<ProfileFormValues>({
@@ -221,7 +217,7 @@ export default function ProfilePage() {
             ? new Date(data.profile.createdAt).toISOString()
             : undefined,
         });
-        setVitalsData(data.vitals);
+        // setVitalsData(data.vitals);
 
         // Set avatar preview if available
         if (data.profile.avatarUrl) {
@@ -277,43 +273,51 @@ export default function ProfilePage() {
     fetchProfileData();
   }, [toast, profileForm, vitalsForm]);
 
+  const reloadPage = () => {
+  window.location.reload();
+};
   // Profile form
 
-  async function onSubmitProfile(data: ProfileFormValues) {
-    setIsLoading(true);
-    try {
-      const formData = new FormData();
+ async function onSubmitProfile(data: ProfileFormValues) {
+  setIsLoading(true);
+  try {
+    const formData = new FormData();
 
-      // Append profile data
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, value);
-        }
-      });
-
-      // Append avatar if changed
-      if (avatarFile) {
-        formData.append("avatar", avatarFile);
+    // Append profile data
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value);
       }
+    });
 
-      await updatePatientProfile(formData);
-
-      toast({
-        title: "Profil mis à jour",
-        description:
-          "Vos informations personnelles ont été mises à jour avec succès.",
-      });
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le profil.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+    // Append avatar if changed
+    if (avatarFile) {
+      formData.append("avatar", avatarFile);
     }
+
+    await updatePatientProfile(formData);
+
+    toast({
+      title: "Profil mis à jour",
+      description:
+        "Vos informations personnelles ont été mises à jour avec succès.",
+    });
+    
+    // Recharger la page après un court délai pour que l'utilisateur voit le toast
+    setTimeout(() => {
+      reloadPage();
+    }, 1000);
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    toast({
+      title: "Erreur",
+      description: "Impossible de mettre à jour le profil.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
   }
+}
 
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,59 +351,59 @@ export default function ProfilePage() {
   };
 
   // Get vital sign status
-  const getVitalStatus = (type: string, value: number) => {
-    if (!value) return "normal";
+  // const getVitalStatus = (type: string, value: number) => {
+  //   if (!value) return "normal";
 
-    switch (type) {
-      case "bloodPressure":
-        const systolic = vitalsData?.bloodPressureSystolic || 0;
-        const diastolic = vitalsData?.bloodPressureDiastolic || 0;
-        if (systolic > 140 || diastolic > 90) return "high";
-        if (systolic < 90 || diastolic < 60) return "low";
-        return "normal";
-      case "heartRate":
-        if (value > 100) return "high";
-        if (value < 60) return "low";
-        return "normal";
-      case "respiratoryRate":
-        if (value > 20) return "high";
-        if (value < 12) return "low";
-        return "normal";
-      case "temperature":
-        if (value > 37.5) return "high";
-        if (value < 36) return "low";
-        return "normal";
-      case "oxygenSaturation":
-        if (value < 95) return "low";
-        return "normal";
-      default:
-        return "normal";
-    }
-  };
+  //   switch (type) {
+  //     case "bloodPressure":
+  //       const systolic = vitalsData?.bloodPressureSystolic || 0;
+  //       const diastolic = vitalsData?.bloodPressureDiastolic || 0;
+  //       if (systolic > 140 || diastolic > 90) return "high";
+  //       if (systolic < 90 || diastolic < 60) return "low";
+  //       return "normal";
+  //     case "heartRate":
+  //       if (value > 100) return "high";
+  //       if (value < 60) return "low";
+  //       return "normal";
+  //     case "respiratoryRate":
+  //       if (value > 20) return "high";
+  //       if (value < 12) return "low";
+  //       return "normal";
+  //     case "temperature":
+  //       if (value > 37.5) return "high";
+  //       if (value < 36) return "low";
+  //       return "normal";
+  //     case "oxygenSaturation":
+  //       if (value < 95) return "low";
+  //       return "normal";
+  //     default:
+  //       return "normal";
+  //   }
+  // };
 
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "high":
-        return "text-red-500";
-      case "low":
-        return "text-blue-500";
-      default:
-        return "text-green-500";
-    }
-  };
+  // // Get status color
+  // const getStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case "high":
+  //       return "text-red-500";
+  //     case "low":
+  //       return "text-blue-500";
+  //     default:
+  //       return "text-green-500";
+  //   }
+  // };
 
-  // Get progress color
-  const getProgressColor = (status: string) => {
-    switch (status) {
-      case "high":
-        return "bg-red-500";
-      case "low":
-        return "bg-blue-500";
-      default:
-        return "bg-green-500";
-    }
-  };
+  // // Get progress color
+  // const getProgressColor = (status: string) => {
+  //   switch (status) {
+  //     case "high":
+  //       return "bg-red-500";
+  //     case "low":
+  //       return "bg-blue-500";
+  //     default:
+  //       return "bg-green-500";
+  //   }
+  // };
 
   if (isLoadingProfile) {
     return <Loading />;
@@ -496,121 +500,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Vital Signs Card */}
-            <Card className="w-full mt-6">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Signes Vitaux</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {vitalsData?.bloodPressureSystolic &&
-                  vitalsData?.bloodPressureDiastolic && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-1.5">
-                          <Activity className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">
-                            Tension artérielle
-                          </span>
-                        </div>
-                        <span
-                          className={`text-sm font-medium ${getStatusColor(getVitalStatus("bloodPressure", 0))}`}
-                        >
-                          {vitalsData.bloodPressureSystolic}/
-                          {vitalsData.bloodPressureDiastolic} mmHg
-                        </span>
-                      </div>
-                      <Progress
-                        value={100}
-                        className={`h-1.5 ${getProgressColor(
-                          getVitalStatus("bloodPressure", 0)
-                        )}`}
-                      />
-                    </div>
-                  )}
-
-                {vitalsData?.heartRate && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <Heart className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          Fréquence cardiaque
-                        </span>
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${getStatusColor(getVitalStatus("heartRate", vitalsData.heartRate))}`}
-                      >
-                        {vitalsData.heartRate} bpm
-                      </span>
-                    </div>
-                    <Progress
-                      value={100}
-                      className={`h-1.5 ${getProgressColor(
-                        getVitalStatus("heartRate", vitalsData.heartRate)
-                      )}`}
-                    />
-                  </div>
-                )}
-
-                {vitalsData?.oxygenSaturation && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <Droplets className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          Saturation en oxygène
-                        </span>
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${getStatusColor(getVitalStatus("oxygenSaturation", vitalsData.oxygenSaturation))}`}
-                      >
-                        {vitalsData.oxygenSaturation}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={vitalsData.oxygenSaturation}
-                      className={`h-1.5 ${getProgressColor(
-                        getVitalStatus(
-                          "oxygenSaturation",
-                          vitalsData.oxygenSaturation
-                        )
-                      )}`}
-                    />
-                  </div>
-                )}
-
-                {vitalsData?.temperature && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <Thermometer className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Température</span>
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${getStatusColor(getVitalStatus("temperature", vitalsData.temperature))}`}
-                      >
-                        {vitalsData.temperature}°C
-                      </span>
-                    </div>
-                    <Progress
-                      value={100}
-                      className={`h-1.5 ${getProgressColor(
-                        getVitalStatus("temperature", vitalsData.temperature)
-                      )}`}
-                    />
-                  </div>
-                )}
-
-                {!vitalsData?.bloodPressureSystolic &&
-                  !vitalsData?.heartRate &&
-                  !vitalsData?.oxygenSaturation &&
-                  !vitalsData?.temperature && (
-                    <div className="text-center py-2 text-sm text-muted-foreground">
-                      Aucun signe vital enregistré
-                    </div>
-                  )}
-              </CardContent>
-            </Card>
+            
           </CardContent>
         </Card>
 
