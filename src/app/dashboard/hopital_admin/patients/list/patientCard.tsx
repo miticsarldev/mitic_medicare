@@ -250,7 +250,7 @@ export const PatientCard: FC<PatientCardProps> = ({ patient: initialPatient }) =
                                                 {/* Carte d'historique compacte */}
                                                 <div className="flex-1 pb-6">
                                                     <div className="relative space-y-2 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="absolute top-14 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"

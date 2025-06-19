@@ -18,8 +18,8 @@ interface Department {
 interface DoctorModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onDoctorCreated?: () => void; // Callback après création réussie
-    departments?: Department[]; // Optionnel: peut passer les départements en props
+    onDoctorCreated?: () => void;
+    departments?: Department[];
 }
 
 export default function DoctorModal({ open, onOpenChange, onDoctorCreated, departments: initialDepartments }: DoctorModalProps) {
@@ -43,7 +43,7 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
         zipCode: '',
         country: '',
         bio: '',
-        genre: '',
+        genre: '', // MALE ou FEMALE
     });
 
     useEffect(() => {
@@ -69,8 +69,23 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleGenreChange = (value: string) => {
+        setForm(prev => ({ ...prev, genre: value }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validation des champs obligatoires
+        if (!form.phone) {
+            toast({
+                title: 'Erreur',
+                description: 'Le numéro de téléphone est obligatoire',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         setSubmitLoading(true);
 
         try {
@@ -112,7 +127,6 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
                 genre: '',
             });
 
-            // Fermer le modal et rafraîchir la liste si besoin
             onOpenChange(false);
             if (onDoctorCreated) onDoctorCreated();
 
@@ -164,13 +178,14 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
                             </div>
 
                             <div>
-                                <Label htmlFor="phone">Téléphone</Label>
+                                <Label htmlFor="phone">Téléphone*</Label>
                                 <Input
                                     id="phone"
                                     name="phone"
                                     type="tel"
                                     value={form.phone}
                                     onChange={handleChange}
+                                    required
                                 />
                             </div>
 
@@ -233,14 +248,20 @@ export default function DoctorModal({ open, onOpenChange, onDoctorCreated, depar
                             </div>
 
                             <div>
-                                <Label htmlFor="genre">Genre</Label>
-                                <Input
-                                    id="genre"
-                                    name="genre"
+                                <Label htmlFor="genre">Genre*</Label>
+                                <Select
+                                    onValueChange={handleGenreChange}
                                     value={form.genre}
-                                    onChange={handleChange}
-                                    placeholder="Homme, Femme, Autre"
-                                />
+                                    required
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Sélectionnez un genre" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="MALE">Homme</SelectItem>
+                                        <SelectItem value="FEMALE">Femme</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div>
