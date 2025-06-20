@@ -138,6 +138,22 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
       .toUpperCase();
   };
 
+  function formatBloodType(bloodType: string): string {
+    const map: Record<string, string> = {
+      A_POSITIVE: "A+",
+      A_NEGATIVE: "A-",
+      B_POSITIVE: "B+",
+      B_NEGATIVE: "B-",
+      AB_POSITIVE: "AB+",
+      AB_NEGATIVE: "AB-",
+      O_POSITIVE: "O+",
+      O_NEGATIVE: "O-",
+    };
+
+    return map[bloodType] || bloodType; // fallback si la valeur n’est pas reconnue
+  }
+
+
   const addAppointment = (newAppointment: Appointment) => {
     setAppointments((prev) => [...prev, newAppointment]);
   };
@@ -234,7 +250,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                 </Badge>
                 {patient.bloodType && (
                   <Badge variant="outline" className="text-sm">
-                    {patient.bloodType}
+                    {formatBloodType(patient.bloodType)}
                   </Badge>
                 )}
               </div>

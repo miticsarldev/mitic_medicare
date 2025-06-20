@@ -1,6 +1,5 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Users, ClipboardList, CheckCircle, XCircle, Clock, Calendar, Star, Activity, Stethoscope, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -8,8 +7,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { DashboardData } from "./types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import DoctorDashboard from "./grapheZone";
 
 // Types pour les données du cache
 type CachedData = DashboardData & {
@@ -57,14 +56,11 @@ type Availability = {
 };
 
 export default function Dashboard() {
-  const filterOptions = ['jour', 'semaine', 'mois', 'année'];
-  const [appointmentFilter, setAppointmentFilter] = useState<string>("semaine");
   const { data: session } = useSession();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Couleurs personnalisées pour les graphiques
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   const fetchData = useCallback(async (filterKey: string, endpoint: string, filter?: string): Promise<DashboardData> => {
     const cacheKey = `${endpoint}-${filter || 'default'}`;
@@ -106,32 +102,6 @@ export default function Dashboard() {
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
-
-  // Chargement des données filtrées seulement quand nécessaire
-  const loadFilteredData = useCallback(async (filter: string) => {
-    if (!session || !data) return;
-
-    try {
-      const baseUrl = `/api/hospital_doctor/overview`;
-      const [filteredData] = await Promise.all([
-        fetchData(`patients-${filter}`, `${baseUrl}/patients`, filter),
-      ]);
-
-      setData(prev => ({
-        ...prev!,
-        weeklyPatients: filteredData.weeklyPatients || prev!.weeklyPatients,
-      }));
-    } catch (error) {
-      console.error("Erreur lors du chargement des données filtrées :", error);
-    }
-  }, [session, data, fetchData]);
-
-  // Effet pour les changements de filtre
-  useEffect(() => {
-    if (appointmentFilter) {
-      loadFilteredData(appointmentFilter);
-    }
-  }, [appointmentFilter, loadFilteredData]);
 
   const handleAppointmentStatusUpdate = async (appointmentId: string, status: "CONFIRMED" | "REJECTED") => {
     try {
@@ -209,64 +179,10 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Graphiques principaux */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Évolution des patients */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Évolution des patients</CardTitle>
-              <Select value={appointmentFilter} onValueChange={setAppointmentFilter}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Période" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filterOptions.map(option => (
-                    <SelectItem key={option} value={option}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <CardDescription>Répartition des patients sur la période sélectionnée</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                layout="vertical"
-                data={data.weeklyPatients}
-                margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-              >
-                <XAxis type="number" />
-                <YAxis
-                  dataKey="date"
-                  type="category"
-                  width={80}
-                  tickFormatter={(date: string) => format(new Date(date), "dd MMM", { locale: fr })}
-                />
-                <Tooltip />
-                <Bar
-                  dataKey="count"
-                  fill="#3b82f6"
-                  radius={[0, 4, 4, 0]}
-                  label={{ position: 'right' }}
-                >
-                  {data.weeklyPatients.map((entry: { date: string; count: number }, index: number) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={`hsl(217, 91%, ${60 + (index * 5)}%)`}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <DoctorDashboard  />
 
       {/* Rendez-vous par jour */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Rendez-vous par jour</CardTitle>
           <CardDescription>Répartition quotidienne des consultations</CardDescription>
@@ -298,7 +214,7 @@ export default function Dashboard() {
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Rendez-vous en attente */}
       <Card>

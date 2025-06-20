@@ -106,7 +106,7 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
               </Avatar>
               <div>
                 <CardTitle className="text-base font-medium flex items-center gap-2">
-                  {doctor.name}
+                  Dr.{doctor.name}
                   {doctor.isVerified && (
                     <CheckCircle className="w-4 h-4 text-green-500" />
                   )}
