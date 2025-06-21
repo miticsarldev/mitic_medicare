@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus, User2, FileSearch, FileText } from "lucide-react";
+import { Pill, Activity, User, HeartPulse, Calendar, AlertCircle, Plus, Pencil, User2, FileSearch, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,17 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader } from '@/components/loader';
-
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 interface PatientDetails {
   id: string;
   user: {
@@ -153,6 +163,30 @@ export default function PatientMedicalRecord() {
   const [isUpdatingVitals, setIsUpdatingVitals] = useState(false);
   const [isAddingPrescription, setIsAddingPrescription] = useState(false);
   const [isViewingRecord, setIsViewingRecord] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [historyToDelete, setHistoryToDelete] = useState<string | null>(null);
+  
+  const { toast } = useToast();
+  const refreshData = async () => {
+  setIsRefreshing(true);
+  await fetchPatientData();
+  setIsRefreshing(false);
+};
+const getBloodTypeInfo = (bloodType: string) => {
+  const bloodTypeMap: Record<string, { display: string; variant: 'default' | 'destructive' | 'outline' | 'secondary' }> = {
+    'A_POSITIVE': { display: 'A+', variant: 'destructive' },
+    'A_NEGATIVE': { display: 'A-', variant: 'outline' },
+    'B_POSITIVE': { display: 'B+', variant: 'destructive' },
+    'B_NEGATIVE': { display: 'B-', variant: 'outline' },
+    'AB_POSITIVE': { display: 'AB+', variant: 'destructive' },
+    'AB_NEGATIVE': { display: 'AB-', variant: 'outline' },
+    'O_POSITIVE': { display: 'O+', variant: 'destructive' },
+    'O_NEGATIVE': { display: 'O-', variant: 'outline' }
+  };
+  
+  return bloodTypeMap[bloodType] || { display: bloodType, variant: 'secondary' };
+};
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
@@ -232,54 +266,47 @@ export default function PatientMedicalRecord() {
     setIsModalOpen(true);
   };
 
-  // const handleUpdateHistory = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!editingHistory) return;
 
-  //   try {
-  //     const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`, {
-  //       method: 'PUT',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ 
-  //         title, 
-  //         condition, 
-  //         details, 
-  //         diagnosedDate: diagnosedDate || undefined, 
-  //         status: editingHistory.status 
-  //       })
-  //     });
-
-  //     if (response.ok) {
-  //       const updatedPatient = await response.json();
-  //       setPatient(updatedPatient);
-  //       setIsModalOpen(false);
-  //       resetForm();
-  //     }
-  //   } catch (err) {
-  //     console.error("Erreur lors de la mise à jour de l'historique", err);
-  //   }
-  // };
-
-  const handleDeleteHistory = async (historyId: string) => {
-  if (!confirm("Êtes-vous sûr de vouloir supprimer cet antécédent ?")) return;
+const handleDeleteHistory = async (historyId: string) => {
   setIsDeletingHistory(true);
 
-    try {
-      const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        const updatedPatient = await response.json();
-        setPatient(updatedPatient);
+  try {
+    const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`, {
+      method: 'DELETE',
+      headers: {
+        'Cache-Control': 'no-cache'
       }
-    } catch (err) {
-      console.error("Erreur lors de la suppression de l'historique", err);
+    });
+
+    if (response.ok) {
+      await fetchPatientData();
+      toast({
+        title: "Succès",
+        description: "Antécédent supprimé avec succès",
+        variant: "default",
+      });
+    } else {
+      const errorData = await response.json();
+      console.error("Erreur lors de la suppression:", errorData.error);
+      toast({
+      title: "Succès",
+      description: "Antécédent supprimé avec succès",
+      variant: "default",
+    });
     }
-    finally {
+  } catch (err) {
+    console.error("Erreur réseau lors de la suppression", err);
+    toast({
+  title: "Erreur",
+  description: "Échec de la suppression: " + ( "Erreur inconnue"),
+  variant: "destructive",
+});
+  } finally {
     setIsDeletingHistory(false);
+    setIsDeleteModalOpen(false);
+    setHistoryToDelete(null);
   }
-  };
+};
 
   const resetForm = () => {
     setEditingHistory(null);
@@ -288,53 +315,66 @@ export default function PatientMedicalRecord() {
     setDetails('');
     setDiagnosedDate('');
   };
-
-   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const isEditing = !!editingHistory;
-   if (isEditing) {
-    setIsUpdatingHistory(true);
-  } else {
-    setIsAddingHistory(true);
-  }
-
-    
-    try {
-      const endpoint = editingHistory 
-        ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
-        : `/api/hospital_doctor/patient/${patientId}/medical-history`;
-
-      const method = editingHistory ? 'PUT' : 'POST';
-
-      const response = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title, 
-          condition, 
-          details, 
-          diagnosedDate: diagnosedDate || undefined, 
-          status: 'ACTIVE' 
-        })
-      });
-
-      if (response.ok) {
-        const updatedPatient = await response.json();
-        setPatient(updatedPatient);
-        setIsModalOpen(false);
-        resetForm();
+const fetchPatientData = async () => {
+  try {
+    setLoading(true);
+    const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
+      headers: {
+        'Cache-Control': 'no-cache'
       }
-    } catch (err) {
-      console.error("Erreur lors de l'opération sur l'historique", err);
-    } finally {
-      if (isEditing) {
-  setIsUpdatingHistory(true);
-} else {
-  setIsAddingHistory(true);
-}
+    });
+    if (!response.ok) throw new Error('Patient non trouvé');
+    const data = await response.json();
+    setPatient(data);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Une erreur est survenue");
+  } finally {
+    setLoading(false);
+  }
+};
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const isEditing = !!editingHistory;
+  setIsAddingHistory(!isEditing);
+  setIsUpdatingHistory(isEditing);
 
+  try {
+    const endpoint = editingHistory 
+      ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
+      : `/api/hospital_doctor/patient/${patientId}/medical-history`;
+
+    const method = editingHistory ? 'PUT' : 'POST';
+
+    const response = await fetch(endpoint, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        title, 
+        condition, 
+        details, 
+        diagnosedDate: diagnosedDate || undefined, 
+        status: 'ACTIVE' 
+      })
+    });
+
+    if (response.ok) {
+      // Recharger les données plutôt que de se fier à la réponse
+      await fetchPatientData(); // Utilisez la fonction existante
+      setIsModalOpen(false);
+      resetForm();
+      toast({
+        title: "Succès",
+        description: editingHistory ? "Antécédent mis à jour" : "Antécédent ajouté",
+        variant: "default",
+      });
     }
-  };
+  } catch (err) {
+    console.error("Erreur lors de l'opération sur l'historique", err);
+  } finally {
+    setIsAddingHistory(false);
+    setIsUpdatingHistory(false);
+  }
+};
 
   const handleViewDiagnosis = async (appointmentId: string) => {
   setIsViewingRecord(true);
@@ -380,6 +420,12 @@ export default function PatientMedicalRecord() {
         setIsPrescriptionModalOpen(false);
         setMedicationName(''); setDosage(''); setFrequency(''); setDuration(''); setInstructions('');
         setStartDate(new Date().toISOString().split('T')[0]);
+        toast({
+        title: "Succès",
+        description: "Prescription ajoutée",
+        variant: "default",
+      });
+
       }
     } catch (err) {
       console.error("Erreur lors de l'ajout de la prescription", err);
@@ -408,17 +454,30 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
     });
 
     if (response.ok) {
-      const updatedPatient = await response.json();
-      setPatient(updatedPatient);
+      await fetchPatientData(); // Ajoutez cette ligne pour rafraîchir les données
       setIsVitalModalOpen(false);
+      toast({
+        title: "Succès",
+        description: "Signes vitaux mis à jour",
+        variant: "default",
+      });
     } else {
       const errorData = await response.json();
       console.error("Erreur lors de la mise à jour:", errorData.error);
+      toast({
+        title: "Erreur",
+        description: "Échec de la mise à jour: " + (errorData.message || "Erreur inconnue"),
+        variant: "destructive",
+      });
     }
   } catch (err) {
     console.error("Erreur réseau lors de la mise à jour des signes vitaux", err);
-  }
-  finally {
+    toast({
+      title: "Erreur",
+      description: "Erreur réseau lors de la mise à jour",
+      variant: "destructive",
+    });
+  } finally {
     setIsUpdatingVitals(false);
   }
 };
@@ -452,6 +511,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
   if (loading) return <div>Chargement...</div>;
   if (error) return <div>Erreur: {error}</div>;
   if (!patient) return <div>Patient non trouvé</div>;
+  {isRefreshing && <Loader className="mr-2 h-4 w-4" />}
 
   return (
     <div className="p-6 space-y-6 bg-gray-100 dark:bg-gray-900 min-h-screen">
@@ -672,17 +732,20 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
                       Modifier
                     </Button>
 
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteHistory(history.id)}
-                      disabled={isDeletingHistory || isAddingHistory || isUpdatingHistory}
-                    >
-                      {isDeletingHistory ? (
-                        <Loader className="mr-2 h-4 w-4" />
-                      ) : null}
-                      Supprimer
-                    </Button>
+                   <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setHistoryToDelete(history.id);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    disabled={isDeletingHistory || isAddingHistory || isUpdatingHistory}
+                  >
+                    {isDeletingHistory ? (
+                      <Loader className="mr-2 h-4 w-4" />
+                    ) : null}
+                    Supprimer
+                  </Button>
                       </div>
                     </li>
                   ))}
@@ -704,9 +767,18 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
                 Signes vitaux
               </CardTitle>
               <Button onClick={() => setIsVitalModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> 
-                {latestVitalSigns ? 'Modifier' : 'Ajouter'}
-              </Button>
+              {latestVitalSigns ? (
+                <>
+                  <Pencil className="mr-2 h-4 w-4" /> {/* Icône de crayon pour la modification */}
+                  Modifier
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" /> {/* Icône + pour l'ajout */}
+                  Ajouter
+                </>
+              )}
+            </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -1065,96 +1137,122 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
 
 <Dialog open={isRecordModalOpen} onOpenChange={setIsRecordModalOpen}>
   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-  <DialogHeader>
-    <DialogTitle>Diagnostic & Dossier Médical</DialogTitle>
-  </DialogHeader>
+    <DialogHeader>
+      <DialogTitle>Diagnostic & Dossier Médical</DialogTitle>
+    </DialogHeader>
 
-  {recordData ? (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-medium mb-2">Diagnostic</h3>
-        <div className="p-4 bg-muted/50 rounded-lg">
-          {recordData.diagnosis || 'Non spécifié'}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="font-medium mb-2">Traitement</h3>
-        <div className="p-4 bg-muted/50 rounded-lg">
-          {recordData.treatment || 'Non spécifié'}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="font-medium mb-2">Informations sur le rendez-vous</h3>
-        <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-          <p><strong>Hôpital :</strong> {recordData.hospital?.name || 'N/A'}</p>
-          <p><strong>Date du dossier :</strong> {new Date(recordData.createdAt).toLocaleDateString()}</p>
-          {/* <p><strong>Statut du rendez-vous :</strong> {recordData.appointment?.status || 'N/A'}</p> */}
-          <p><strong>Motif de consultation :</strong> {recordData.appointment?.reason || 'N/A'}</p>
-        </div>
-      </div>
-
-      {recordData.notes && (
+    {recordData ? (
+      <div className="space-y-6">
         <div>
-          <h3 className="font-medium mb-2">Notes</h3>
-          <div className="p-4 bg-muted/50 rounded-lg whitespace-pre-line">
-            {recordData.notes}
+          <h3 className="font-medium mb-2">Diagnostic</h3>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            {recordData.diagnosis || 'Non spécifié'}
           </div>
         </div>
-      )}
 
-      {recordData.followUpNeeded && (
         <div>
-          <h3 className="font-medium mb-2">Suivi</h3>
+          <h3 className="font-medium mb-2">Traitement</h3>
           <div className="p-4 bg-muted/50 rounded-lg">
-            <p>Un suivi est nécessaire</p>
-            {recordData.followUpDate && (
-              <p className="mt-2">
-                Date de suivi: {new Date(recordData.followUpDate).toLocaleDateString()}
+            {recordData.treatment || 'Non spécifié'}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-medium mb-2">Informations sur le rendez-vous</h3>
+          <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+            <p><strong>Hôpital :</strong> {recordData.hospital?.name || 'N/A'}</p>
+            <p><strong>Date du dossier :</strong> {new Date(recordData.createdAt).toLocaleDateString()}</p>
+            <p><strong>Motif de consultation :</strong> {recordData.appointment?.reason || 'N/A'}</p>
+          </div>
+        </div>
+
+        {recordData.notes && (
+          <div>
+            <h3 className="font-medium mb-2">Notes</h3>
+            <div className="p-4 bg-muted/50 rounded-lg whitespace-pre-line">
+              {recordData.notes}
+            </div>
+          </div>
+        )}
+
+        {recordData.followUpNeeded && (
+          <div>
+            <h3 className="font-medium mb-2">Suivi</h3>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p>Un suivi est nécessaire</p>
+              {recordData.followUpDate && (
+                <p className="mt-2">
+                  Date de suivi: {new Date(recordData.followUpDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {recordData.patient?.bloodType && (
+          <div>
+            <h3 className="font-medium mb-2">Informations patient</h3>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p>
+                Groupe sanguin: {' '}
+                <Badge variant={getBloodTypeInfo(recordData.patient.bloodType).variant}>
+                  {getBloodTypeInfo(recordData.patient.bloodType).display}
+                </Badge>
               </p>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {recordData.patient?.bloodType && (
-        <div>
-          <h3 className="font-medium mb-2">Informations patient</h3>
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <p>Groupe sanguin: {recordData.patient.bloodType}</p>
-          </div>
-        </div>
-      )}
-
-      {recordData.prescriptions?.length > 0 && (
-        <div>
-          <h3 className="font-medium mb-2">Prescriptions ({recordData.prescriptions.length})</h3>
-          <div className="space-y-2">
-            {recordData.prescriptions.map((pres: Prescription) => (
-              <div key={pres.id} className="p-3 border rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{pres.medicationName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {pres.dosage} • {pres.frequency} • {pres.duration}
-                    </p>
+        {recordData.prescriptions?.length > 0 && (
+          <div>
+            <h3 className="font-medium mb-2">Prescriptions ({recordData.prescriptions.length})</h3>
+            <div className="space-y-2">
+              {recordData.prescriptions.map((pres: Prescription) => (
+                <div key={pres.id} className="p-3 border rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{pres.medicationName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {pres.dosage} • {pres.frequency} • {pres.duration}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  ) : (
-    <p>Aucun dossier trouvé pour ce rendez-vous.</p>
-  )}
-</DialogContent>
+        )}
+      </div>
+    ) : (
+      <p>Aucun dossier trouvé pour ce rendez-vous.</p>
+    )}
+  </DialogContent>
 </Dialog>
 
-
+      {/* Modal de suppression */}
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera définitivement cet antécédent médical. Vous ne pourrez pas annuler cette action.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => historyToDelete && handleDeleteHistory(historyToDelete)}
+              disabled={isDeletingHistory}
+            >
+              {isDeletingHistory ? (
+                <Loader className="mr-2 h-4 w-4" />
+              ) : null}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* Modal pour ajouter une prescription */}
       <Dialog open={isPrescriptionModalOpen} onOpenChange={setIsPrescriptionModalOpen}>
         <DialogContent>

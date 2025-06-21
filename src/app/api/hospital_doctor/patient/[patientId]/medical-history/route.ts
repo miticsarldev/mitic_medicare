@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: { patientId: 
     
     // D'abord trouver le rendez-vous pour obtenir le vrai patientId
     const appointment = await prisma.appointment.findUnique({
-      where: { id: params.patientId }, // Ici params.patientId est en fait l'ID du rendez-vous
+      where: { id: params.patientId },
       select: { patientId: true }
     });
 
@@ -39,7 +39,19 @@ export async function POST(request: Request, { params }: { params: { patientId: 
       );
     }
 
-    // Créer l'historique médical
+    // Vérifie si l'utilisateur est un médecin et récupère son doctorId
+    const doctor = await prisma.doctor.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (!doctor) {
+      return NextResponse.json(
+        { error: "Seul un médecin peut créer un historique médical" },
+        { status: 403 }
+      );
+    }
+
+    // Créer l'historique médical avec le doctorId
     await prisma.medicalHistory.create({
       data: {
         title,
@@ -47,7 +59,8 @@ export async function POST(request: Request, { params }: { params: { patientId: 
         details,
         diagnosedDate: diagnosedDate ? new Date(diagnosedDate) : undefined,
         status,
-        patientId: realPatientId, // Utiliser le vrai patientId
+        patientId: realPatientId,
+        doctorId: doctor.id, // Ajout du doctorId
         createdBy: session.user.id
       }
     });
@@ -55,7 +68,11 @@ export async function POST(request: Request, { params }: { params: { patientId: 
     const updatedPatient = await prisma.patient.findUnique({
       where: { id: realPatientId },
       include: {
-        medicalHistories: true
+        medicalHistories: {
+          include: {
+            doctor: true // Inclure les informations du médecin dans la réponse
+          }
+        }
       }
     });
 
