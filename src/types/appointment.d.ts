@@ -61,6 +61,7 @@ export type Appointment = {
     doctor: Doctor;
     patient: Patient;
     medicalRecord: MedicalRecord | null;
+    hasMedicalRecord?: boolean;
 };
 
 export type AppointmentsResponse = {
