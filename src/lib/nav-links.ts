@@ -367,6 +367,10 @@ export const hospitalAdminNavItems = [
         url: "/dashboard/hopital_admin/management/details",
       },
       {
+        title: "Gestion de l'abonnement",
+        url: "/dashboard/hopital_admin/management/pricing",
+      },
+      {
         title: "Departements & Spécialités",
         url: "/dashboard/hopital_admin/management/services",
       },
