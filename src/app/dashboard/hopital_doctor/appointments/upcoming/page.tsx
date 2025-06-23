@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search, FilePlus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +100,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      let url = `/api/hospital_doctor/appointments/all?page=${pagination.currentPage}&pageSize=${pagination.pageSize}`;
+      let url = `/api/hospital_doctor/appointments/all?page=${pagination.currentPage}&pageSize=${pagination.pageSize}&includeMedicalRecordInfo=true`;
 
       if (filters.status !== "ALL") {
         url += `&status=${filters.status}`;
@@ -544,11 +544,14 @@ function AppointmentCard({
   onAction,
   getStatusBadge
 }: {
-  appointment: Appointment;
+  appointment: Appointment & { hasMedicalRecord?: boolean };
   onAction: (
   type: "confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord",apt: Appointment) => void;
   getStatusBadge: (status: AppointmentStatus) => React.ReactNode;
 }) {
+  const hasMedicalRecord = appointment.medicalRecord !== null && 
+                          appointment.medicalRecord !== undefined && 
+                          Object.keys(appointment.medicalRecord).length > 0;
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
@@ -602,20 +605,7 @@ function AppointmentCard({
                 </>
               )}
               {appointment.status === "COMPLETED" && (
-                <>
-                <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
-                    <FileText className="mr-2 h-4 w-4" /> Ajouter un dossier
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAction("edit", appointment)}>
-                    <FileText className="mr-2 h-4 w-4" /> Modifier le dossier
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onAction("deleteRecord", appointment)}
-                    className="text-red-600"
-                  >
-                    <X className="mr-2 h-4 w-4" /> Supprimer le dossier
-                  </DropdownMenuItem>
-                </>
+                <></> 
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -650,6 +640,11 @@ function AppointmentCard({
             <span className="font-medium">Motif :</span> {appointment.reason}
           </p>
         )}
+         {appointment.status === "COMPLETED" && hasMedicalRecord && (
+        <div className="absolute top-2 right-2 bg-green-100 p-1 rounded-full">
+          <FileText className="h-4 w-4 text-green-600" />
+        </div>
+      )}
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button
@@ -660,7 +655,32 @@ function AppointmentCard({
           Détails
         </Button>
         <div className="flex gap-2">
-          {appointment.status === "PENDING" && (
+          {appointment.status === "COMPLETED" ? (
+            hasMedicalRecord ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => onAction("edit", appointment)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" /> Modifier
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onAction("deleteRecord", appointment)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => onAction("complete", appointment)}
+              >
+                <FilePlus className="mr-2 h-4 w-4" /> Ajouter un dossier
+              </Button>
+            )
+          ) : appointment.status === "PENDING" ? (
             <>
               <Button
                 size="sm"
@@ -676,8 +696,7 @@ function AppointmentCard({
                 <X className="mr-2 h-4 w-4" /> Annuler
               </Button>
             </>
-          )}
-          {appointment.status === "CONFIRMED" && (
+          ) : appointment.status === "CONFIRMED" && (
             <>
               <Button
                 size="sm"

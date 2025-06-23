@@ -452,6 +452,21 @@ export const hospitalDoctorNavItems = [
     ],
   },
   {
+    title: "Mes Disponibilités",
+    icon: Calendar,
+    url: "/dashboard/hopital_doctor/avaibility",
+    items: [
+      {
+        title: "Mes Disponibilités",
+        url: "/dashboard/hopital_doctor/avaibility/avaibilities",
+      },
+      {
+        title: "Mon planning",
+        url: "/dashboard/hopital_doctor/avaibility/schedule",
+      },
+    ],
+  },
+  {
     title: "Hôpital",
     icon: Stethoscope,
     url: "/dashboard/hopital_doctor/hospital",
@@ -460,7 +475,6 @@ export const hospitalDoctorNavItems = [
         title: "Informations de l’Hôpital",
         url: "/dashboard/hopital_doctor/hospital/details",
       },
-      { title: "Planning", url: "/dashboard/hopital_doctor/hospital/schedule" },
     ],
   },
   {

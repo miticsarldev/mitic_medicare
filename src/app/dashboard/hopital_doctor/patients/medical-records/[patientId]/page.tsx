@@ -163,17 +163,11 @@ export default function PatientMedicalRecord() {
   const [isUpdatingVitals, setIsUpdatingVitals] = useState(false);
   const [isAddingPrescription, setIsAddingPrescription] = useState(false);
   const [isViewingRecord, setIsViewingRecord] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [historyToDelete, setHistoryToDelete] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const refreshData = async () => {
-  setIsRefreshing(true);
-  await fetchPatientData();
-  setIsRefreshing(false);
-};
-const getBloodTypeInfo = (bloodType: string) => {
+  const getBloodTypeInfo = (bloodType: string) => {
   const bloodTypeMap: Record<string, { display: string; variant: 'default' | 'destructive' | 'outline' | 'secondary' }> = {
     'A_POSITIVE': { display: 'A+', variant: 'destructive' },
     'A_NEGATIVE': { display: 'A-', variant: 'outline' },
@@ -511,7 +505,6 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
   if (loading) return <div>Chargement...</div>;
   if (error) return <div>Erreur: {error}</div>;
   if (!patient) return <div>Patient non trouvé</div>;
-  {isRefreshing && <Loader className="mr-2 h-4 w-4" />}
 
   return (
     <div className="p-6 space-y-6 bg-gray-100 dark:bg-gray-900 min-h-screen">

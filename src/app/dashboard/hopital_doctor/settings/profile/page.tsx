@@ -9,11 +9,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
-  //   CalendarIcon,
   Camera,
   Check,
   ChevronsUpDown,
-  //   Info,
   Loader2,
   MapPin,
   Phone,
@@ -64,7 +62,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -72,16 +69,7 @@ import {
   updatePatientProfile,
 } from "@/app/dashboard/patient/actions";
 import { countries } from "@/constant";
-// import { BloodType } from "@prisma/client";
-// import { Calendar } from "../ui/calendar";
-// import { fr } from "date-fns/locale";
-// import { format } from "date-fns";
-// import {
-//   TooltipProvider,
-//   Tooltip,
-//   TooltipContent,
-//   TooltipTrigger,
-// } from "@/components/ui/tooltip";
+
 
 interface ProfileData {
   name: string;
@@ -89,7 +77,6 @@ interface ProfileData {
   phone?: string;
   bio?: string;
   dateOfBirth?: string;
-
   allergies?: string;
   address?: string;
   city?: string;
@@ -103,7 +90,6 @@ interface ProfileData {
   avatarUrl?: string;
   createdAt?: string;
 }
-
 const profileFormSchema = z.object({
   name: z.string().min(2, {
     message: "Le nom doit contenir au moins 2 caractères.",
@@ -208,6 +194,7 @@ export default function ProfilePage() {
       setIsLoadingProfile(true);
       try {
         const data = await getPatientProfile();
+        console.log("Données du profil reçues:", data);
         setProfileData({
           ...data.profile,
           dateOfBirth: data.profile.dateOfBirth
@@ -350,60 +337,6 @@ export default function ProfilePage() {
     return age;
   };
 
-  // Get vital sign status
-  // const getVitalStatus = (type: string, value: number) => {
-  //   if (!value) return "normal";
-
-  //   switch (type) {
-  //     case "bloodPressure":
-  //       const systolic = vitalsData?.bloodPressureSystolic || 0;
-  //       const diastolic = vitalsData?.bloodPressureDiastolic || 0;
-  //       if (systolic > 140 || diastolic > 90) return "high";
-  //       if (systolic < 90 || diastolic < 60) return "low";
-  //       return "normal";
-  //     case "heartRate":
-  //       if (value > 100) return "high";
-  //       if (value < 60) return "low";
-  //       return "normal";
-  //     case "respiratoryRate":
-  //       if (value > 20) return "high";
-  //       if (value < 12) return "low";
-  //       return "normal";
-  //     case "temperature":
-  //       if (value > 37.5) return "high";
-  //       if (value < 36) return "low";
-  //       return "normal";
-  //     case "oxygenSaturation":
-  //       if (value < 95) return "low";
-  //       return "normal";
-  //     default:
-  //       return "normal";
-  //   }
-  // };
-
-  // // Get status color
-  // const getStatusColor = (status: string) => {
-  //   switch (status) {
-  //     case "high":
-  //       return "text-red-500";
-  //     case "low":
-  //       return "text-blue-500";
-  //     default:
-  //       return "text-green-500";
-  //   }
-  // };
-
-  // // Get progress color
-  // const getProgressColor = (status: string) => {
-  //   switch (status) {
-  //     case "high":
-  //       return "bg-red-500";
-  //     case "low":
-  //       return "bg-blue-500";
-  //     default:
-  //       return "bg-green-500";
-  //   }
-  // };
 
   if (isLoadingProfile) {
     return <Loading />;
@@ -467,15 +400,24 @@ export default function ProfilePage() {
               <p className="text-sm text-muted-foreground">
                 Membre depuis{" "}
                 {profileData?.createdAt
-                  ? new Date(profileData.createdAt).toLocaleDateString(
-                      "fr-FR",
-                      { month: "long", year: "numeric" }
-                    )
-                  : ""}
+                  ? new Date(profileData.createdAt).toLocaleDateString("fr-FR", {
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "Date inconnue"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {profileData?.dateOfBirth
+                  ? `Né(e) le ${new Date(profileData.dateOfBirth).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric"
+                    })}`
+                  : "Date de naissance non renseignée"}
               </p>
             </div>
             <Separator className="my-4" />
-            <div className="w-full space-y-2">
+            <div className="w-full space-y-2 pl-12">
               {profileData?.phone && (
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
@@ -493,11 +435,11 @@ export default function ProfilePage() {
                 </div>
               )}
               {profileData?.dateOfBirth && (
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{calculateAge(profileData.dateOfBirth)} ans</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>{calculateAge(profileData.dateOfBirth)} ans</span>
+              </div>
+            )}
             </div>
 
             
@@ -586,100 +528,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        {/* <FormField
-                          control={profileForm.control}
-                          name="dateOfBirth"
-                          render={({ field }) => {
-                            // Ensure selected value is a Date
-                            const selectedDate = field.value
-                              ? new Date(field.value)
-                              : undefined;
-
-                            const today = new Date();
-                            const minDate = new Date(
-                              today.getFullYear() - 14,
-                              today.getMonth(),
-                              today.getDate()
-                            );
-
-                            const defaultMonth = selectedDate ?? minDate;
-
-                            return (
-                              <FormItem className="flex flex-col">
-                                <div className="flex items-center justify-between">
-                                  <FormLabel>Date de naissance</FormLabel>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                                      </TooltipTrigger>
-                                      <TooltipContent side="left">
-                                        L&apos;utilisateur doit avoir au moins
-                                        14 ans.
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </div>
-                                <Popover open={open} onOpenChange={setOpen}>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button
-                                        variant="outline"
-                                        className={cn(
-                                          "w-full pl-3 text-left font-normal",
-                                          !selectedDate &&
-                                            "text-muted-foreground"
-                                        )}
-                                      >
-                                        {selectedDate ? (
-                                          format(selectedDate, "dd MMMM yyyy", {
-                                            locale: fr,
-                                          })
-                                        ) : (
-                                          <span>Sélectionner une date</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0 max-w-sm"
-                                    align="start"
-                                    sideOffset={8}
-                                    side="bottom"
-                                    collisionPadding={8}
-                                    avoidCollisions
-                                    style={{ zIndex: 50 }}
-                                  >
-                                    <Calendar
-                                      mode="single"
-                                      selected={selectedDate}
-                                      onSelect={(selected) => {
-                                        field.onChange(selected);
-                                        setOpen(false);
-                                      }}
-                                      locale={fr}
-                                      initialFocus
-                                      disabled={(date) => date > minDate}
-                                      defaultMonth={defaultMonth}
-                                      captionLayout="dropdown" // 👈 Adds dropdowns
-                                      fromYear={today.getFullYear() - 100} // 👈 Allow up to 100 years back
-                                      toYear={today.getFullYear() - 14} // 👈 Only allow dates up to 14 years ago
-                                      classNames={{
-                                        caption_dropdowns:
-                                          "flex justify-between gap-2 px-2",
-
-                                        dropdown:
-                                          "rounded-md border border-input bg-background py-1.5 px-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                                      }}
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                              </FormItem>
-                            );
-                          }}
-                        /> */}
+                        
                         <FormField
                           control={profileForm.control}
                           name="gender"
@@ -885,224 +734,6 @@ export default function ProfilePage() {
                 </form>
               </Form>
             </TabsContent>
-
-            {/* <TabsContent value="vitals">
-              <Form {...vitalsForm}>
-                <form
-                  onSubmit={vitalsForm.handleSubmit(onSubmitVitals)}
-                  className="space-y-6"
-                >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Signes Vitaux</CardTitle>
-                      <CardDescription>
-                        Mettez à jour vos signes vitaux pour un meilleur suivi
-                        médical.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <FormField
-                          control={vitalsForm.control}
-                          name="height"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Taille (cm)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <Input
-                                    type="number"
-                                    placeholder="170"
-                                    {...field}
-                                  />
-                                  <div className="ml-2">
-                                    <Weight className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={vitalsForm.control}
-                          name="weight"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Poids (kg)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <Input
-                                    type="number"
-                                    placeholder="70"
-                                    {...field}
-                                  />
-                                  <div className="ml-2">
-                                    <Weight className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="space-y-4">
-                          <FormLabel>Tension artérielle (mmHg)</FormLabel>
-                          <div className="flex gap-2">
-                            <FormField
-                              control={vitalsForm.control}
-                              name="bloodPressureSystolic"
-                              render={({ field }) => (
-                                <FormItem className="flex-1">
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      placeholder="120"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <span className="flex items-center">/</span>
-                            <FormField
-                              control={vitalsForm.control}
-                              name="bloodPressureDiastolic"
-                              render={({ field }) => (
-                                <FormItem className="flex-1">
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      placeholder="80"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <div className="ml-2 flex items-center">
-                              <Activity className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </div>
-                        </div>
-
-                        <FormField
-                          control={vitalsForm.control}
-                          name="heartRate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Fréquence cardiaque (bpm)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <Input
-                                    type="number"
-                                    placeholder="75"
-                                    {...field}
-                                  />
-                                  <div className="ml-2">
-                                    <Heart className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={vitalsForm.control}
-                          name="respiratoryRate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Fréquence respiratoire</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <Input
-                                    type="number"
-                                    placeholder="16"
-                                    {...field}
-                                  />
-                                  <div className="ml-2">
-                                    <Lungs className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={vitalsForm.control}
-                          name="temperature"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Température (°C)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    placeholder="36.8"
-                                    {...field}
-                                  />
-                                  <div className="ml-2">
-                                    <Thermometer className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={vitalsForm.control}
-                          name="oxygenSaturation"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Saturation en oxygène (%)</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center">
-                                  <Input
-                                    type="number"
-                                    placeholder="98"
-                                    {...field}
-                                  />
-                                  <div className="ml-2">
-                                    <Droplets className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end">
-                      <Button type="submit" disabled={isVitalsLoading}>
-                        {isVitalsLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Enregistrement...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Enregistrer les signes vitaux
-                          </>
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </form>
-              </Form>
-            </TabsContent> */}
           </Tabs>
         </div>
       </div>
@@ -1110,7 +741,6 @@ export default function ProfilePage() {
   );
 }
 
-// Loading component for internal use
 function Loading() {
   return (
     <div className="container mx-auto p-4">
