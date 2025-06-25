@@ -199,7 +199,7 @@ export async function POST(req: Request) {
                     education: education || null,
                     experience: experience || null,
                     consultationFee: consultationFee ? parseFloat(consultationFee) : null,
-                    isVerified: true // Auto-vérification pour les médecins créés par l'admin
+                    isVerified: true 
                 },
                 include: {
                     user: {

@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Loader2, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react"
+import {  RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { RenewSubscriptionModal } from "./RenewSubscriptionModal"
 
 interface Payment {
   id: string
@@ -46,7 +47,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     FAILED: { label: "Échoué", variant: "destructive" as const }
   }
 
-  const { label, variant} = statusMap[status as keyof typeof statusMap] || 
+  const { label, variant } = statusMap[status as keyof typeof statusMap] ||
     { label: status, variant: "outline" as const, icon: null }
 
   return (
@@ -65,8 +66,8 @@ const PlanBadge = ({ plan }: { plan: string }) => {
     ENTERPRISE: { label: "Entreprise", variant: "default" as const }
   }
 
-  const { label } = planMap[plan as keyof typeof planMap] || 
-    { label: plan,  }
+  const { label } = planMap[plan as keyof typeof planMap] ||
+    { label: plan, }
 
   return <Badge variant="default">{label}</Badge>
 }
@@ -75,7 +76,7 @@ export default function SubscriptionSection() {
   const [data, setData] = useState<SubscriptionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [renewing, setRenewing] = useState(false)
+  const [renewModalOpen, setRenewModalOpen] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -108,27 +109,7 @@ export default function SubscriptionSection() {
     }, 0) || 0
   }, [data])
 
-  const handleRenewal = async () => {
-    setRenewing(true)
-    try {
-      // Simuler une requête API
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      toast({
-        title: "Succès",
-        description: "Votre abonnement a été renouvelé",
-      })
-      fetchData()
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: "Échec du renouvellement",
-        variant: "destructive"
-      })
-      console.log(err)
-    } finally {
-      setRenewing(false)
-    }
-  }
+ 
 
   if (loading) {
     return (
@@ -192,34 +173,26 @@ export default function SubscriptionSection() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Votre abonnement</h2>
           <p className="text-muted-foreground">
-            {data.status === "ACTIVE" 
-              ? `Valide jusqu'au ${format(data.endDate, "PPP", { locale: fr })}` 
+            {data.status === "ACTIVE"
+              ? `Valide jusqu'au ${format(data.endDate, "PPP", { locale: fr })}`
               : "Abonnement inactif"}
           </p>
         </div>
-        
+
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={fetchData}
             disabled={loading}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Actualiser
           </Button>
-          <Button 
-            onClick={handleRenewal} 
-            disabled={renewing || data.status !== "ACTIVE"}
+          <Button
+            onClick={() => setRenewModalOpen(true)}
             className="min-w-[200px]"
           >
-            {renewing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Traitement...
-              </>
-            ) : (
-              "Renouveler l'abonnement"
-            )}
+            Renouveler l&lsquo;abonnement
           </Button>
         </div>
       </div>
@@ -229,8 +202,8 @@ export default function SubscriptionSection() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
-              {data.daysUntilExpiration > 0 
-                ? `${data.daysUntilExpiration} jours restants` 
+              {data.daysUntilExpiration > 0
+                ? `${data.daysUntilExpiration} jours restants`
                 : "Expirer"}
             </span>
             <span className="text-sm text-muted-foreground">
@@ -256,8 +229,8 @@ export default function SubscriptionSection() {
               {data.plan === "ENTERPRISE" ? "Illimité" : data.maxDoctors} médecins
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {data.remainingSlots === "Illimité" 
-                ? "Capacité illimitée" 
+              {data.remainingSlots === "Illimité"
+                ? "Capacité illimitée"
                 : `${data.remainingSlots} créneaux disponibles`}
             </p>
           </CardContent>
@@ -375,12 +348,18 @@ export default function SubscriptionSection() {
           <div>
             <h4 className="font-medium text-yellow-800">Limite de médecins atteinte</h4>
             <p className="text-sm text-yellow-700">
-              Vous avez atteint la limite de médecins pour votre abonnement {data.plan}. 
+              Vous avez atteint la limite de médecins pour votre abonnement {data.plan}.
               {data.plan !== "ENTERPRISE" && " Pour ajouter plus de médecins, veuillez mettre à niveau votre abonnement."}
             </p>
           </div>
         </div>
       )}
+
+      <RenewSubscriptionModal
+        open={renewModalOpen}
+        onOpenChange={setRenewModalOpen}
+        currentPlan={data.plan}
+      />
     </div>
   )
 }

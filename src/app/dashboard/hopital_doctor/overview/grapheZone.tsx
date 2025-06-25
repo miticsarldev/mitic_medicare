@@ -147,7 +147,7 @@ export default function DoctorDashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="current">Ce mois</SelectItem>
-                <SelectItem value="past">6 dernier mois</SelectItem>
+                <SelectItem value="past">6 derniers mois</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -274,7 +274,7 @@ export default function DoctorDashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="current">Ce mois</SelectItem>
-                <SelectItem value="past">6 dernier mois</SelectItem>
+                <SelectItem value="past">6 derniers mois</SelectItem>
               </SelectContent>
             </Select>
           </div>
