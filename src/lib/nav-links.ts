@@ -142,7 +142,22 @@ export const doctorNavItems = [
     items: [
       {
         title: "Tous les Rendez-vous",
-        url: "/dashboard/independant_doctor/appointments/all",
+        url: "/dashboard/independant_doctor/appointments/upcoming",
+      },
+    ],
+  },
+  {
+    title: "Mes Disponibilités",
+    icon: Calendar,
+    url: "/dashboard/hopital_doctor/avaibility",
+    items: [
+      {
+        title: "Mes Disponibilités",
+        url: "/dashboard/independant_doctor/avaibility/avaibilities",
+      },
+      {
+        title: "Mon planning",
+        url: "/dashboard/independant/avaibility/schedule",
       },
     ],
   },
@@ -152,20 +167,16 @@ export const doctorNavItems = [
     url: "/dashboard/independant_doctor/settings",
     items: [
       {
-        title: "Mon Profil",
-        url: "/dashboard/independant_doctor/settings/profil",
-      },
-      {
-        title: "Disponibilités",
-        url: "/dashboard/independant_doctor/settings/availability",
+        title: "Mon Profile",
+        url: "/dashboard/independant_doctor/settings/profile",
       },
       {
         title: "Tarification",
         url: "/dashboard/independant_doctor/settings/pricing",
       },
       {
-        title: "Paramètres",
-        url: "/dashboard/independant_doctor/settings/settings",
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/independant_doctor/settings/security",
       },
     ],
   },
@@ -174,10 +185,6 @@ export const doctorNavItems = [
     icon: FileText,
     url: "/dashboard/independant_doctor/support",
     items: [
-      {
-        title: "Centre d'Aide",
-        url: "/dashboard/independant_doctor/support/help-center",
-      },
       { title: "FAQs", url: "/dashboard/independant_doctor/support/faq" },
       {
         title: "Support Technique",
