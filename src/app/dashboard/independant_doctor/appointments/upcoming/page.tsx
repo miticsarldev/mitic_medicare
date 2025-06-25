@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Filter, Search, FilePlus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +84,7 @@ type Filters = {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    pageSize: 10,
+    pageSize: 9,
     totalItems: 0,
     totalPages: 1,
   });
@@ -100,7 +99,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      let url = `/api/hospital_doctor/appointments/all?page=${pagination.currentPage}&pageSize=${pagination.pageSize}`;
+      let url = `/api/independant_doctor/appointments/all?page=${pagination.currentPage}&pageSize=${pagination.pageSize}&includeMedicalRecordInfo=true`;
 
       if (filters.status !== "ALL") {
         url += `&status=${filters.status}`;
@@ -138,7 +137,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
 
   const fetchStats = async () => {
     try {
-      const res = await fetch("/api/hospital_doctor/appointments/stats");
+      const res = await fetch("/api/independant_doctor/appointments/stats");
       const data = await res.json();
       setStats(data);
     } catch (error) {
@@ -152,7 +151,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
     medicalRecord?: MedicalRecordInput;
   }) => {
     try {
-      const response = await fetch("/api/hospital_doctor/appointments/update-status", {
+      const response = await fetch("/api/independant_doctor/appointments/update-status", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -370,7 +369,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
                 onAction={(type, apt) => {
                   if (type === "edit") {
                   // Appelle l'API pour récupérer les données du dossier
-                  fetch(`/api/hospital_doctor/medical-records/${apt.id}`)
+                  fetch(`/api/independant_doctor/medical-records/${apt.id}`)
                   .then(res => {
                     if (!res.ok) throw new Error("Dossier non trouvé");
                     return res.json();
@@ -427,7 +426,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
       {/* Modals */}
       {selectedAppointment && (
         <>
-          <ConfirmModal
+           <ConfirmModal
             open={modalType === "confirm"}
             onOpenChange={(open) => !open && setModalType(null)}
             onConfirm={() => {
@@ -436,6 +435,9 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
                 action: "confirm",
               });
             }}
+            title="Confirmer le rendez-vous"
+            description="Êtes-vous sûr de vouloir confirmer ce rendez-vous ? "
+            confirmText="Confirmer"
           />
           {modalType === "edit" && selectedAppointment && medicalRecordData?.diagnosis && (
           <CompleteModal
@@ -448,7 +450,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
             }}
             appointment={selectedAppointment}
             onSubmit={(updatedData) => {
-              fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+              fetch(`/api/independant_doctor/medical-records/${selectedAppointment.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updatedData),
@@ -469,25 +471,28 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
         )}
         {modalType === "deleteRecord" && selectedAppointment && (
   <ConfirmModal
-    open={true}
-    onOpenChange={(open) => !open && setModalType(null)}
-    onConfirm={() => {
-      fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
-        method: "DELETE",
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Erreur suppression");
-          toast({ title: "Succès", description: "Dossier supprimé." });
-          setModalType(null);
-          fetchAppointments();
+      open={modalType === "deleteRecord"}
+      onOpenChange={(open) => !open && setModalType(null)}
+      onConfirm={() => {
+        fetch(`/api/independant_doctor/medical-records/${selectedAppointment.id}`, {
+          method: "DELETE",
         })
-        .catch(() =>
-          toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
-        );
-    }}
-    title="Supprimer le dossier médical"
-    description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? Cette action est irréversible."
-  />
+          .then((res) => {
+            if (!res.ok) throw new Error("Erreur suppression");
+            toast({ title: "Succès", description: "Dossier supprimé." });
+            setModalType(null);
+            fetchAppointments();
+          })
+          .catch(() =>
+            toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
+          );
+      }}
+      title="Supprimer le dossier médical"
+      description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? cette action est ireversible."
+      confirmText="Supprimer"
+      cancelText="Annuler"
+      variant="destructive"
+    />
 )}
 
           <CancelModal
@@ -544,13 +549,22 @@ function AppointmentCard({
   onAction,
   getStatusBadge
 }: {
-  appointment: Appointment;
+  appointment: Appointment & { hasMedicalRecord?: boolean };
   onAction: (
   type: "confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord",apt: Appointment) => void;
   getStatusBadge: (status: AppointmentStatus) => React.ReactNode;
 }) {
+  const hasMedicalRecord = appointment.medicalRecord !== null && 
+                          appointment.medicalRecord !== undefined && 
+                          Object.keys(appointment.medicalRecord).length > 0;
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover:shadow-lg transition-shadow relative">
+      {hasMedicalRecord && (
+        <div className="absolute top-4 right-4 bg-blue-100 p-2 rounded-full">
+          <FileText className="h-4 w-4 text-blue-600" />
+          
+        </div>
+      )}
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
@@ -565,7 +579,7 @@ function AppointmentCard({
               </div>
             </CardDescription>
           </div>
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <MoreVertical className="h-4 w-4" />
@@ -602,23 +616,10 @@ function AppointmentCard({
                 </>
               )}
               {appointment.status === "COMPLETED" && (
-                <>
-                <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
-                    <FileText className="mr-2 h-4 w-4" /> Ajouter un dossier
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAction("edit", appointment)}>
-                    <FileText className="mr-2 h-4 w-4" /> Modifier le dossier
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onAction("deleteRecord", appointment)}
-                    className="text-red-600"
-                  >
-                    <X className="mr-2 h-4 w-4" /> Supprimer le dossier
-                  </DropdownMenuItem>
-                </>
+                <></> 
               )}
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
         </div>
       </CardHeader>
       <CardContent>
@@ -650,6 +651,11 @@ function AppointmentCard({
             <span className="font-medium">Motif :</span> {appointment.reason}
           </p>
         )}
+         {appointment.status === "COMPLETED" && hasMedicalRecord && (
+        <div className="absolute top-2 right-2 bg-green-100 p-1 rounded-full">
+          <FileText className="h-4 w-4 text-green-600" />
+        </div>
+      )}
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button
@@ -660,7 +666,32 @@ function AppointmentCard({
           Détails
         </Button>
         <div className="flex gap-2">
-          {appointment.status === "PENDING" && (
+          {appointment.status === "COMPLETED" ? (
+            hasMedicalRecord ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => onAction("edit", appointment)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" /> Modifier
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onAction("deleteRecord", appointment)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => onAction("complete", appointment)}
+              >
+                <FilePlus className="mr-2 h-4 w-4" /> Ajouter un dossier
+              </Button>
+            )
+          ) : appointment.status === "PENDING" ? (
             <>
               <Button
                 size="sm"
@@ -676,8 +707,7 @@ function AppointmentCard({
                 <X className="mr-2 h-4 w-4" /> Annuler
               </Button>
             </>
-          )}
-          {appointment.status === "CONFIRMED" && (
+          ) : appointment.status === "CONFIRMED" && (
             <>
               <Button
                 size="sm"
