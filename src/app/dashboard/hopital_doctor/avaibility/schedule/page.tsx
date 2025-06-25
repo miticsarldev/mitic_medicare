@@ -272,9 +272,6 @@ export default function AppointmentCalendarView() {
                                         <strong>Motif :</strong> {selectedAppointment.reason}
                                     </p>
                                     <p>
-                                        <strong>Type :</strong> {selectedAppointment.type}
-                                    </p>
-                                    <p>
                                         <strong>Médecin :</strong> {selectedAppointment.doctor.name} ({selectedAppointment.doctor.specialization})
                                     </p>
                                     <p className="flex items-center gap-2">

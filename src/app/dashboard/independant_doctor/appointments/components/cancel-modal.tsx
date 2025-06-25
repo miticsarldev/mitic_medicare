@@ -16,7 +16,7 @@ export function CancelModal({ open, onOpenChange, onConfirm }: CancelModalProps)
                 <DialogHeader>
                     <DialogTitle>Annuler le rendez-vous</DialogTitle>
                     <DialogDescription>
-                        Êtes-vous sûr de vouloir annuler ce rendez-vous ? Cette action est ireversible.
+                        Êtes-vous sûr de vouloir annuler ce rendez-vous ? Cette action ne peut pas être annulée.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>

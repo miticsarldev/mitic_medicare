@@ -34,16 +34,7 @@ export function DetailsModal({ open, onOpenChange, appointment }: DetailsModalPr
                 return <Badge variant="outline">Inconnu</Badge>;
         }
     };
-const bloodTypeTranslations: Record<string, string> = {
-  'A_POSITIVE': 'A+',
-  'A_NEGATIVE': 'A-',
-  'B_POSITIVE': 'B+',
-  'B_NEGATIVE': 'B-',
-  'AB_POSITIVE': 'AB+',
-  'AB_NEGATIVE': 'AB-',
-  'O_POSITIVE': 'O+',
-  'O_NEGATIVE': 'O-',
-};
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
@@ -69,7 +60,7 @@ const bloodTypeTranslations: Record<string, string> = {
                                 <InfoRow label="Genre" value={appointment.patient.gender == "MALE" ? "Masculin" : "Feminin"} />
                                 <InfoRow label="Email" value={appointment.patient.email} />
                                 <InfoRow label="Téléphone" value={appointment.patient.phone} />
-                                <InfoRow label="Groupe sanguin" value={appointment.patient.bloodType ? bloodTypeTranslations[appointment.patient.bloodType] || appointment.patient.bloodType : "Non précisé"} />
+                                <InfoRow label="Groupe sanguin" value={appointment.patient.bloodType} />
                                 <InfoRow label="Allergies" value={appointment.patient.allergies} />
                                 <InfoRow label="Notes médicales" value={appointment.patient.medicalNotes} />
                             </CardContent>
