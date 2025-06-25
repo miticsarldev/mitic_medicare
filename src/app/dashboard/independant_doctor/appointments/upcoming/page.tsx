@@ -1,274 +1,701 @@
 "use client";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+
+import { useState, useEffect } from "react";
+import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast"
+import { Appointment, AppointmentsResponse } from "@/types/appointment";
+import { AppointmentStatus } from "@prisma/client";
+import { ConfirmModal } from "../components/confirm-modal";
+import { CancelModal } from "../components/cancel-modal";
+import { CompleteModal } from "../components/complete-modal";
+import { DetailsModal } from "../components/details-modal";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Clock, MoreHorizontal, User, MapPin } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+type MedicalRecordInput = {
+  diagnosis: string;
+  treatment: string;
+  notes?: string;
+  followUpNeeded?: boolean;
+  followUpDate?: Date | string | undefined; 
+};
+interface MedicalRecordData {
+  diagnosis: string;
+  treatment: string;
+  notes?: string;
+  followUpNeeded: boolean;
+  followUpDate?: Date;
+  attachments?: {
+    fileName: string;
+    fileType: string;
+    fileUrl: string;
+    fileSize: number;
+  }[];
+  prescriptions?: {
+    medicationName: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    instructions?: string;
+    isActive: boolean;
+    startDate: string;
+    endDate: string;
+  }[];
+}
 
-const doctorAppointments = [
-  {
-    id: "1",
-    patientName: "Jean Dupont",
-    date: new Date(2025, 2, 15, 10, 30),
-    location: "Cabinet médical, Paris",
-    status: "CONFIRMED",
-    notes: "Consultation de suivi trimestrielle",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "2",
-    patientName: "Marie Curie",
-    date: new Date(2025, 2, 18, 14, 0),
-    location: "Cabinet médical, Paris",
-    status: "PENDING",
-    notes: "Examen de routine",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "3",
-    patientName: "Louis Pasteur",
-    date: new Date(2025, 2, 20, 9, 15),
-    location: "Cabinet médical, Paris",
-    status: "CONFIRMED",
-    notes: "Analyse des résultats de laboratoire",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
+const statusOptions = [
+  { value: "ALL", label: "Tous les statuts" },
+  { value: "PENDING", label: "En attente" },
+  { value: "CONFIRMED", label: "Confirmé" },
+  { value: "COMPLETED", label: "Terminé" },
+  { value: "CANCELED", label: "Annulé" },
+  { value: "NO_SHOW", label: "Absent" },
 ];
 
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case "CONFIRMED":
-      return (
-        <Badge className="bg-green-500 hover:bg-green-600">Confirmé</Badge>
-      );
-    case "PENDING":
-      return (
-        <Badge variant="outline" className="text-amber-500 border-amber-500">
-          En attente
-        </Badge>
-      );
-    case "CANCELED":
-      return <Badge variant="destructive">Annulé</Badge>;
-    default:
-      return <Badge variant="outline">Inconnu</Badge>;
-  }
-};
-
-type Appointment = {
-  id: string;
-  doctorName?: string;
-  patientName: string;
-  date: Date;
-  status: string;
-  notes: string;
-  location: string;
-  avatar: string;
-};
-
-export default function Page() {
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const appointmentsForDate = date
-    ? doctorAppointments.filter(
-      (appointment) =>
-        appointment.date.getDate() === date.getDate() &&
-        appointment.date.getMonth() === date.getMonth() &&
-        appointment.date.getFullYear() === date.getFullYear()
-    )
-    : [];
-  const [formDialogOpen, setFormDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    id: "",
-    patientName: "",
-    date: "",
-    diagnostic: "",
-    medications: "",
-    notes: "",
+export default function AppointmentsPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [medicalRecordData, setMedicalRecordData] = useState<MedicalRecordData | null>(null);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    completed: 0,
+    canceled: 0,
   });
+  const [filters, setFilters] = useState({
+  status: "ALL",
+  patientName: "",
+});
+type Filters = {
+  status: string;
+  patientName: string;
+};
 
-  const handleCancelAppointment = () => {
-    if (!selectedAppointment) return;
-    console.log(`Cancelling appointment ${selectedAppointment.id}`);
-    setCancelDialogOpen(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    totalItems: 0,
+    totalPages: 1,
+  });
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord" | null>(null);
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchStats();
+  }, [pagination.currentPage, filters, dateRange]);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      let url = `/api/hospital_doctor/appointments/all?page=${pagination.currentPage}&pageSize=${pagination.pageSize}`;
+
+      if (filters.status !== "ALL") {
+        url += `&status=${filters.status}`;
+      }
+      if (filters.patientName) {
+        url += `&patientName=${encodeURIComponent(filters.patientName)}`;
+      }
+      if (dateRange?.from) {
+        url += `&startDate=${dateRange.from.toISOString()}`;
+      }
+      if (dateRange?.to) {
+        url += `&endDate=${dateRange.to.toISOString()}`;
+      }
+
+      const res = await fetch(url);
+      const data: AppointmentsResponse = await res.json();
+      setAppointments(data.appointments);
+      setPagination({
+        currentPage: data.pagination.currentPage,
+        pageSize: data.pagination.pageSize,
+        totalItems: data.pagination.totalItems,
+        totalPages: data.pagination.totalPages,
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les rendez-vous",
+        variant: "destructive",
+      });
+      console.error("Error fetching appointments:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFormSubmit = () => {
-    console.log("Submitting form:", formData);
-    setFormDialogOpen(false);
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/hospital_doctor/appointments/stats");
+      const data = await res.json();
+      setStats(data);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
   };
 
+  const handleStatusUpdate = async (data: {
+    appointmentId: string;
+    action: "confirm" | "canceled" | "complete";
+    medicalRecord?: MedicalRecordInput;
+  }) => {
+    try {
+      const response = await fetch("/api/hospital_doctor/appointments/update-status", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Échec de la mise à jour");
+      }
+
+      toast({
+        title: "Succès",
+        description: "Rendez-vous mis à jour avec succès",
+      });
+
+      fetchAppointments();
+      fetchStats();
+      setModalType(null);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Échec de la mise à jour du rendez-vous",
+        variant: "destructive",
+      });
+      console.error("Error updating appointment status:", error);
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, currentPage: newPage }));
+    }
+  };
+
+  const handleFilterChange = <K extends keyof Filters>(
+  key: K,
+  value: Filters[K]
+) => {
+  setFilters(prev => ({ ...prev, [key]: value }));
+  setPagination(prev => ({ ...prev, currentPage: 1 }));
+};
+
+
+  const resetFilters = () => {
+    setFilters({
+      status: "ALL",
+      patientName: "",
+    });
+    setDateRange(undefined);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
+
+  const getStatusBadge = (status: AppointmentStatus) => {
+    switch (status) {
+      case "PENDING":
+        return <Badge variant="secondary">En attente</Badge>;
+      case "CONFIRMED":
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Confirmé</Badge>;
+      case "CANCELED":
+        return <Badge variant="destructive">Annulé</Badge>;
+      case "COMPLETED":
+        return <Badge className="bg-green-500 hover:bg-green-600">Terminé</Badge>;
+      case "NO_SHOW":
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Absent</Badge>;
+      default:
+        return <Badge variant="outline">Inconnu</Badge>;
+    }
+  };
 
   return (
-    <div className="space-y-6 p-4">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Prochains Rendez-vous
-        </h2>
-        <p className="text-muted-foreground">
-          Consultez et gérez vos rendez-vous médicaux à venir.
-        </p>
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Gestion des Rendez-vous</h1>
       </div>
-      <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="list">Liste</TabsTrigger>
-          <TabsTrigger value="calendar">Calendrier</TabsTrigger>
-        </TabsList>
-        <TabsContent value="list" className="space-y-4">
-          {doctorAppointments.map((appointment) => (
-            <Card key={appointment.id} className="overflow-hidden">
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage
-                      src={appointment.avatar}
-                      alt={appointment.patientName}
-                    />
-                    <AvatarFallback>
-                      {appointment.patientName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle>{appointment.patientName}</CardTitle>
-                    <CardDescription>{appointment.notes}</CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusBadge(appointment.status)}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Options</span>
-                      </Button>
-                    </DropdownMenuTrigger> 
-                      <DropdownMenuContent align="end">
-                        {appointment.status === "CONFIRMED" && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedAppointment(appointment);
-                                setCancelDialogOpen(true);
-                              }}
-                              className="text-destructive"
-                            >
-                              Annuler le rendez-vous
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setFormDialogOpen(true)}>
-                              Ajouter un diagnostic
-                            </DropdownMenuItem>
-                          </>
-                        )}
 
-                        {appointment.status === "PENDING" && (
-                          <>
-                            <DropdownMenuItem>Reprogrammer</DropdownMenuItem>
-                            <DropdownMenuItem>Détails</DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span>{format(appointment.date, "EEEE d MMMM yyyy", { locale: fr })}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4" />
-                  <span>{format(appointment.date, "HH:mm")}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4" />
-                  <span>{appointment.location}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
-        <TabsContent value="calendar">
-          <Calendar mode="single" selected={date} onSelect={setDate} locale={fr} />
-          {appointmentsForDate.length === 0 ? (
-            <p>Aucun rendez-vous pour cette date.</p>
-          ) : (
-            appointmentsForDate.map((appointment) => (
-              <p key={appointment.id}>{appointment.patientName} à {format(appointment.date, "HH:mm")}</p>
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Cartes Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <StatCard
+          title="Total RDV"
+          value={stats.total}
+          icon={<FileText className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="En attente"
+          value={stats.pending}
+          icon={<Clock className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Confirmés"
+          value={stats.confirmed}
+          icon={<Check className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Terminés"
+          value={stats.completed}
+          icon={<Stethoscope className="h-6 w-6 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Annulés"
+          value={stats.canceled}
+          icon={<X className="h-6 w-6 text-muted-foreground" />}
+        />
+      </div>
 
-      {/* Cancel Appointment Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Annuler le rendez-vous</DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir annuler ce rendez-vous ? Cette action ne
-              peut pas être annulée.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedAppointment && (
-            <div className="grid gap-2 py-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">
-                  {selectedAppointment.doctorName}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {format(selectedAppointment.date, "EEEE d MMMM yyyy", {
-                    locale: fr,
-                  })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>{format(selectedAppointment.date, "HH:mm")}</span>
+      {/* Zone de Filtres */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg">Filtres</CardTitle>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+            >
+              Réinitialiser
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Statut</label>
+              <Select
+                value={filters.status}
+                onValueChange={(value) => handleFilterChange("status", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Nom du patient</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un patient..."
+                  className="pl-9"
+                  value={filters.patientName}
+                  onChange={(e) => handleFilterChange("patientName", e.target.value)}
+                />
               </div>
             </div>
-          )}
-          <DialogFooter>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Période</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "dd MMM yyyy", { locale: fr })} -{" "}
+                          {format(dateRange.to, "dd MMM yyyy", { locale: fr })}
+                        </>
+                      ) : (
+                        format(dateRange.from, "dd MMM yyyy", { locale: fr })
+                      )
+                    ) : (
+                      <span>Sélectionner une période</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Liste des rendez-vous */}
+      {loading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 rounded-lg" />
+          ))}
+        </div>
+      ) : appointments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <FileText className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">Aucun rendez-vous trouvé</h3>
+          <p className="text-gray-500 mt-1">Aucun rendez-vous ne correspond à vos critères de recherche.</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {appointments.map((appointment) => (
+              <AppointmentCard
+                key={appointment.id}
+                appointment={appointment}
+                onAction={(type, apt) => {
+                  if (type === "edit") {
+                  // Appelle l'API pour récupérer les données du dossier
+                  fetch(`/api/hospital_doctor/medical-records/${apt.id}`)
+                  .then(res => {
+                    if (!res.ok) throw new Error("Dossier non trouvé");
+                    return res.json();
+                  })
+                  .then(data => {
+                    if (!data) throw new Error("Dossier vide");
+                    setMedicalRecordData(data);
+                    setModalType("edit");
+                  })
+                  .catch(() => {
+                    toast({
+                      title: "Erreur",
+                      description: "Le dossier médical n'existe plus ou a été supprimé.",
+                      variant: "destructive",
+                    });
+                    setModalType(null);
+                    setMedicalRecordData(null);
+                  });
+
+                } else {
+                  setModalType(type);
+                }
+                  setSelectedAppointment(apt);
+                  setModalType(type);
+                }}
+                getStatusBadge={getStatusBadge}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex justify-between items-center mt-8">
             <Button
               variant="outline"
-              onClick={() => setCancelDialogOpen(false)}
+              disabled={pagination.currentPage === 1}
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
             >
-              Annuler
+              Précédent
             </Button>
-            <Button variant="destructive" onClick={handleCancelAppointment}>
-              Confirmer l&apos;annulation
+            <span className="text-sm text-gray-600">
+              Page {pagination.currentPage} sur {pagination.totalPages} • {pagination.totalItems} rendez-vous
+            </span>
+            <Button
+              variant="outline"
+              disabled={pagination.currentPage === pagination.totalPages}
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+            >
+              Suivant
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </>
+      )}
 
-      <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remplir un diagnostic</DialogTitle>
-          </DialogHeader>
-          <input type="text" placeholder="Nom du patient" className="border p-2 rounded w-full" value={formData.patientName} onChange={(e) => setFormData({ ...formData, patientName: e.target.value })} />
-          <input type="date" className="border p-2 rounded w-full" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} />
-          <input type="text" placeholder="Diagnostic" className="border p-2 rounded w-full" value={formData.diagnostic} onChange={(e) => setFormData({ ...formData, diagnostic: e.target.value })} />
-          <input type="text" placeholder="Médicaments" className="border p-2 rounded w-full" value={formData.medications} onChange={(e) => setFormData({ ...formData, medications: e.target.value })} />
-          <textarea placeholder="Notes" className="border p-2 rounded w-full" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })}></textarea>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleFormSubmit}>Enregistrer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modals */}
+      {selectedAppointment && (
+        <>
+          <ConfirmModal
+            open={modalType === "confirm"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            onConfirm={() => {
+              handleStatusUpdate({
+                appointmentId: selectedAppointment.id,
+                action: "confirm",
+              });
+            }}
+          />
+          {modalType === "edit" && selectedAppointment && medicalRecordData?.diagnosis && (
+          <CompleteModal
+            open={true}
+            onOpenChange={(open) => {
+              if (!open) {
+                setModalType(null);
+                setMedicalRecordData(null);
+              }
+            }}
+            appointment={selectedAppointment}
+            onSubmit={(updatedData) => {
+              fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedData),
+              })
+                .then(res => {
+                  if (!res.ok) throw new Error("Erreur modification");
+                  toast({ title: "Succès", description: "Dossier modifié." });
+                  setModalType(null);
+                  fetchAppointments();
+                })
+                .catch(() =>
+                  toast({ title: "Erreur", description: "Modification échouée.", variant: "destructive" })
+                );
+            }}
+            // Injecte les valeurs existantes dans CompleteModal via defaultValues
+            defaultValues={medicalRecordData}
+          />
+        )}
+        {modalType === "deleteRecord" && selectedAppointment && (
+  <ConfirmModal
+    open={true}
+    onOpenChange={(open) => !open && setModalType(null)}
+    onConfirm={() => {
+      fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+        method: "DELETE",
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Erreur suppression");
+          toast({ title: "Succès", description: "Dossier supprimé." });
+          setModalType(null);
+          fetchAppointments();
+        })
+        .catch(() =>
+          toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
+        );
+    }}
+    title="Supprimer le dossier médical"
+    description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? Cette action est irréversible."
+  />
+)}
+
+          <CancelModal
+            open={modalType === "cancel"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            onConfirm={() => {
+              handleStatusUpdate({
+                appointmentId: selectedAppointment.id,
+                action: "canceled",
+              });
+            }}
+          />
+
+          <CompleteModal
+            open={modalType === "complete"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            appointment={selectedAppointment}
+            onSubmit={(medicalRecordData) => {
+              handleStatusUpdate({
+                appointmentId: selectedAppointment.id,
+                action: "complete",
+                medicalRecord: medicalRecordData,
+              });
+            }}
+          />
+
+          <DetailsModal
+            open={modalType === "details"}
+            onOpenChange={(open) => !open && setModalType(null)}
+            appointment={selectedAppointment}
+          />
+        </>
+      )}
     </div>
+  );
+}
+
+function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode; }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AppointmentCard({
+  appointment,
+  onAction,
+  getStatusBadge
+}: {
+  appointment: Appointment;
+  onAction: (
+  type: "confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord",apt: Appointment) => void;
+  getStatusBadge: (status: AppointmentStatus) => React.ReactNode;
+}) {
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-gray-500" />
+              {appointment.patient.name}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              <div className="flex items-center gap-2 text-sm">
+                <Stethoscope className="h-4 w-4" />
+                {appointment.doctor.name} - {appointment.doctor.specialization || "Spécialité non précisée"}
+              </div>
+            </CardDescription>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onAction("details", appointment)}>
+                <Eye className="mr-2 h-4 w-4" /> Détails
+              </DropdownMenuItem>
+              {appointment.status === "PENDING" && (
+                <>
+                  <DropdownMenuItem onClick={() => onAction("confirm", appointment)}>
+                    <Check className="mr-2 h-4 w-4" /> Confirmer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onAction("cancel", appointment)}
+                    className="text-red-600"
+                  >
+                    <X className="mr-2 h-4 w-4" /> Annuler
+                  </DropdownMenuItem>
+                </>
+              )}
+              {appointment.status === "CONFIRMED" && (
+                <>
+                  <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Compléter
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onAction("cancel", appointment)}
+                    className="text-red-600"
+                  >
+                    <X className="mr-2 h-4 w-4" /> Annuler
+                  </DropdownMenuItem>
+                </>
+              )}
+              {appointment.status === "COMPLETED" && (
+                <>
+                <DropdownMenuItem onClick={() => onAction("complete", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Ajouter un dossier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAction("edit", appointment)}>
+                    <FileText className="mr-2 h-4 w-4" /> Modifier le dossier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onAction("deleteRecord", appointment)}
+                    className="text-red-600"
+                  >
+                    <X className="mr-2 h-4 w-4" /> Supprimer le dossier
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2 mb-2">
+          <CalendarIcon className="h-4 w-4 text-gray-500" />
+          <span className="text-sm">
+            {new Date(appointment.scheduledAt).toLocaleDateString("fr-FR", {
+              weekday: "short",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Clock className="h-4 w-4 text-gray-500" />
+          <span className="text-sm">
+            {new Date(appointment.scheduledAt).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+        <div className="mb-3">
+          {getStatusBadge(appointment.status)}
+        </div>
+        {appointment.reason && (
+          <p className="text-sm text-gray-600 line-clamp-2">
+            <span className="font-medium">Motif :</span> {appointment.reason}
+          </p>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onAction("details", appointment)}
+        >
+          Détails
+        </Button>
+        <div className="flex gap-2">
+          {appointment.status === "PENDING" && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => onAction("confirm", appointment)}
+              >
+                <Check className="mr-2 h-4 w-4" /> Confirmer
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onAction("cancel", appointment)}
+              >
+                <X className="mr-2 h-4 w-4" /> Annuler
+              </Button>
+            </>
+          )}
+          {appointment.status === "CONFIRMED" && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => onAction("complete", appointment)}
+              >
+                <FileText className="mr-2 h-4 w-4" /> Compléter
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onAction("cancel", appointment)}
+              >
+                <X className="mr-2 h-4 w-4" /> Annuler
+              </Button>
+            </>
+          )}
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

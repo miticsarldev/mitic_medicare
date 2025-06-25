@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Eye, MoreVertical, Filter, Search, FilePlus, Trash2, Pencil } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Filter, Search, FilePlus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +84,7 @@ type Filters = {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    pageSize: 10,
+    pageSize: 9,
     totalItems: 0,
     totalPages: 1,
   });
@@ -427,7 +426,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
       {/* Modals */}
       {selectedAppointment && (
         <>
-          <ConfirmModal
+           <ConfirmModal
             open={modalType === "confirm"}
             onOpenChange={(open) => !open && setModalType(null)}
             onConfirm={() => {
@@ -436,6 +435,9 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
                 action: "confirm",
               });
             }}
+            title="Confirmer le rendez-vous"
+            description="Êtes-vous sûr de vouloir confirmer ce rendez-vous ? "
+            confirmText="Confirmer"
           />
           {modalType === "edit" && selectedAppointment && medicalRecordData?.diagnosis && (
           <CompleteModal
@@ -469,25 +471,28 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
         )}
         {modalType === "deleteRecord" && selectedAppointment && (
   <ConfirmModal
-    open={true}
-    onOpenChange={(open) => !open && setModalType(null)}
-    onConfirm={() => {
-      fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
-        method: "DELETE",
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Erreur suppression");
-          toast({ title: "Succès", description: "Dossier supprimé." });
-          setModalType(null);
-          fetchAppointments();
+      open={modalType === "deleteRecord"}
+      onOpenChange={(open) => !open && setModalType(null)}
+      onConfirm={() => {
+        fetch(`/api/hospital_doctor/medical-records/${selectedAppointment.id}`, {
+          method: "DELETE",
         })
-        .catch(() =>
-          toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
-        );
-    }}
-    title="Supprimer le dossier médical"
-    description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? Cette action est irréversible."
-  />
+          .then((res) => {
+            if (!res.ok) throw new Error("Erreur suppression");
+            toast({ title: "Succès", description: "Dossier supprimé." });
+            setModalType(null);
+            fetchAppointments();
+          })
+          .catch(() =>
+            toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
+          );
+      }}
+      title="Supprimer le dossier médical"
+      description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? cette action est ireversible."
+      confirmText="Supprimer"
+      cancelText="Annuler"
+      variant="destructive"
+    />
 )}
 
           <CancelModal
@@ -553,7 +558,13 @@ function AppointmentCard({
                           appointment.medicalRecord !== undefined && 
                           Object.keys(appointment.medicalRecord).length > 0;
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover:shadow-lg transition-shadow relative">
+      {hasMedicalRecord && (
+        <div className="absolute top-4 right-4 bg-blue-100 p-2 rounded-full">
+          <FileText className="h-4 w-4 text-blue-600" />
+          
+        </div>
+      )}
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
@@ -568,7 +579,7 @@ function AppointmentCard({
               </div>
             </CardDescription>
           </div>
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <MoreVertical className="h-4 w-4" />
@@ -608,7 +619,7 @@ function AppointmentCard({
                 <></> 
               )}
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
         </div>
       </CardHeader>
       <CardContent>

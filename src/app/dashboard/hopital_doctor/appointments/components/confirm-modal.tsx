@@ -1,33 +1,49 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent,  DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ConfirmModalProps {
     open: boolean;
-    title?: string;
-    description?: string;
-    onOpenChange: (open: boolean) => void;
-    onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: "default" | "destructive";
 }
-
-export function ConfirmModal({ open, onOpenChange, onConfirm }: ConfirmModalProps) {
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Confirmer le rendez-vous</DialogTitle>
-                    <DialogDescription>
-                        Êtes-vous sûr de vouloir confirmer ce rendez-vous ? Cette action ne peut pas être annulée.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Annuler
-                    </Button>
-                    <Button onClick={onConfirm}>Confirmer</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
+export const ConfirmModal = ({
+  open,
+  onOpenChange,
+  onConfirm,
+  title,
+  description,
+  confirmText = "Confirmer",
+  cancelText = "Annuler",
+  variant = "default"
+}: ConfirmModalProps) => {
+     return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p>{description}</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {cancelText}
+          </Button>
+          <Button 
+            variant={variant === "destructive" ? "destructive" : "default"} 
+            onClick={onConfirm}
+          >
+            {confirmText}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

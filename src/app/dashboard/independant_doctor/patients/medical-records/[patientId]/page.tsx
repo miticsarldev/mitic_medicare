@@ -165,7 +165,7 @@ export default function PatientMedicalRecord() {
   const [isViewingRecord, setIsViewingRecord] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [historyToDelete, setHistoryToDelete] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("infos");
+  
   const { toast } = useToast();
   const getBloodTypeInfo = (bloodType: string) => {
   const bloodTypeMap: Record<string, { display: string; variant: 'default' | 'destructive' | 'outline' | 'secondary' }> = {
@@ -183,34 +183,23 @@ export default function PatientMedicalRecord() {
 };
   useEffect(() => {
     const fetchPatientData = async () => {
-  try {
-    setLoading(true);
-    const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+      try {
+        const response = await fetch(`/api/independant_doctor/patient/${patientId}`);
+        if (!response.ok) {
+          throw new Error('Patient non trouvé');
+        }
+        const data = await response.json();
+        setPatient(data);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Une erreur est survenue");
+        }
+      } finally {
+        setLoading(false);
       }
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch patient data');
-    }
-    
-    const data = await response.json();
-    setPatient(data);
-    setError(null);
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Une erreur est survenue");
-    toast({
-      title: "Erreur",
-      description: "Impossible de charger les données du patient",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    };
 
     fetchPatientData();
   }, [patientId]);
@@ -276,7 +265,7 @@ const handleDeleteHistory = async (historyId: string) => {
   setIsDeletingHistory(true);
 
   try {
-    const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`, {
+    const response = await fetch(`/api/independant_doctor/patient/${patientId}/medical-history/${historyId}`, {
       method: 'DELETE',
       headers: {
         'Cache-Control': 'no-cache'
@@ -285,7 +274,6 @@ const handleDeleteHistory = async (historyId: string) => {
 
     if (response.ok) {
       await fetchPatientData();
-      setActiveTab("medical-history");
       toast({
         title: "Succès",
         description: "Antécédent supprimé avec succès",
@@ -324,7 +312,7 @@ const handleDeleteHistory = async (historyId: string) => {
 const fetchPatientData = async () => {
   try {
     setLoading(true);
-    const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
+    const response = await fetch(`/api/independant_doctor/patient/${patientId}`, {
       headers: {
         'Cache-Control': 'no-cache'
       }
@@ -346,8 +334,8 @@ const fetchPatientData = async () => {
 
   try {
     const endpoint = editingHistory 
-      ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
-      : `/api/hospital_doctor/patient/${patientId}/medical-history`;
+      ? `/api/independant_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
+      : `/api/independant_doctor/patient/${patientId}/medical-history`;
 
     const method = editingHistory ? 'PUT' : 'POST';
 
@@ -364,10 +352,10 @@ const fetchPatientData = async () => {
     });
 
     if (response.ok) {
+      // Recharger les données plutôt que de se fier à la réponse
+      await fetchPatientData(); // Utilisez la fonction existante
       setIsModalOpen(false);
       resetForm();
-      await fetchPatientData();
-      setActiveTab("medical-history");
       toast({
         title: "Succès",
         description: editingHistory ? "Antécédent mis à jour" : "Antécédent ajouté",
@@ -382,30 +370,20 @@ const fetchPatientData = async () => {
   }
 };
 
-const handleViewDiagnosis = async (appointmentId: string) => {
+  const handleViewDiagnosis = async (appointmentId: string) => {
   setIsViewingRecord(true);
-  try {
-    const res = await fetch(`/api/hospital_doctor/history/record?appointmentId=${appointmentId}`, {
-      next: { revalidate: 0 } 
-    });
-    
-    if (!res.ok) throw new Error('Failed to fetch medical record');
-    
+    try {
+    const res = await fetch(`/api/independant_doctor/history/record?appointmentId=${appointmentId}`);
     const data = await res.json();
-    setRecordData(data[0] || null);
+    setRecordData(data[0]); 
     setIsRecordModalOpen(true);
-  } catch (error: unknown) {
-  console.error(error); // ou loggez-le autrement
-  toast({
-    title: "Erreur",
-    description: "Impossible de charger le dossier médical",
-    variant: "destructive",
-  });
-}
-   finally {
+  } catch (error) {
+    console.error("Erreur lors de la récupération du dossier médical:", error);
+  }
+  finally {
     setIsViewingRecord(false);
   }
-};
+    };
 
   const translateStatus = (status: string) => {
   const statusTranslations: Record<string, string> = {
@@ -425,7 +403,7 @@ const handleViewDiagnosis = async (appointmentId: string) => {
     try {
       const lastAppointment = completedAppointments[0];
       const medicalRecordId = lastAppointment?.medicalRecord?.id;
-      const response = await fetch(`/api/hospital_doctor/patient/${patient?.id}/prescription`, {
+      const response = await fetch(`/api/independant_doctor/patient/${patient?.id}/prescription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ medicalRecordId, medicationName, dosage, frequency, duration: duration || undefined, instructions: instructions || undefined, startDate })
@@ -455,7 +433,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setIsUpdatingVitals(true);
   try {
-    const response = await fetch(`/api/hospital_doctor/patient/${patientId}/vital-signs`, {
+    const response = await fetch(`/api/independant_doctor/patient/${patientId}/vital-signs`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -470,8 +448,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
     });
 
     if (response.ok) {
-      await fetchPatientData();
-      setActiveTab("vital-signs");
+      await fetchPatientData(); // Ajoutez cette ligne pour rafraîchir les données
       setIsVitalModalOpen(false);
       toast({
         title: "Succès",
@@ -489,7 +466,6 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
     }
   } catch (err) {
     console.error("Erreur réseau lors de la mise à jour des signes vitaux", err);
-    await fetchPatientData();
     toast({
       title: "Erreur",
       description: "Erreur réseau lors de la mise à jour",
@@ -575,7 +551,7 @@ const handleVitalSignsSubmit = async (e: React.FormEvent) => {
       </Card>
 
       {/* Système d'onglets */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="infos" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="infos">
             <User2 className="w-4 h-4 mr-2" />

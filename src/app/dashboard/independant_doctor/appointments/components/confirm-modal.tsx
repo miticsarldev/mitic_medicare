@@ -3,29 +3,29 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-interface CancelModalProps {
+interface ConfirmModalProps {
     open: boolean;
+    title?: string;
+    description?: string;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => void;
 }
 
-export function CancelModal({ open, onOpenChange, onConfirm }: CancelModalProps) {
+export function ConfirmModal({ open, onOpenChange, onConfirm }: ConfirmModalProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Annuler le rendez-vous</DialogTitle>
+                    <DialogTitle>Confirmer le rendez-vous</DialogTitle>
                     <DialogDescription>
-                        Êtes-vous sûr de vouloir annuler ce rendez-vous ? Cette action est ireversible.
+                        Êtes-vous sûr de vouloir confirmer ce rendez-vous ? Cette action ne peut pas être annulée.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Non, garder
+                        Annuler
                     </Button>
-                    <Button variant="destructive" onClick={onConfirm}>
-                        Oui, annuler
-                    </Button>
+                    <Button onClick={onConfirm}>Confirmer</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

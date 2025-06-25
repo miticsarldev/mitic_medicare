@@ -122,16 +122,6 @@ export const doctorNavItems = [
         url: "/dashboard/independant_doctor/overview",
         icon: ClipboardList,
       },
-      {
-        title: "Statistiques & Analyse",
-        url: "/dashboard/independant_doctor/statistics",
-        icon: FileText,
-      },
-      {
-        title: "Avis & Retours",
-        url: "/dashboard/independant_doctor/reviews",
-        icon: MessageSquare,
-      },
     ],
   },
   {
@@ -143,11 +133,6 @@ export const doctorNavItems = [
         title: "Liste des Patients",
         url: "/dashboard/independant_doctor/patients/list",
       },
-      {
-        title: "Dossiers Médicaux",
-        url: "/dashboard/independant_doctor/patients/medical-records",
-        icon: FolderHeart,
-      },
     ],
   },
   {
@@ -158,10 +143,6 @@ export const doctorNavItems = [
       {
         title: "Tous les Rendez-vous",
         url: "/dashboard/independant_doctor/appointments/all",
-      },
-      {
-        title: "Prochains Rendez-vous",
-        url: "/dashboard/independant_doctor/appointments/upcoming",
       },
     ],
   },
