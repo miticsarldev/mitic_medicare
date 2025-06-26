@@ -149,7 +149,7 @@ export const doctorNavItems = [
   {
     title: "Mes Disponibilités",
     icon: Calendar,
-    url: "/dashboard/hopital_doctor/avaibility",
+    url: "/dashboard/independant_doctor/avaibility",
     items: [
       {
         title: "Mes Disponibilités",
@@ -157,7 +157,7 @@ export const doctorNavItems = [
       },
       {
         title: "Mon planning",
-        url: "/dashboard/independant/avaibility/schedule",
+        url: "/dashboard/independant_doctor/avaibility/schedule",
       },
     ],
   },
