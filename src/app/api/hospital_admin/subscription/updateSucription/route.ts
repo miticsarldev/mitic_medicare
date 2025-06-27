@@ -6,7 +6,6 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { SubscriptionPlan } from "@prisma/client";
 
-
 export async function POST(request: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -48,34 +47,43 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Hospital not found" }, { status: 404 });
         }
 
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setMonth(startDate.getMonth() + months);
-
         let subscription;
+        const startDate = new Date();
 
         if (hospital.subscription) {
+            // Calcul de la nouvelle date de fin
+            const currentEndDate = hospital.subscription.endDate;
+            const newEndDate = new Date(currentEndDate);
+            
+            // Si le plan est le même, on ajoute les mois à la date de fin existante
+            // Sinon, on part de la date actuelle
+            const baseDate = hospital.subscription.plan === plan ? currentEndDate : startDate;
+            newEndDate.setMonth(baseDate.getMonth() + months);
+
             // Mise à jour de la souscription existante
             subscription = await prisma.subscription.update({
                 where: { hospitalId: hospital.id },
                 data: {
                     plan,
-                    status: "ACTIVE",
-                    startDate,
-                    endDate,
+                    status: "TRIAL",
+                    startDate: hospital.subscription.plan === plan ? hospital.subscription.startDate : startDate,
+                    endDate: newEndDate,
                     amount: amount,
                     currency: "XOF",
-                    autoRenew: false, // Ou true selon votre logique métier
+                    autoRenew: false,
                 },
             });
         } else {
             // Création d'une nouvelle souscription
+            const endDate = new Date();
+            endDate.setMonth(startDate.getMonth() + months);
+
             subscription = await prisma.subscription.create({
                 data: {
                     subscriberType: "HOSPITAL",
                     hospitalId: hospital.id,
                     plan,
-                    status: "ACTIVE",
+                    status: "TRIAL",
                     startDate,
                     endDate,
                     amount: amount,

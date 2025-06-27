@@ -6,10 +6,8 @@ import prisma from "@/lib/prisma";
 // Quotas de patients par type d'abonnement
 const PATIENT_QUOTAS = {
     FREE: 100,
-    BASIC: 250,
     STANDARD: 500,
     PREMIUM: 1000,
-    ENTERPRISE: Infinity
 };
 
 export async function PATCH(
