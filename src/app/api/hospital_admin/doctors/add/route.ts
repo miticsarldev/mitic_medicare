@@ -9,10 +9,8 @@ import bcrypt from "bcryptjs";
 // Quotas de médecins par type d'abonnement
 const DOCTOR_QUOTAS = {
     FREE: 10,
-    BASIC: 15,
     STANDARD: 20,
     PREMIUM: 30,
-    ENTERPRISE: Infinity
 };
 
 export async function POST(req: Request) {
