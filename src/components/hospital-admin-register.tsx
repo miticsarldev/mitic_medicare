@@ -374,7 +374,7 @@ const HospitalAdminRegisterForm = () => {
                   id="institutionEmail"
                   {...register("institutionEmail")}
                 />
-                <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
               {errors.institutionEmail && (
                 <p className="text-red-500 text-xs mt-0.5">
@@ -403,7 +403,10 @@ const HospitalAdminRegisterForm = () => {
             </div>
             <div>
               <Label htmlFor="institutionCity">Ville de l&apos;hôpital</Label>
-              <Input id="institutionCity" {...register("institutionCity")} />
+              <div className="relative">
+                <Input id="institutionCity" {...register("institutionCity")} />
+                <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
               {errors.institutionCity && (
                 <p className="text-red-500 text-xs mt-0.5">
                   {errors.institutionCity.message}
@@ -431,10 +434,13 @@ const HospitalAdminRegisterForm = () => {
               <Label htmlFor="institutionZipCode">
                 Code postal de l&apos;hôpital
               </Label>
-              <Input
-                id="institutionZipCode"
-                {...register("institutionZipCode")}
-              />
+              <div className="relative">
+                <Input
+                  id="institutionZipCode"
+                  {...register("institutionZipCode")}
+                />
+                <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
               {errors.institutionZipCode && (
                 <p className="text-red-500 text-xs mt-0.5">
                   {errors.institutionZipCode.message}

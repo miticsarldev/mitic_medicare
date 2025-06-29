@@ -68,6 +68,20 @@ const registerSchema = z.object({
       /[\W_]/,
       "Le mot de passe doit contenir au moins un caractère spécial"
     ),
+  birthDate: z.string().refine(
+    (date) => {
+      const birth = new Date(date);
+      const today = new Date();
+      const age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      return (
+        age > 18 || (age === 18 && m >= 0 && today.getDate() >= birth.getDate())
+      );
+    },
+    {
+      message: "Vous devez avoir au moins 18 ans",
+    }
+  ),
   terms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les politiques et confidentialité",
   }),
@@ -94,6 +108,7 @@ const RegisterForm = () => {
       phoneNumber: "",
       email: "",
       password: "",
+      birthDate: "",
       terms: false,
     },
   });
@@ -261,6 +276,26 @@ const RegisterForm = () => {
             </p>
           )}
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="birthDate">Date de naissance</Label>
+        <Input
+          type="date"
+          id="birthDate"
+          max={
+            new Date(new Date().setFullYear(new Date().getFullYear() - 18))
+              .toISOString()
+              .split("T")[0]
+          }
+          {...register("birthDate")}
+          className="w-full"
+        />
+        {errors.birthDate && (
+          <p className="text-red-500 text-sm mt-1">
+            {errors.birthDate.message}
+          </p>
+        )}
       </div>
 
       <div className="relative">

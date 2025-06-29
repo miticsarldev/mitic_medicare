@@ -21,12 +21,8 @@ import {
   FileTextIcon,
   AlertCircle,
   ChevronRight,
-  Share2,
-  Printer,
   ArrowUpRight,
   CalendarClock,
-  Bookmark,
-  BookmarkCheck,
   Filter,
   X,
   MapPin,
@@ -101,7 +97,6 @@ export function MedicalRecordsClient({
   );
   //   const [isLoading, setIsLoading] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
 
   // Get all unique tags from medical records
   const allTags = useMemo(() => {
@@ -296,15 +291,6 @@ export function MedicalRecordsClient({
   const countRecordsByStatus = (status: string) => {
     return medicalRecords.filter((r) => r.status === status).length;
   };
-
-  // Get recent records (last 30 days)
-  //   const recentRecords = useMemo(() => {
-  //     const thirtyDaysAgo = new Date();
-  //     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  //     return medicalRecords.filter(
-  //       (record) => new Date(record.date) >= thirtyDaysAgo
-  //     );
-  //   }, [medicalRecords]);
 
   // Get upcoming follow-ups
   const upcomingFollowUps = useMemo(() => {
@@ -851,54 +837,6 @@ export function MedicalRecordsClient({
                       )}
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsFavorite(!isFavorite);
-                        }}
-                      >
-                        {isFavorite ? (
-                          <BookmarkCheck className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Bookmark className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {isFavorite
-                        ? "Retirer des favoris"
-                        : "Ajouter aux favoris"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Partager</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Imprimer</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
             </div>
           </DialogHeader>

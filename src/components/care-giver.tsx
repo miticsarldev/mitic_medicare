@@ -114,7 +114,7 @@ export function CareGiver() {
               </h2>
 
               <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">
-                Découvrez MediCare Pro et transformez votre pratique quotidienne
+                Découvrez MiticCare et transformez votre pratique quotidienne
                 avec notre plateforme conçue par et pour les professionnels de
                 santé.
               </p>

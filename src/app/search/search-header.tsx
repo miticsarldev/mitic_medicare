@@ -35,6 +35,7 @@ export function SearchHeader({ initialQuery, activeType }: SearchHeaderProps) {
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("type", value);
+    params.set("page", "1");
     router.push(`/search?${params.toString()}`);
   };
 

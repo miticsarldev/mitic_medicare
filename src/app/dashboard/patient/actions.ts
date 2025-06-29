@@ -617,9 +617,13 @@ export async function getPatientAppointments({
 
     const now = new Date();
     if (time === "upcoming") {
+      where.status = { in: ["PENDING", "CONFIRMED"] };
       where.scheduledAt = { gte: now };
     } else if (time === "past") {
-      where.scheduledAt = { lt: now };
+      where.OR = [
+        { scheduledAt: { lt: now } },
+        { status: { in: ["CANCELED", "COMPLETED", "NO_SHOW"] } },
+      ];
     }
 
     // Calculate pagination
@@ -732,15 +736,17 @@ export async function cancelAppointment(
     }
 
     // Update the appointment status
-    await prisma.appointment.update({
+    const updated = await prisma.appointment.update({
       where: { id },
       data: {
-        status: "CANCELED",
+        status: AppointmentStatus.CANCELED,
         cancelledAt: new Date(),
         cancellationReason: reason || "Cancelled by patient",
         notes: notes ? `${notes}\n\nCancellation notes: ${notes}` : undefined,
       },
     });
+
+    console.log("Cancelled Appointment:", updated);
 
     // Revalidate the appointments page
     revalidatePath("/dashboard/patient/appointments");
@@ -874,6 +880,7 @@ export async function getAppointmentById(appointmentId: string) {
       scheduledAt: appointment.scheduledAt,
       reason: appointment.reason || "",
       status: appointment.status,
+      isPast: appointment.scheduledAt.getTime() < Date.now(),
     };
   } catch (error) {
     console.error("Error fetching appointment:", error);
@@ -920,6 +927,7 @@ export async function getPatientMedicalRecords(): Promise<GetPatientMedicalRecor
             prescriptions: true,
           },
         },
+        prescription: true,
         attachments: true,
       },
       orderBy: {
@@ -943,16 +951,32 @@ export async function getPatientMedicalRecords(): Promise<GetPatientMedicalRecor
       status: record.followUpNeeded ? "active" : "completed",
       type: determineRecordType(record),
       tags: generateTags(record),
-      medications: record.prescriptionOrder.flatMap((order) =>
-        order.prescriptions.map((prescription) => ({
-          id: prescription.id,
-          name: prescription.medicationName,
-          dosage: prescription.dosage,
-          frequency: prescription.frequency,
-          duration: prescription.duration || "Non spécifié",
-          isActive: prescription.isActive,
-        }))
-      ),
+      medications: [
+        ...record.prescriptionOrder.flatMap((order) =>
+          order.prescriptions.map((prescription) => ({
+            id: prescription.id,
+            name: prescription.medicationName,
+            dosage: prescription.dosage,
+            frequency: prescription.frequency,
+            duration: prescription.duration || "Non spécifié",
+            isActive: prescription.isActive,
+            doctorId: prescription.doctorId,
+            issuedAt: order.issuedAt.toISOString(),
+            source: "order",
+          }))
+        ),
+        ...(record.prescription?.map((pres) => ({
+          id: pres.id,
+          name: pres.medicationName,
+          dosage: pres.dosage,
+          frequency: pres.frequency,
+          duration: pres.duration || "Non spécifié",
+          isActive: pres.isActive,
+          doctorId: pres.doctorId,
+          issuedAt: pres.createdAt.toISOString(),
+          source: "direct",
+        })) ?? []),
+      ],
       documents: record.attachments.map((attachment) => ({
         id: attachment.id,
         name: attachment.fileName,

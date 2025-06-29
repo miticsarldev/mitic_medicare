@@ -730,106 +730,24 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Date de naissance</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} />
+                                <Input
+                                  type="date"
+                                  {...field}
+                                  max={
+                                    new Date(
+                                      new Date().setFullYear(
+                                        new Date().getFullYear() - 18
+                                      )
+                                    )
+                                      .toISOString()
+                                      .split("T")[0]
+                                  }
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        {/* <FormField
-                          control={profileForm.control}
-                          name="dateOfBirth"
-                          render={({ field }) => {
-                            // Ensure selected value is a Date
-                            const selectedDate = field.value
-                              ? new Date(field.value)
-                              : undefined;
-
-                            const today = new Date();
-                            const minDate = new Date(
-                              today.getFullYear() - 14,
-                              today.getMonth(),
-                              today.getDate()
-                            );
-
-                            const defaultMonth = selectedDate ?? minDate;
-
-                            return (
-                              <FormItem className="flex flex-col">
-                                <div className="flex items-center justify-between">
-                                  <FormLabel>Date de naissance</FormLabel>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                                      </TooltipTrigger>
-                                      <TooltipContent side="left">
-                                        L&apos;utilisateur doit avoir au moins
-                                        14 ans.
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </div>
-                                <Popover open={open} onOpenChange={setOpen}>
-                                  <PopoverTrigger asChild>
-                                    <FormControl>
-                                      <Button
-                                        variant="outline"
-                                        className={cn(
-                                          "w-full pl-3 text-left font-normal",
-                                          !selectedDate &&
-                                            "text-muted-foreground"
-                                        )}
-                                      >
-                                        {selectedDate ? (
-                                          format(selectedDate, "dd MMMM yyyy", {
-                                            locale: fr,
-                                          })
-                                        ) : (
-                                          <span>Sélectionner une date</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                      </Button>
-                                    </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    className="w-auto p-0 max-w-sm"
-                                    align="start"
-                                    sideOffset={8}
-                                    side="bottom"
-                                    collisionPadding={8}
-                                    avoidCollisions
-                                    style={{ zIndex: 50 }}
-                                  >
-                                    <Calendar
-                                      mode="single"
-                                      selected={selectedDate}
-                                      onSelect={(selected) => {
-                                        field.onChange(selected);
-                                        setOpen(false);
-                                      }}
-                                      locale={fr}
-                                      initialFocus
-                                      disabled={(date) => date > minDate}
-                                      defaultMonth={defaultMonth}
-                                      captionLayout="dropdown" // 👈 Adds dropdowns
-                                      fromYear={today.getFullYear() - 100} // 👈 Allow up to 100 years back
-                                      toYear={today.getFullYear() - 14} // 👈 Only allow dates up to 14 years ago
-                                      classNames={{
-                                        caption_dropdowns:
-                                          "flex justify-between gap-2 px-2",
-
-                                        dropdown:
-                                          "rounded-md border border-input bg-background py-1.5 px-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                                      }}
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                              </FormItem>
-                            );
-                          }}
-                        /> */}
                         <FormField
                           control={profileForm.control}
                           name="gender"

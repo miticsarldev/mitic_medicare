@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +31,7 @@ import type {
 } from "@/app/actions/ui-actions";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface SearchResultsProps {
   results: SearchResultsType;
@@ -40,7 +40,9 @@ interface SearchResultsProps {
 }
 
 export function SearchResults({ results, type, filters }: SearchResultsProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page") || "1");
   const { status } = useSession();
 
   // Get initials for avatar fallback
@@ -50,6 +52,12 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
       .map((part) => part[0])
       .join("")
       .toUpperCase();
+  };
+
+  const goToPage = (pageNum: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", pageNum.toString());
+    router.push(`?${params.toString()}`);
   };
 
   // Calculate pagination
@@ -387,7 +395,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
           <PaginationContent>
             <PaginationItem>
               <PaginationLink
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                onClick={() => goToPage(currentPage - 1)}
                 size="default"
                 className={cn(
                   "bg-secondary",
@@ -416,7 +424,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
               return (
                 <PaginationItem key={i}>
                   <PaginationLink
-                    onClick={() => setCurrentPage(pageNum)}
+                    onClick={() => goToPage(pageNum)}
                     isActive={currentPage === pageNum}
                     className="cursor-pointer"
                   >
@@ -428,9 +436,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
 
             <PaginationItem>
               <PaginationLink
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
+                onClick={() => goToPage(currentPage + 1)}
                 size="default"
                 // disabled={currentPage === totalPages}
                 className={cn(

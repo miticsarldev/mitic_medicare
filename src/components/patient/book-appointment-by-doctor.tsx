@@ -117,7 +117,7 @@ export default function BookAppointmentByDoctorIdPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (doctorId || !date || !selectedTime) {
+    if (!doctorId || !date || !selectedTime) {
       return;
     }
 
@@ -135,7 +135,7 @@ export default function BookAppointmentByDoctorIdPage({
         title: "Rendez-vous programmé",
         description: "Votre rendez-vous a été programmé avec succès.",
       });
-      router.push("/dashboard/patient/doctors/all");
+      router.push("/dashboard/patient/appointments/all");
     } catch (error) {
       console.error("Error rescheduling doctor:", error);
       toast({
@@ -352,7 +352,7 @@ export default function BookAppointmentByDoctorIdPage({
                     ) : (
                       <>
                         <CalendarCheck className="mr-2 h-4 w-4" />
-                        Confirmer la reprogrammation
+                        Confirmer la programmation
                       </>
                     )}
                   </Button>

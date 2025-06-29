@@ -182,15 +182,17 @@ export default function AppointmentsPage() {
           description: "Votre rendez-vous a été annulé avec succès.",
         });
 
-        // Refresh appointments
+        setActiveTab("past");
+        setCurrentPage(1);
+        setStatusFilter(null);
+        setSearchQuery("");
+
         const updatedResult = await getPatientAppointments({
-          status:
-            activeTab === "upcoming"
-              ? (["PENDING", "CONFIRMED"] as AppointmentStatus[])
-              : (["COMPLETED", "CANCELED", "NO_SHOW"] as AppointmentStatus[]),
-          search: searchQuery,
-          page: currentPage,
+          status: ["COMPLETED", "CANCELED", "NO_SHOW"] as AppointmentStatus[],
+          search: "",
+          page: 1,
           limit: 5,
+          time: "past",
         });
 
         setAppointments(updatedResult);

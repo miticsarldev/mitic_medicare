@@ -4,10 +4,29 @@ import prisma from "@/lib/prisma";
 import { generateVerificationToken } from "@/lib/token";
 import { sendVerificationEmail } from "@/lib/email";
 
+function isAtLeast18YearsOld(dateString: string): boolean {
+  const birthDate = new Date(dateString);
+  const today = new Date();
+  const age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  return (
+    age > 18 ||
+    (age === 18 &&
+      (m > 0 || (m === 0 && today.getDate() >= birthDate.getDate())))
+  );
+}
+
 export async function POST(req: Request) {
   try {
-    const { firstName, lastName, email, password, phoneNumber, genre } =
-      await req.json();
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phoneNumber,
+      genre,
+      birthDate,
+    } = await req.json();
 
     if (
       !firstName ||
@@ -15,10 +34,18 @@ export async function POST(req: Request) {
       !email ||
       !password ||
       !phoneNumber ||
-      genre
+      !birthDate
     ) {
       return NextResponse.json(
         { error: "Tous les champs sont requis." },
+        { status: 400 }
+      );
+    }
+
+    // Vérification de l'âge
+    if (!isAtLeast18YearsOld(birthDate)) {
+      return NextResponse.json(
+        { error: "Vous devez avoir au moins 18 ans pour vous inscrire." },
         { status: 400 }
       );
     }
@@ -57,7 +84,7 @@ export async function POST(req: Request) {
         email: normalizedEmail,
         phone: phoneNumber,
         password: hashedPassword,
-        dateOfBirth: new Date(),
+        dateOfBirth: new Date(birthDate),
         role: "PATIENT",
         profile: {
           create: {

@@ -659,11 +659,16 @@ export default function GiveFeedbackPage() {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Minimum 10 caractères.{" "}
-                {comment.length < 10
-                  ? `Encore ${10 - comment.length} caractères requis.`
-                  : ""}
+              <p
+                className={`text-xs ${
+                  comment.length < 50
+                    ? "text-red-500 font-semibold"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {comment.length < 50
+                  ? `Encore ${50 - comment.length} caractère${10 - comment.length > 1 ? "s" : ""} requis.`
+                  : "✅"}
               </p>
             </div>
 

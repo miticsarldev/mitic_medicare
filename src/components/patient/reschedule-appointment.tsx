@@ -55,6 +55,7 @@ interface Appointment {
   hospital: string;
   scheduledAt: string;
   reason: string;
+  isPast?: boolean;
 }
 
 export default function RescheduleAppointmentPage({
@@ -154,6 +155,13 @@ export default function RescheduleAppointmentPage({
 
     fetchTimeSlots();
   }, [appointment?.doctorId, date, originalDate, originalTime]);
+
+  const isDateTimeInPast = (date: Date, time: string) => {
+    const [hour, minute] = time.split(":").map(Number);
+    const dateTime = new Date(date);
+    dateTime.setHours(hour, minute, 0, 0); // Ajout des heures et minutes
+    return dateTime.getTime() < new Date().getTime(); // Comparaison avec maintenant
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,6 +306,13 @@ export default function RescheduleAppointmentPage({
                 </div>
               </div>
 
+              {date && selectedTime && isDateTimeInPast(date, selectedTime) && (
+                <p className="text-sm text-red-600 mt-1">
+                  Le créneau sélectionné est déjà passé. Veuillez choisir une
+                  date et une heure futures.
+                </p>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-6">
@@ -417,7 +432,8 @@ export default function RescheduleAppointmentPage({
                       !selectedTime ||
                       !reason.trim() ||
                       isSubmitting ||
-                      !hasChanges()
+                      !hasChanges() ||
+                      isDateTimeInPast(date, selectedTime)
                     }
                   >
                     {isSubmitting ? (

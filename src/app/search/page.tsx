@@ -22,6 +22,7 @@ export default async function SearchPage({
   const gender = searchParams.gender as string | undefined;
   const experience = searchParams.experience as string | undefined;
   const sortBy = searchParams.sortBy as string | undefined;
+  const page = searchParams.page ? Number(searchParams.page as string) : 1;
 
   const filters: SearchFilters = {
     type,
@@ -32,6 +33,8 @@ export default async function SearchPage({
     gender,
     experience,
     sortBy,
+    page,
+    limit: 10,
   };
 
   // Fetch search results
