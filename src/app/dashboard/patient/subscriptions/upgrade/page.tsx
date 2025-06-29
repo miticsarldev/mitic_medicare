@@ -57,26 +57,6 @@ export default function UpgradeSubscriptionPage() {
       ],
     },
     {
-      id: "basic",
-      name: "Basic",
-      description: "Pour les patients réguliers",
-      price: {
-        monthly: "4,99€",
-        annually: "49,99€",
-      },
-      features: [
-        "5 rendez-vous par mois",
-        "2 consultations vidéo par mois",
-        "Accès au dossier médical complet",
-        "Rappels de médicaments",
-        "Support par chat",
-      ],
-      limitations: [
-        "Pas d'accès prioritaire",
-        "Pas d'accès aux spécialistes premium",
-      ],
-    },
-    {
       id: "premium",
       name: "Premium",
       description: "Pour un suivi médical complet",

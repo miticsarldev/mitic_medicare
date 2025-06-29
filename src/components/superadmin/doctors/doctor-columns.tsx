@@ -242,7 +242,7 @@ export function useDoctorColumns({
                   ? "border-purple-500 text-purple-500"
                   : row.original.subscription?.plan === "PREMIUM"
                     ? "border-blue-500 text-blue-500"
-                    : row.original.subscription?.plan === "BASIC"
+                    : row.original.subscription?.plan === "FREE"
                       ? "border-amber-500 text-amber-500"
                       : row.original.subscription?.plan === "STANDARD"
                         ? "border-red-500 text-red-500"

@@ -146,17 +146,11 @@ export function useSubscriptionColumns({
             case "FREE":
               badgeClass = "bg-gray-100 text-gray-800";
               break;
-            case "BASIC":
-              badgeClass = "bg-blue-100 text-blue-800";
-              break;
             case "STANDARD":
               badgeClass = "bg-green-100 text-green-800";
               break;
             case "PREMIUM":
               badgeClass = "bg-purple-100 text-purple-800";
-              break;
-            case "ENTERPRISE":
-              badgeClass = "bg-amber-100 text-amber-800";
               break;
             default:
               badgeClass = "bg-gray-100 text-gray-800";

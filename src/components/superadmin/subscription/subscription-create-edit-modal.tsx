@@ -48,7 +48,7 @@ export default function SubscriptionCreateEditModal({
     subscriberType: "DOCTOR",
     doctorId: "",
     hospitalId: "",
-    plan: "BASIC",
+    plan: "FREE",
     status: "ACTIVE",
     startDate: "",
     endDate: "",
@@ -69,7 +69,7 @@ export default function SubscriptionCreateEditModal({
         subscriberType: subscription.subscriberType || "DOCTOR",
         doctorId: subscription.doctorId || "",
         hospitalId: subscription.hospitalId || "",
-        plan: subscription.plan || "BASIC",
+        plan: subscription.plan || "FREE",
         status: subscription.status || "ACTIVE",
         startDate: subscription.startDate
           ? new Date(subscription.startDate).toISOString().split("T")[0]
@@ -92,7 +92,7 @@ export default function SubscriptionCreateEditModal({
         subscriberType: "DOCTOR",
         doctorId: "",
         hospitalId: "",
-        plan: "BASIC",
+        plan: "FREE",
         status: "ACTIVE",
         startDate: today.toISOString().split("T")[0],
         endDate: nextYear.toISOString().split("T")[0],
@@ -327,10 +327,8 @@ export default function SubscriptionCreateEditModal({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="FREE">Gratuit</SelectItem>
-                      <SelectItem value="BASIC">Basic</SelectItem>
                       <SelectItem value="STANDARD">Standard</SelectItem>
                       <SelectItem value="PREMIUM">Premium</SelectItem>
-                      <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

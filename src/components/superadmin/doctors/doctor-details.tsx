@@ -186,7 +186,7 @@ export default function DoctorDetails({
                             ? "border-purple-500 text-purple-500"
                             : doctor.subscription?.plan === "PREMIUM"
                               ? "border-blue-500 text-blue-500"
-                              : doctor.subscription?.plan === "BASIC"
+                              : doctor.subscription?.plan === "FREE"
                                 ? "border-amber-500 text-amber-500"
                                 : doctor.subscription?.plan === "STANDARD"
                                   ? "border-red-500 text-red-500"

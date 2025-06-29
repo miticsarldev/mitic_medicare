@@ -1007,10 +1007,8 @@ async function generateSubscriptionTypeData(): Promise<
     // Return fallback data
     return [
       { name: "FREE", value: 40 },
-      { name: "BASIC", value: 30 },
       { name: "STANDARD", value: 20 },
       { name: "PREMIUM", value: 8 },
-      { name: "ENTERPRISE", value: 2 },
     ];
   }
 }
@@ -1114,10 +1112,8 @@ function generateFallbackData(): StatisticsData {
     ],
     subscriptionTypeData: [
       { name: "FREE", value: 40 },
-      { name: "BASIC", value: 30 },
       { name: "STANDARD", value: 20 },
       { name: "PREMIUM", value: 8 },
-      { name: "ENTERPRISE", value: 2 },
     ],
     platformUsageData: [
       { name: "Web", value: 45 },

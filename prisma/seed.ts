@@ -225,7 +225,7 @@ const malianHospitals = [
   },
 ];
 
-const departments = [
+export const departments = [
   {
     name: "Cardiologie",
     description: "Traitement des maladies du cœur et des vaisseaux sanguins",
@@ -247,74 +247,17 @@ const departments = [
     name: "Médecine Interne",
     description: "Diagnostic et traitement non chirurgical des maladies",
   },
-  {
-    name: "Ophtalmologie",
-    description: "Traitement des maladies des yeux",
-  },
-  {
-    name: "Orthopédie",
-    description: "Traitement des affections de l'appareil locomoteur",
-  },
-  {
-    name: "Neurologie",
-    description: "Traitement des maladies du système nerveux",
-  },
-  {
-    name: "Dermatologie",
-    description: "Traitement des maladies de la peau",
-  },
-  {
-    name: "ORL",
-    description: "Traitement des maladies de l'oreille, du nez et de la gorge",
-  },
-  {
-    name: "Urologie",
-    description: "Traitement des maladies de l'appareil urinaire",
-  },
-  {
-    name: "Pneumologie",
-    description: "Traitement des maladies respiratoires",
-  },
-  {
-    name: "Néphrologie",
-    description: "Traitement des maladies des reins",
-  },
-  {
-    name: "Endocrinologie",
-    description: "Traitement des troubles hormonaux",
-  },
-  {
-    name: "Psychiatrie",
-    description: "Traitement des troubles mentaux",
-  },
 ];
 
 const specializations = [
   "Cardiologie",
   "Pédiatrie",
-  "Gynécologie",
-  "Obstétrique",
   "Chirurgie Générale",
   "Médecine Interne",
-  "Ophtalmologie",
-  "Orthopédie",
-  "Neurologie",
-  "Dermatologie",
-  "ORL",
-  "Urologie",
-  "Pneumologie",
-  "Néphrologie",
-  "Endocrinologie",
   "Psychiatrie",
   "Radiologie",
-  "Anesthésiologie",
-  "Oncologie",
-  "Hématologie",
-  "Rhumatologie",
-  "Gastro-entérologie",
   "Médecine d'urgence",
   "Médecine de famille",
-  "Gériatrie",
 ];
 
 const medicalConditions = [
@@ -540,23 +483,19 @@ async function main() {
 
     // Create subscription for hospital
     const subscriptionStartDate = randomDate(
-      new Date(2023, 0, 1),
-      new Date(2023, 11, 31)
-    );
-    const subscriptionEndDate = randomDate(
       new Date(2024, 0, 1),
       new Date(2024, 11, 31)
+    );
+    const subscriptionEndDate = randomDate(
+      new Date(2025, 0, 1),
+      new Date(2025, 11, 31)
     );
 
     const subscription = await prisma.subscription.create({
       data: {
         subscriberType: SubscriberType.HOSPITAL,
         hospitalId: createdHospital.id,
-        plan: randomItem([
-          SubscriptionPlan.STANDARD,
-          SubscriptionPlan.PREMIUM,
-          SubscriptionPlan.ENTERPRISE,
-        ]),
+        plan: randomItem([SubscriptionPlan.STANDARD, SubscriptionPlan.PREMIUM]),
         status: SubscriptionStatus.ACTIVE,
         startDate: subscriptionStartDate,
         endDate: subscriptionEndDate,
@@ -635,8 +574,8 @@ async function main() {
       where: { hospitalId: hospital.id },
     });
 
-    // Create 5 doctors for this hospital
-    for (let i = 0; i < 5; i++) {
+    // Create 3 doctors for this hospital
+    for (let i = 0; i < 3; i++) {
       const gender = randomBoolean() ? "male" : "female";
       const firstName = randomItem(malianFirstNames[gender]);
       const lastName = randomItem(malianLastNames);
@@ -820,23 +759,19 @@ async function main() {
 
     // Create subscription for independent doctors
     const subscriptionStartDate = randomDate(
-      new Date(2023, 0, 1),
-      new Date(2023, 11, 31)
-    );
-    const subscriptionEndDate = randomDate(
       new Date(2024, 0, 1),
       new Date(2024, 11, 31)
+    );
+    const subscriptionEndDate = randomDate(
+      new Date(2025, 0, 1),
+      new Date(2025, 11, 31)
     );
 
     const subscription = await prisma.subscription.create({
       data: {
         subscriberType: SubscriberType.DOCTOR,
         doctorId: doctor.id,
-        plan: randomItem([
-          SubscriptionPlan.FREE,
-          SubscriptionPlan.BASIC,
-          SubscriptionPlan.PREMIUM,
-        ]),
+        plan: randomItem([SubscriptionPlan.FREE, SubscriptionPlan.PREMIUM]),
         status: SubscriptionStatus.ACTIVE,
         startDate: subscriptionStartDate,
         endDate: subscriptionEndDate,

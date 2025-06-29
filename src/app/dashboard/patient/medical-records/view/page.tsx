@@ -1,6 +1,4 @@
-// export default function MedicalRecordsPageWrapper() {
-//   return <MedicalRecordsPage />;
-// }
+export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
 import { getPatientMedicalRecords } from "@/app/dashboard/patient/actions";

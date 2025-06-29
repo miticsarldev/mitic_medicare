@@ -1196,7 +1196,7 @@ export default function DoctorsPage() {
 
                             if (plan.plan === "FREE") {
                               color = "bg-purple-500";
-                            } else if (plan.plan === "BASIC") {
+                            } else if (plan.plan === "FREE") {
                               color = "bg-yellow-500";
                             } else if (plan.plan === "STANDARD") {
                               color = "bg-blue-500";

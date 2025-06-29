@@ -926,7 +926,7 @@ async function main() {
         doctorId: doctor.id,
         plan: randomItem([
           SubscriptionPlan.FREE,
-          SubscriptionPlan.BASIC,
+          SubscriptionPlan.FREE,
           SubscriptionPlan.PREMIUM,
         ]),
         status: SubscriptionStatus.ACTIVE,

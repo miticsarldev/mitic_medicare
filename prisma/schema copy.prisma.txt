@@ -56,7 +56,7 @@ enum SubscriptionStatus {
 
 enum SubscriptionPlan {
     FREE
-    BASIC
+    FREE
     STANDARD
     PREMIUM
     ENTERPRISE

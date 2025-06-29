@@ -520,12 +520,6 @@ export default function SubscriptionsPage() {
                         Gratuit
                       </DropdownMenuCheckboxItem>
                       <DropdownMenuCheckboxItem
-                        checked={selectedPlan === "BASIC"}
-                        onCheckedChange={() => setSelectedPlan("BASIC")}
-                      >
-                        Basic
-                      </DropdownMenuCheckboxItem>
-                      <DropdownMenuCheckboxItem
                         checked={selectedPlan === "STANDARD"}
                         onCheckedChange={() => setSelectedPlan("STANDARD")}
                       >
@@ -536,12 +530,6 @@ export default function SubscriptionsPage() {
                         onCheckedChange={() => setSelectedPlan("PREMIUM")}
                       >
                         Premium
-                      </DropdownMenuCheckboxItem>
-                      <DropdownMenuCheckboxItem
-                        checked={selectedPlan === "ENTERPRISE"}
-                        onCheckedChange={() => setSelectedPlan("ENTERPRISE")}
-                      >
-                        Enterprise
                       </DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

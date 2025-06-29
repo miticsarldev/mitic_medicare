@@ -18,7 +18,6 @@ const loginSchema = z.object({
     (val) => {
       // Email regex
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      // Phone regex (basic international format)
       const phoneRegex = /^\+?[0-9]{8,15}$/;
 
       return emailRegex.test(val) || phoneRegex.test(val);

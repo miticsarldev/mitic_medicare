@@ -1,14 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Clock, Stethoscope, User, FileText, Check, X, Filter, Search, FilePlus, Trash2, Pencil } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  Stethoscope,
+  User,
+  FileText,
+  Check,
+  X,
+  Filter,
+  Search,
+  FilePlus,
+  Trash2,
+  Pencil,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/hooks/use-toast"
+import { toast } from "@/hooks/use-toast";
 import { Appointment, AppointmentsResponse } from "@/types/appointment";
 import { AppointmentStatus } from "@prisma/client";
 import { ConfirmModal } from "../components/confirm-modal";
@@ -16,7 +42,11 @@ import { CancelModal } from "../components/cancel-modal";
 import { CompleteModal } from "../components/complete-modal";
 import { DetailsModal } from "../components/details-modal";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -26,7 +56,7 @@ type MedicalRecordInput = {
   treatment: string;
   notes?: string;
   followUpNeeded?: boolean;
-  followUpDate?: Date | string | undefined; 
+  followUpDate?: Date | string | undefined;
 };
 interface MedicalRecordData {
   diagnosis: string;
@@ -64,7 +94,8 @@ const statusOptions = [
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [medicalRecordData, setMedicalRecordData] = useState<MedicalRecordData | null>(null);
+  const [medicalRecordData, setMedicalRecordData] =
+    useState<MedicalRecordData | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -73,13 +104,13 @@ export default function AppointmentsPage() {
     canceled: 0,
   });
   const [filters, setFilters] = useState({
-  status: "ALL",
-  patientName: "",
-});
-type Filters = {
-  status: string;
-  patientName: string;
-};
+    status: "ALL",
+    patientName: "",
+  });
+  type Filters = {
+    status: string;
+    patientName: string;
+  };
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pagination, setPagination] = useState({
@@ -88,15 +119,19 @@ type Filters = {
     totalItems: 0,
     totalPages: 1,
   });
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord" | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
+  const [modalType, setModalType] = useState<
+    | "confirm"
+    | "cancel"
+    | "complete"
+    | "details"
+    | "edit"
+    | "deleteRecord"
+    | null
+  >(null);
 
-  useEffect(() => {
-    fetchAppointments();
-    fetchStats();
-  }, [pagination.currentPage, filters, dateRange]);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
       let url = `/api/independant_doctor/appointments/all?page=${pagination.currentPage}&pageSize=${pagination.pageSize}&includeMedicalRecordInfo=true`;
@@ -133,7 +168,12 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, dateRange, pagination.currentPage, pagination.pageSize]);
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchStats();
+  }, [pagination.currentPage, filters, dateRange, fetchAppointments]);
 
   const fetchStats = async () => {
     try {
@@ -151,13 +191,16 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
     medicalRecord?: MedicalRecordInput;
   }) => {
     try {
-      const response = await fetch("/api/independant_doctor/appointments/update-status", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await fetch(
+        "/api/independant_doctor/appointments/update-status",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Échec de la mise à jour");
@@ -183,18 +226,17 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
-      setPagination(prev => ({ ...prev, currentPage: newPage }));
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
     }
   };
 
   const handleFilterChange = <K extends keyof Filters>(
-  key: K,
-  value: Filters[K]
-) => {
-  setFilters(prev => ({ ...prev, [key]: value }));
-  setPagination(prev => ({ ...prev, currentPage: 1 }));
-};
-
+    key: K,
+    value: Filters[K]
+  ) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  };
 
   const resetFilters = () => {
     setFilters({
@@ -202,7 +244,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
       patientName: "",
     });
     setDateRange(undefined);
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
   const getStatusBadge = (status: AppointmentStatus) => {
@@ -210,13 +252,19 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
       case "PENDING":
         return <Badge variant="secondary">En attente</Badge>;
       case "CONFIRMED":
-        return <Badge className="bg-blue-500 hover:bg-blue-600">Confirmé</Badge>;
+        return (
+          <Badge className="bg-blue-500 hover:bg-blue-600">Confirmé</Badge>
+        );
       case "CANCELED":
         return <Badge variant="destructive">Annulé</Badge>;
       case "COMPLETED":
-        return <Badge className="bg-green-500 hover:bg-green-600">Terminé</Badge>;
+        return (
+          <Badge className="bg-green-500 hover:bg-green-600">Terminé</Badge>
+        );
       case "NO_SHOW":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Absent</Badge>;
+        return (
+          <Badge className="bg-yellow-500 hover:bg-yellow-600">Absent</Badge>
+        );
       default:
         return <Badge variant="outline">Inconnu</Badge>;
     }
@@ -265,11 +313,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
               <Filter className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-lg">Filtres</CardTitle>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetFilters}
-            >
+            <Button variant="ghost" size="sm" onClick={resetFilters}>
               Réinitialiser
             </Button>
           </div>
@@ -296,14 +340,18 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Nom du patient</label>
+              <label className="block text-sm font-medium mb-1">
+                Nom du patient
+              </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Rechercher un patient..."
                   className="pl-9"
                   value={filters.patientName}
-                  onChange={(e) => handleFilterChange("patientName", e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("patientName", e.target.value)
+                  }
                 />
               </div>
             </div>
@@ -320,7 +368,10 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
                     {dateRange?.from ? (
                       dateRange.to ? (
                         <>
-                          {format(dateRange.from, "dd MMM yyyy", { locale: fr })} -{" "}
+                          {format(dateRange.from, "dd MMM yyyy", {
+                            locale: fr,
+                          })}{" "}
+                          -{" "}
                           {format(dateRange.to, "dd MMM yyyy", { locale: fr })}
                         </>
                       ) : (
@@ -356,8 +407,12 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
       ) : appointments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <FileText className="h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">Aucun rendez-vous trouvé</h3>
-          <p className="text-gray-500 mt-1">Aucun rendez-vous ne correspond à vos critères de recherche.</p>
+          <h3 className="text-lg font-medium text-gray-900">
+            Aucun rendez-vous trouvé
+          </h3>
+          <p className="text-gray-500 mt-1">
+            Aucun rendez-vous ne correspond à vos critères de recherche.
+          </p>
         </div>
       ) : (
         <>
@@ -368,30 +423,30 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
                 appointment={appointment}
                 onAction={(type, apt) => {
                   if (type === "edit") {
-                  // Appelle l'API pour récupérer les données du dossier
-                  fetch(`/api/independant_doctor/medical-records/${apt.id}`)
-                  .then(res => {
-                    if (!res.ok) throw new Error("Dossier non trouvé");
-                    return res.json();
-                  })
-                  .then(data => {
-                    if (!data) throw new Error("Dossier vide");
-                    setMedicalRecordData(data);
-                    setModalType("edit");
-                  })
-                  .catch(() => {
-                    toast({
-                      title: "Erreur",
-                      description: "Le dossier médical n'existe plus ou a été supprimé.",
-                      variant: "destructive",
-                    });
-                    setModalType(null);
-                    setMedicalRecordData(null);
-                  });
-
-                } else {
-                  setModalType(type);
-                }
+                    // Appelle l'API pour récupérer les données du dossier
+                    fetch(`/api/independant_doctor/medical-records/${apt.id}`)
+                      .then((res) => {
+                        if (!res.ok) throw new Error("Dossier non trouvé");
+                        return res.json();
+                      })
+                      .then((data) => {
+                        if (!data) throw new Error("Dossier vide");
+                        setMedicalRecordData(data);
+                        setModalType("edit");
+                      })
+                      .catch(() => {
+                        toast({
+                          title: "Erreur",
+                          description:
+                            "Le dossier médical n'existe plus ou a été supprimé.",
+                          variant: "destructive",
+                        });
+                        setModalType(null);
+                        setMedicalRecordData(null);
+                      });
+                  } else {
+                    setModalType(type);
+                  }
                   setSelectedAppointment(apt);
                   setModalType(type);
                 }}
@@ -410,7 +465,8 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
               Précédent
             </Button>
             <span className="text-sm text-gray-600">
-              Page {pagination.currentPage} sur {pagination.totalPages} • {pagination.totalItems} rendez-vous
+              Page {pagination.currentPage} sur {pagination.totalPages} •{" "}
+              {pagination.totalItems} rendez-vous
             </span>
             <Button
               variant="outline"
@@ -426,7 +482,7 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
       {/* Modals */}
       {selectedAppointment && (
         <>
-           <ConfirmModal
+          <ConfirmModal
             open={modalType === "confirm"}
             onOpenChange={(open) => !open && setModalType(null)}
             onConfirm={() => {
@@ -439,61 +495,83 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
             description="Êtes-vous sûr de vouloir confirmer ce rendez-vous ? "
             confirmText="Confirmer"
           />
-          {modalType === "edit" && selectedAppointment && medicalRecordData?.diagnosis && (
-          <CompleteModal
-            open={true}
-            onOpenChange={(open) => {
-              if (!open) {
-                setModalType(null);
-                setMedicalRecordData(null);
-              }
-            }}
-            appointment={selectedAppointment}
-            onSubmit={(updatedData) => {
-              fetch(`/api/independant_doctor/medical-records/${selectedAppointment.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updatedData),
-              })
-                .then(res => {
-                  if (!res.ok) throw new Error("Erreur modification");
-                  toast({ title: "Succès", description: "Dossier modifié." });
-                  setModalType(null);
-                  fetchAppointments();
-                })
-                .catch(() =>
-                  toast({ title: "Erreur", description: "Modification échouée.", variant: "destructive" })
-                );
-            }}
-            // Injecte les valeurs existantes dans CompleteModal via defaultValues
-            defaultValues={medicalRecordData}
-          />
-        )}
-        {modalType === "deleteRecord" && selectedAppointment && (
-  <ConfirmModal
-      open={modalType === "deleteRecord"}
-      onOpenChange={(open) => !open && setModalType(null)}
-      onConfirm={() => {
-        fetch(`/api/independant_doctor/medical-records/${selectedAppointment.id}`, {
-          method: "DELETE",
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error("Erreur suppression");
-            toast({ title: "Succès", description: "Dossier supprimé." });
-            setModalType(null);
-            fetchAppointments();
-          })
-          .catch(() =>
-            toast({ title: "Erreur", description: "Suppression échouée.", variant: "destructive" })
-          );
-      }}
-      title="Supprimer le dossier médical"
-      description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? cette action est ireversible."
-      confirmText="Supprimer"
-      cancelText="Annuler"
-      variant="destructive"
-    />
-)}
+          {modalType === "edit" &&
+            selectedAppointment &&
+            medicalRecordData?.diagnosis && (
+              <CompleteModal
+                open={true}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setModalType(null);
+                    setMedicalRecordData(null);
+                  }
+                }}
+                appointment={selectedAppointment}
+                onSubmit={(updatedData) => {
+                  fetch(
+                    `/api/independant_doctor/medical-records/${selectedAppointment.id}`,
+                    {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(updatedData),
+                    }
+                  )
+                    .then((res) => {
+                      if (!res.ok) throw new Error("Erreur modification");
+                      toast({
+                        title: "Succès",
+                        description: "Dossier modifié.",
+                      });
+                      setModalType(null);
+                      fetchAppointments();
+                    })
+                    .catch(() =>
+                      toast({
+                        title: "Erreur",
+                        description: "Modification échouée.",
+                        variant: "destructive",
+                      })
+                    );
+                }}
+                // Injecte les valeurs existantes dans CompleteModal via defaultValues
+                defaultValues={medicalRecordData}
+              />
+            )}
+          {modalType === "deleteRecord" && selectedAppointment && (
+            <ConfirmModal
+              open={modalType === "deleteRecord"}
+              onOpenChange={(open) => !open && setModalType(null)}
+              onConfirm={() => {
+                fetch(
+                  `/api/independant_doctor/medical-records/${selectedAppointment.id}`,
+                  {
+                    method: "DELETE",
+                  }
+                )
+                  .then((res) => {
+                    if (!res.ok) throw new Error("Erreur suppression");
+                    toast({
+                      title: "Succès",
+                      description: "Dossier supprimé.",
+                    });
+                    setModalType(null);
+                    fetchAppointments();
+                  })
+                  .catch(() =>
+                    toast({
+                      title: "Erreur",
+                      description: "Suppression échouée.",
+                      variant: "destructive",
+                    })
+                  );
+              }}
+              title="Supprimer le dossier médical"
+              description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier médical ? cette action est ireversible."
+              confirmText="Supprimer"
+              cancelText="Annuler"
+              variant="destructive"
+            />
+          )}
 
           <CancelModal
             open={modalType === "cancel"}
@@ -530,11 +608,21 @@ const [modalType, setModalType] = useState<"confirm" | "cancel" | "complete" | "
   );
 }
 
-function StatCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode; }) {
+function StatCard({
+  title,
+  value,
+  icon,
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
@@ -547,22 +635,30 @@ function StatCard({ title, value, icon }: { title: string; value: number; icon: 
 function AppointmentCard({
   appointment,
   onAction,
-  getStatusBadge
+  getStatusBadge,
 }: {
   appointment: Appointment & { hasMedicalRecord?: boolean };
   onAction: (
-  type: "confirm" | "cancel" | "complete" | "details" | "edit" | "deleteRecord",apt: Appointment) => void;
+    type:
+      | "confirm"
+      | "cancel"
+      | "complete"
+      | "details"
+      | "edit"
+      | "deleteRecord",
+    apt: Appointment
+  ) => void;
   getStatusBadge: (status: AppointmentStatus) => React.ReactNode;
 }) {
-  const hasMedicalRecord = appointment.medicalRecord !== null && 
-                          appointment.medicalRecord !== undefined && 
-                          Object.keys(appointment.medicalRecord).length > 0;
+  const hasMedicalRecord =
+    appointment.medicalRecord !== null &&
+    appointment.medicalRecord !== undefined &&
+    Object.keys(appointment.medicalRecord).length > 0;
   return (
     <Card className="hover:shadow-lg transition-shadow relative">
       {hasMedicalRecord && (
         <div className="absolute top-4 right-4 bg-blue-100 p-2 rounded-full">
           <FileText className="h-4 w-4 text-blue-600" />
-          
         </div>
       )}
       <CardHeader className="pb-3">
@@ -575,7 +671,8 @@ function AppointmentCard({
             <CardDescription className="mt-1">
               <div className="flex items-center gap-2 text-sm">
                 <Stethoscope className="h-4 w-4" />
-                {appointment.doctor.name} - {appointment.doctor.specialization || "Spécialité non précisée"}
+                {appointment.doctor.name} -{" "}
+                {appointment.doctor.specialization || "Spécialité non précisée"}
               </div>
             </CardDescription>
           </div>
@@ -643,19 +740,17 @@ function AppointmentCard({
             })}
           </span>
         </div>
-        <div className="mb-3">
-          {getStatusBadge(appointment.status)}
-        </div>
+        <div className="mb-3">{getStatusBadge(appointment.status)}</div>
         {appointment.reason && (
           <p className="text-sm text-gray-600 line-clamp-2">
             <span className="font-medium">Motif :</span> {appointment.reason}
           </p>
         )}
-         {appointment.status === "COMPLETED" && hasMedicalRecord && (
-        <div className="absolute top-2 right-2 bg-green-100 p-1 rounded-full">
-          <FileText className="h-4 w-4 text-green-600" />
-        </div>
-      )}
+        {appointment.status === "COMPLETED" && hasMedicalRecord && (
+          <div className="absolute top-2 right-2 bg-green-100 p-1 rounded-full">
+            <FileText className="h-4 w-4 text-green-600" />
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button
@@ -669,10 +764,7 @@ function AppointmentCard({
           {appointment.status === "COMPLETED" ? (
             hasMedicalRecord ? (
               <>
-                <Button
-                  size="sm"
-                  onClick={() => onAction("edit", appointment)}
-                >
+                <Button size="sm" onClick={() => onAction("edit", appointment)}>
                   <Pencil className="mr-2 h-4 w-4" /> Modifier
                 </Button>
                 <Button
@@ -707,22 +799,24 @@ function AppointmentCard({
                 <X className="mr-2 h-4 w-4" /> Annuler
               </Button>
             </>
-          ) : appointment.status === "CONFIRMED" && (
-            <>
-              <Button
-                size="sm"
-                onClick={() => onAction("complete", appointment)}
-              >
-                <FileText className="mr-2 h-4 w-4" /> Compléter
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => onAction("cancel", appointment)}
-              >
-                <X className="mr-2 h-4 w-4" /> Annuler
-              </Button>
-            </>
+          ) : (
+            appointment.status === "CONFIRMED" && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => onAction("complete", appointment)}
+                >
+                  <FileText className="mr-2 h-4 w-4" /> Compléter
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onAction("cancel", appointment)}
+                >
+                  <X className="mr-2 h-4 w-4" /> Annuler
+                </Button>
+              </>
+            )
           )}
         </div>
       </CardFooter>

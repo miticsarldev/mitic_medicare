@@ -434,10 +434,8 @@ enum SubscriptionStatus {
 
 enum SubscriptionPlan {
     FREE
-    BASIC
     STANDARD
     PREMIUM
-    ENTERPRISE
 }
 
 enum SubscriberType {
