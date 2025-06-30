@@ -181,39 +181,56 @@ export default function PatientMedicalRecord() {
   
   return bloodTypeMap[bloodType] || { display: bloodType, variant: 'secondary' };
 };
-  useEffect(() => {
-    const fetchPatientData = async () => {
+const fetchPatientData = async () => {
   try {
     setLoading(true);
     const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
       headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
+        'Cache-Control': 'no-cache'
       }
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to fetch patient data');
-    }
-    
+    if (!response.ok) throw new Error('Patient non trouvé');
     const data = await response.json();
     setPatient(data);
-    setError(null);
   } catch (err) {
     setError(err instanceof Error ? err.message : "Une erreur est survenue");
-    toast({
-      title: "Erreur",
-      description: "Impossible de charger les données du patient",
-      variant: "destructive",
-    });
   } finally {
     setLoading(false);
   }
 };
+useEffect(() => {
+  const fetchPatientData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch patient data');
+      }
+      
+      const data = await response.json();
+      setPatient(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données du patient",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchPatientData();
-  }, [patientId]);
+  fetchPatientData();
+}, [patientId, toast]);
 
   const formatDate = (date: Date | string | undefined) => {
   if (!date) return 'Date inconnue';
@@ -321,23 +338,7 @@ const handleDeleteHistory = async (historyId: string) => {
     setDetails('');
     setDiagnosedDate('');
   };
-const fetchPatientData = async () => {
-  try {
-    setLoading(true);
-    const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
-      headers: {
-        'Cache-Control': 'no-cache'
-      }
-    });
-    if (!response.ok) throw new Error('Patient non trouvé');
-    const data = await response.json();
-    setPatient(data);
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Une erreur est survenue");
-  } finally {
-    setLoading(false);
-  }
-};
+
  const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   const isEditing = !!editingHistory;

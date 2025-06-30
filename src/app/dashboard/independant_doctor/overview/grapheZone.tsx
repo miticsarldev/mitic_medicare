@@ -132,9 +132,9 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Période" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="daily">Journalier</SelectItem>
-                <SelectItem value="weekly">Hebdomadaire</SelectItem>
-                <SelectItem value="monthly">Mensuel</SelectItem>
+                <SelectItem value="daily">Jour</SelectItem>
+                <SelectItem value="weekly">Semaine</SelectItem>
+                <SelectItem value="monthly">Mois</SelectItem>
               </SelectContent>
             </Select>
 
@@ -146,8 +146,8 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Intervalle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="current">En cours</SelectItem>
-                <SelectItem value="past">Historique</SelectItem>
+                <SelectItem value="current">Ce mois</SelectItem>
+                <SelectItem value="past">6 derniers mois</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -259,9 +259,9 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Période" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="daily">Journalier</SelectItem>
-                <SelectItem value="weekly">Hebdomadaire</SelectItem>
-                <SelectItem value="monthly">Mensuel</SelectItem>
+                <SelectItem value="daily">Jour</SelectItem>
+                <SelectItem value="weekly">Semaine</SelectItem>
+                <SelectItem value="monthly">Mois</SelectItem>
               </SelectContent>
             </Select>
 
@@ -273,8 +273,8 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Intervalle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="current">En cours</SelectItem>
-                <SelectItem value="past">Historique</SelectItem>
+                <SelectItem value="current">Ce mois</SelectItem>
+                <SelectItem value="past">6 derniers mois</SelectItem>
               </SelectContent>
             </Select>
           </div>
