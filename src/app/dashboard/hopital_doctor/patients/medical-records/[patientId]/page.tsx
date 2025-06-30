@@ -181,7 +181,7 @@ export default function PatientMedicalRecord() {
   const [editingHistory, setEditingHistory] = useState<PatientDetails['medicalHistories'][0] | null>(null);
   const { toast } = useToast();
 
-
+  // État consolidé pour les formulaires
   const [medicalHistoryForm, setMedicalHistoryForm] = useState<MedicalHistoryForm>({
     title: '',
     condition: '',
@@ -223,7 +223,7 @@ export default function PatientMedicalRecord() {
   const fetchPatientData = debounce(async () => {
     try {
       setLoading(true);
-      const timestamp = Date.now(); 
+      const timestamp = Date.now(); // Ajouter un timestamp pour éviter le cache
       const response = await fetch(`/api/hospital_doctor/patient/${patientId}?timestamp=${timestamp}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -238,7 +238,6 @@ export default function PatientMedicalRecord() {
       setPatient(data);
       setError(null);
     } catch {
-      setError("Une erreur est survenue");
       toast({
         title: "Erreur",
         description: "Impossible de charger les données du patient",
@@ -445,10 +444,10 @@ export default function PatientMedicalRecord() {
           variant: "destructive",
         });
       }
-    } catch {
+    } catch  {
       toast({
         title: "Erreur",
-        description: "Erreur  lors de l'opération",
+        description: "Erreur réseau lors de l'opération",
         variant: "destructive",
       });
     } finally {
@@ -494,7 +493,7 @@ export default function PatientMedicalRecord() {
           variant: "destructive",
         });
       }
-    } catch {
+    } catch  {
       toast({
         title: "Erreur",
         description: "Erreur réseau lors de l'ajout de la prescription",
@@ -645,10 +644,10 @@ export default function PatientMedicalRecord() {
             <Activity className="w-4 h-4 mr-2" />
             Signes vitaux
           </TabsTrigger>
-          {/* <TabsTrigger value="prescriptions">
+          <TabsTrigger value="prescriptions">
             <Pill className="w-4 h-4 mr-2" />
             Prescriptions
-          </TabsTrigger> */}
+          </TabsTrigger>
           <TabsTrigger value="appointments">
             <Calendar className="w-4 h-4 mr-2" />
             Consultations
