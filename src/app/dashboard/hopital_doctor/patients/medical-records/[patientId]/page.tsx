@@ -185,9 +185,12 @@ const fetchPatientData = async () => {
   try {
     setLoading(true);
     const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
+      cache: 'no-store',
       headers: {
-        'Cache-Control': 'no-cache'
-      }
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
     });
     if (!response.ok) throw new Error('Patient non trouvé');
     const data = await response.json();
@@ -199,36 +202,6 @@ const fetchPatientData = async () => {
   }
 };
 useEffect(() => {
-  const fetchPatientData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/hospital_doctor/patient/${patientId}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch patient data');
-      }
-      
-      const data = await response.json();
-      setPatient(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données du patient",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   fetchPatientData();
 }, [patientId, toast]);
 
@@ -295,9 +268,12 @@ const handleDeleteHistory = async (historyId: string) => {
   try {
     const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`, {
       method: 'DELETE',
+      cache: 'no-store',
       headers: {
-        'Cache-Control': 'no-cache'
-      }
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
     });
 
     if (response.ok) {
@@ -354,7 +330,12 @@ const handleDeleteHistory = async (historyId: string) => {
 
     const response = await fetch(endpoint, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
       body: JSON.stringify({ 
         title, 
         condition, 
@@ -428,7 +409,12 @@ const handleViewDiagnosis = async (appointmentId: string) => {
       const medicalRecordId = lastAppointment?.medicalRecord?.id;
       const response = await fetch(`/api/hospital_doctor/patient/${patient?.id}/prescription`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+       cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
         body: JSON.stringify({ medicalRecordId, medicationName, dosage, frequency, duration: duration || undefined, instructions: instructions || undefined, startDate })
       });
       if (response.ok) {
