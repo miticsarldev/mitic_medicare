@@ -8,11 +8,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import OrangeMoneyButton from "@/components/OrangeMonneyButton";
+
 
 const PLANS = [
   {
@@ -46,51 +45,51 @@ export function RenewSubscriptionModal({
 }) {
   const [selectedPlan, setSelectedPlan] = useState(currentPlan);
   const [months, setMonths] = useState(1);
-  const [submitting, setSubmitting] = useState(false);
+  // const [submitting, setSubmitting] = useState(false);
 
   const selectedPlanData = PLANS.find((plan) => plan.id === selectedPlan);
   const totalAmount = selectedPlanData
     ? selectedPlanData.pricePerMonth * months
     : 0;
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    try {
-      const response = await fetch(
-        "/api/hospital_admin/subscription/updateSucription",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            plan: selectedPlan,
-            months,
-            amount: totalAmount,
-          }),
-        }
-      );
+  // const handleSubmit = async () => {
+  //   setSubmitting(true);
+  //   try {
+  //     const response = await fetch(
+  //       "/api/hospital_admin/subscription/updateSucription",
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({
+  //           plan: selectedPlan,
+  //           months,
+  //           amount: totalAmount,
+  //         }),
+  //       }
+  //     );
 
-      if (!response.ok) throw new Error("Échec du renouvellement");
+  //     if (!response.ok) throw new Error("Échec du renouvellement");
 
-      toast({
-        title: "Succès",
-        description: "Votre abonnement a été renouvelé avec succès",
-      });
-      onOpenChange(false);
-      // Rafraîchir les données
-      window.location.reload();
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description:
-          error instanceof Error ? error.message : "Une erreur est survenue",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  //     toast({
+  //       title: "Succès",
+  //       description: "Votre abonnement a été renouvelé avec succès",
+  //     });
+  //     onOpenChange(false);
+  //     // Rafraîchir les données
+  //     window.location.reload();
+  //   } catch (error) {
+  //     toast({
+  //       title: "Erreur",
+  //       description:
+  //         error instanceof Error ? error.message : "Une erreur est survenue",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -173,20 +172,14 @@ export function RenewSubscriptionModal({
           </div>
 
           {/* Bouton de soumission */}
-          <Button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Traitement...
-              </>
-            ) : (
-              "Confirmer le renouvellement"
-            )}
-          </Button>
+          <OrangeMoneyButton
+            amount={100}
+            orderId={`SUB_${Date.now()}`}
+            returnUrl="/dashboard/hopital_admin/management/pricing"
+            cancelUrl="/dashboard/hopital_admin/management/pricing"
+            notifUrl="/dashboard/hopital_admin/management/pricing"
+          />
+
         </div>
       </DialogContent>
     </Dialog>
