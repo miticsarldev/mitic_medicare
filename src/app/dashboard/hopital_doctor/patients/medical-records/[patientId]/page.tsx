@@ -405,56 +405,66 @@ export default function PatientMedicalRecord() {
     }
   };
 
-  const handleMedicalHistorySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const isEditing = !!editingHistory;
-    setIsAddingHistory(!isEditing);
-    setIsUpdatingHistory(isEditing);
-    try {
-      const endpoint = editingHistory
-        ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
-        : `/api/hospital_doctor/patient/${patientId}/medical-history`;
-      const method = editingHistory ? 'PUT' : 'POST';
-      const response = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: medicalHistoryForm.title,
-          condition: medicalHistoryForm.condition,
-          details: medicalHistoryForm.details,
-          diagnosedDate: medicalHistoryForm.diagnosedDate || undefined,
-          status: 'ACTIVE',
-        }),
-      });
-      if (response.ok) {
-        setIsModalOpen(false);
-        resetMedicalHistoryForm();
-        await fetchPatientData();
+ const handleMedicalHistorySubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const isEditing = !!editingHistory;
+  setIsAddingHistory(!isEditing);
+  setIsUpdatingHistory(isEditing);
+  try {
+    const endpoint = editingHistory
+      ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
+      : `/api/hospital_doctor/patient/${patientId}/medical-history`;
+    const method = editingHistory ? 'PUT' : 'POST';
+    const response = await fetch(endpoint, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      body: JSON.stringify({
+        title: medicalHistoryForm.title,
+        condition: medicalHistoryForm.condition,
+        details: medicalHistoryForm.details,
+        diagnosedDate: medicalHistoryForm.diagnosedDate || undefined,
+        status: 'ACTIVE',
+      }),
+    });
+    if (response.ok) {
+      setIsModalOpen(false);
+      resetMedicalHistoryForm();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await fetchPatientData();
+      if (patient?.medicalHistories?.find(h => h.id === editingHistory?.id)?.title !== medicalHistoryForm.title) {
+        toast({
+          title: "Succès",
+          description: "Antécédent supprimé avec succès",
+          variant: "default",
+        });
+        setTimeout(fetchPatientData, 3000); 
+      } else {
         setActiveTab("medical-history");
         toast({
           title: "Succès",
           description: isEditing ? "Antécédent mis à jour" : "Antécédent ajouté",
           variant: "default",
         });
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Erreur",
-          description: errorData.error || "Échec de l'opération",
-          variant: "destructive",
-        });
       }
-    } catch  {
+    } else {
+      const errorData = await response.json();
       toast({
         title: "Erreur",
-        description: "Erreur réseau lors de l'opération",
+        description: errorData.error || "Échec de l'opération",
         variant: "destructive",
       });
-    } finally {
-      setIsAddingHistory(false);
-      setIsUpdatingHistory(false);
     }
-  };
+  } catch {
+    toast({
+      title: "Erreur",
+      description: "Erreur réseau lors de l'opération",
+      variant: "destructive",
+    });
+  } finally {
+    setIsAddingHistory(false);
+    setIsUpdatingHistory(false);
+  }
+};
 
   const handlePrescriptionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -644,10 +654,10 @@ export default function PatientMedicalRecord() {
             <Activity className="w-4 h-4 mr-2" />
             Signes vitaux
           </TabsTrigger>
-          <TabsTrigger value="prescriptions">
+          {/* <TabsTrigger value="prescriptions">
             <Pill className="w-4 h-4 mr-2" />
             Prescriptions
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger value="appointments">
             <Calendar className="w-4 h-4 mr-2" />
             Consultations
