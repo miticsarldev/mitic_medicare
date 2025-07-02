@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest) {
         const body = await request.json();
         const { id, startTime, endTime, slotDuration, isActive } = body;
 
-        // Validation des données
+        
         if (!id || !startTime || !endTime || !slotDuration || isActive === undefined) {
             return NextResponse.json(
                 { error: "Missing required fields" },
@@ -169,7 +169,7 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        // Vérifier que l'heure de fin est après l'heure de début
+       
         if (new Date(`1970-01-01T${endTime}`) <= new Date(`1970-01-01T${startTime}`)) {
             return NextResponse.json(
                 { error: "End time must be after start time" },
@@ -177,7 +177,7 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        // Vérifier que la disponibilité appartient bien au médecin
+        
         const doctor = await prisma.doctor.findUnique({
             where: { 
                 userId: session.user.id,
@@ -241,7 +241,7 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        // Vérifier que la disponibilité appartient bien au médecin
+        
         const doctor = await prisma.doctor.findUnique({
             where: { 
                 userId: session.user.id,
