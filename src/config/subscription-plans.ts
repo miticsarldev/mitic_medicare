@@ -57,6 +57,24 @@ export const subscriptionPlans: Record<SubscriptionPlan, PlanMetadata> = {
     userType: "doctor",
     isPopular: false,
   },
+  BASIC: {
+    name: "",
+    description: "",
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    features: [],
+    userType: "doctor",
+    isPopular: false
+  },
+  ENTERPRISE: {
+    name: "",
+    description: "",
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    features: [],
+    userType: "doctor",
+    isPopular: false
+  }
 };
 
 // Helper function to get a plan by its enum value
