@@ -137,7 +137,7 @@ export default function AdminReviewPage() {
                 search: searchQuery || undefined,
             };
 
-            const { data } = await axios.get<ApiResponse>("/api/hospital_doctor/reviews", { params });
+            const { data } = await axios.get<ApiResponse>("/api/independant_doctor/reviews", { params });
 
             setReviews(data.reviews);
             setPagination(data.pagination);
