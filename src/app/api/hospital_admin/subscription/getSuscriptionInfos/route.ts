@@ -8,9 +8,8 @@ import prisma from "@/lib/prisma";
 // Quotas de médecins par type d'abonnement
 const DOCTOR_QUOTAS = {
   FREE: 10,
-  STANDARD: 20,
-  PREMIUM: 30,
-  ENTERPRISE: Infinity,
+  STANDARD: 50,
+  PREMIUM: Infinity,
 };
 
 export async function GET() {
