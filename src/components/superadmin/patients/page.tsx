@@ -172,7 +172,7 @@ export default function PatientsPage() {
         let apiSortBy = column;
         if (column === "name") apiSortBy = "name";
         else if (column === "registrationDate") apiSortBy = "registrationDate";
-        else if (column === "lastLogin") apiSortBy = "lastLogin";
+        else if (column === "dateOfBirth") apiSortBy = "dateOfBirth";
         else if (column === "appointmentsCount")
           apiSortBy = "appointmentsCount";
 

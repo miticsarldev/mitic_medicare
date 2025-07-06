@@ -69,7 +69,7 @@ export interface SubscriptionStats {
 // Plan statistics
 export interface PlanStat {
   plan: SubscriptionPlan;
-  subscriberType: SubscriberType;
+  //   subscriberType: SubscriberType;
   count: number;
   percentage: number;
   amount: number;
@@ -80,7 +80,7 @@ export interface OverviewStat {
   title: string;
   value: string;
   change: string;
-  trend: "up" | "down";
+  trend: "up" | "down" | "neutral";
   icon: string;
   color: string;
 }
@@ -97,7 +97,6 @@ export interface UserGrowthDataPoint {
 export interface RevenueDataPoint {
   date: string;
   subscriptions: number;
-  services: number;
   total: number;
 }
 

@@ -46,9 +46,6 @@ export async function GET(
       appointmentsCount: patient.appointments.length,
       medicalRecordsCount: patient.medicalRecords.length,
       allergies: patient.allergies ? patient.allergies.split(",") : [],
-      chronicConditions: patient.medicalNotes
-        ? patient.medicalNotes.split(",")
-        : [],
     };
 
     return NextResponse.json(formattedPatient);
@@ -73,19 +70,29 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const patientId = params.id;
+    const patientRecord = await prisma.patient.findUnique({
+      where: { id: params.id },
+      include: { user: true },
+    });
+
+    if (!patientRecord) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+    }
+
+    const userId = patientRecord.user.id;
+
     const data = await request.json();
 
     // Update user data
     await prisma.user.update({
       where: {
-        id: patientId,
+        id: userId,
       },
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone,
-        isActive: data.status === "active",
+        isActive: data.status,
         dateOfBirth: new Date(data.dateOfBirth),
       },
     });
@@ -93,7 +100,7 @@ export async function PUT(
     // Update or create user profile
     await prisma.userProfile.upsert({
       where: {
-        userId: patientId,
+        userId: userId,
       },
       update: {
         address: data.address,
@@ -101,16 +108,16 @@ export async function PUT(
         state: data.state,
         zipCode: data.zipCode,
         country: data.country,
-        genre: data.gender === "Homme" ? "MALE" : "FEMALE",
+        genre: data.gender,
       },
       create: {
-        userId: patientId,
+        userId: userId,
         address: data.address,
         city: data.city,
         state: data.state,
         zipCode: data.zipCode,
         country: data.country,
-        genre: data.gender === "Homme" ? "MALE" : "FEMALE",
+        genre: data.gender,
       },
     });
 
@@ -118,7 +125,7 @@ export async function PUT(
     const patient = await prisma.patient.findFirst({
       where: {
         user: {
-          id: patientId,
+          id: userId,
         },
       },
     });
@@ -137,9 +144,6 @@ export async function PUT(
         allergies: data.allergies.join(","),
         emergencyContact: data.emergencyContact,
         emergencyPhone: data.emergencyPhone,
-        insuranceProvider: data.insuranceProvider,
-        insuranceNumber: data.insuranceNumber,
-        medicalNotes: data.chronicConditions.join(","),
       },
     });
 

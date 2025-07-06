@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BloodType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,8 +57,6 @@ export default function PatientCreateEditModal({
     allergies: "",
     emergencyContact: "",
     emergencyPhone: "",
-    insuranceProvider: "",
-    insuranceNumber: "",
     isActive: true,
   });
 
@@ -71,8 +68,8 @@ export default function PatientCreateEditModal({
         email: patient.user.email || "",
         phone: patient.user.phone || "",
         password: "", // Don't populate password for security reasons
-        dateOfBirth: patient.dateOfBirth
-          ? new Date(patient.dateOfBirth).toISOString().split("T")[0]
+        dateOfBirth: patient.user.dateOfBirth
+          ? new Date(patient.user.dateOfBirth).toISOString().split("T")[0]
           : "",
         gender: patient.user.profile?.genre || "Homme",
         address: patient.user.profile?.address || "",
@@ -86,8 +83,6 @@ export default function PatientCreateEditModal({
           : patient.allergies || "",
         emergencyContact: patient.emergencyContact || "",
         emergencyPhone: patient.emergencyPhone || "",
-        insuranceProvider: patient.insuranceProvider || "",
-        insuranceNumber: patient.insuranceNumber || "",
         isActive: patient.user.isActive,
       });
     } else {
@@ -108,8 +103,6 @@ export default function PatientCreateEditModal({
         allergies: "",
         emergencyContact: "",
         emergencyPhone: "",
-        insuranceProvider: "",
-        insuranceNumber: "",
         isActive: true,
       });
     }
@@ -167,6 +160,7 @@ export default function PatientCreateEditModal({
           onClose();
         }
       } else if (mode === "edit" && patient) {
+        console.log({ patient: patient.id });
         // Update existing patient
         const response = await fetch(`/api/superadmin/patients/${patient.id}`, {
           method: "PUT",
@@ -174,30 +168,21 @@ export default function PatientCreateEditModal({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            ...patient,
-            user: {
-              ...patient.user,
-              name: formData.name,
-              email: formData.email,
-              phone: formData.phone,
-              isActive: formData.isActive,
-              profile: {
-                ...patient.user.profile,
-                address: formData.address,
-                city: formData.city,
-                state: formData.state,
-                zipCode: formData.zipCode,
-                country: formData.country,
-                genre: formData.gender,
-              },
-            },
-            dateOfBirth: new Date(formData.dateOfBirth),
-            bloodType: formData.bloodType as BloodType,
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            isActive: formData.isActive,
+            dateOfBirth: formData.dateOfBirth,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            country: formData.country,
+            gender: formData.gender,
+            bloodType: formData.bloodType,
             allergies: formData.allergies.split(",").map((item) => item.trim()),
             emergencyContact: formData.emergencyContact,
             emergencyPhone: formData.emergencyPhone,
-            insuranceProvider: formData.insuranceProvider,
-            insuranceNumber: formData.insuranceNumber,
           }),
         });
 
@@ -394,24 +379,6 @@ export default function PatientCreateEditModal({
                     id="allergies"
                     name="allergies"
                     value={formData.allergies}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="insuranceProvider">Assureur</Label>
-                  <Input
-                    id="insuranceProvider"
-                    name="insuranceProvider"
-                    value={formData.insuranceProvider}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="insuranceNumber">Numéro d&apos;assuré</Label>
-                  <Input
-                    id="insuranceNumber"
-                    name="insuranceNumber"
-                    value={formData.insuranceNumber}
                     onChange={handleInputChange}
                   />
                 </div>

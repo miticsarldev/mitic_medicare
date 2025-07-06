@@ -1,9 +1,8 @@
-import { BloodType } from "@prisma/client";
+import { BloodType, UserGenre } from "@prisma/client";
 
 export type Patient = {
   id: string;
   userId: string;
-  dateOfBirth: Date;
   bloodType?: BloodType;
   allergies?: string[];
   emergencyContact?: string;
@@ -23,6 +22,7 @@ export type Patient = {
     email: string;
     phone: string;
     role: UserRole;
+    dateOfBirth?: Date;
     emailVerified: Date | null;
     isApproved: boolean;
     isActive: boolean;
@@ -109,7 +109,6 @@ export type Patient = {
         };
       }[];
     };
-
   }[];
 
   medicalHistories?: {

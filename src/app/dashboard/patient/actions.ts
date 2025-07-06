@@ -936,22 +936,8 @@ export async function getPatientMedicalRecords(): Promise<GetPatientMedicalRecor
     });
 
     // Transform the data to a more usable format
-    const transformed = medicalRecords.map((record) => ({
-      id: record.id,
-      title: record.diagnosis,
-      date: record.createdAt.toISOString(),
-      doctor: record.doctor.user.name,
-      specialty: record.doctor.specialization,
-      facility: record.hospital?.name || "Non spécifié",
-      summary: record.diagnosis,
-      recommendations: record.treatment,
-      notes: record.notes,
-      followUpNeeded: record.followUpNeeded,
-      followUpDate: record.followUpDate?.toISOString(),
-      status: record.followUpNeeded ? "active" : "completed",
-      type: determineRecordType(record),
-      tags: generateTags(record),
-      medications: [
+    const transformed = medicalRecords.map((record) => {
+      const allPrescriptions = [
         ...record.prescriptionOrder.flatMap((order) =>
           order.prescriptions.map((prescription) => ({
             id: prescription.id,
@@ -976,16 +962,39 @@ export async function getPatientMedicalRecords(): Promise<GetPatientMedicalRecor
           issuedAt: pres.createdAt.toISOString(),
           source: "direct",
         })) ?? []),
-      ],
-      documents: record.attachments.map((attachment) => ({
-        id: attachment.id,
-        name: attachment.fileName,
-        type: getDocumentType(attachment.fileType),
-        url: attachment.fileUrl,
-        size: formatFileSize(attachment.fileSize),
-        uploadedAt: attachment.uploadedAt.toISOString(),
-      })),
-    }));
+      ];
+
+      // Dédoublonner par ID
+      const uniquePrescriptions = Array.from(
+        new Map(allPrescriptions.map((p) => [p.id, p])).values()
+      );
+
+      return {
+        id: record.id,
+        title: record.diagnosis,
+        date: record.createdAt.toISOString(),
+        doctor: record.doctor.user.name,
+        specialty: record.doctor.specialization,
+        facility: record.hospital?.name || "Non spécifié",
+        summary: record.diagnosis,
+        recommendations: record.treatment,
+        notes: record.notes,
+        followUpNeeded: record.followUpNeeded,
+        followUpDate: record.followUpDate?.toISOString(),
+        status: record.followUpNeeded ? "active" : "completed",
+        type: determineRecordType(record),
+        tags: generateTags(record),
+        medications: uniquePrescriptions,
+        documents: record.attachments.map((attachment) => ({
+          id: attachment.id,
+          name: attachment.fileName,
+          type: getDocumentType(attachment.fileType),
+          url: attachment.fileUrl,
+          size: formatFileSize(attachment.fileSize),
+          uploadedAt: attachment.uploadedAt.toISOString(),
+        })),
+      };
+    });
 
     const allTypes = Array.from(new Set(transformed.map((r) => r.type)));
     const allStatuses = Array.from(new Set(transformed.map((r) => r.status)));

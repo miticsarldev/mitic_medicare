@@ -54,8 +54,6 @@ export async function GET(request: NextRequest) {
       orderBy = { user: { email: sortOrder === "asc" ? "asc" : "desc" } };
     } else if (sortBy === "registrationDate") {
       orderBy = { user: { createdAt: sortOrder === "asc" ? "asc" : "desc" } };
-    } else if (sortBy === "lastLogin") {
-      orderBy = { user: { updatedAt: sortOrder === "asc" ? "asc" : "desc" } };
     } else {
       // Default to createdAt
       orderBy = { createdAt: sortOrder === "asc" ? "asc" : "desc" };
@@ -72,6 +70,7 @@ export async function GET(request: NextRequest) {
             email: true,
             phone: true,
             role: true,
+            dateOfBirth: true,
             emailVerified: true,
             isApproved: true,
             isActive: true,
@@ -151,6 +150,7 @@ export async function POST(request: NextRequest) {
         email: data.email,
         phone: data.phone,
         password: data.password,
+        dateOfBirth: data.dateOfBirth,
         role: "PATIENT",
         emailVerified: new Date(),
         isApproved: true,

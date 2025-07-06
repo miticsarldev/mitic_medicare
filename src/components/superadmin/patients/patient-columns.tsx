@@ -61,15 +61,6 @@ export function usePatientColumns({
         enableHiding: false,
       },
       {
-        accessorKey: "id",
-        header: "ID",
-        cell: ({ row }) => (
-          <div className="font-medium">
-            {row.original.id.substring(0, 8)}...
-          </div>
-        ),
-      },
-      {
         accessorKey: "name",
         header: ({ column }) => (
           <div
@@ -102,6 +93,22 @@ export function usePatientColumns({
           );
         },
       },
+
+      {
+        accessorKey: "dateOfBirth",
+        header: ({ column }) => (
+          <div
+            className="flex items-center cursor-pointer"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Date de naissance
+          </div>
+        ),
+        cell: ({ row }) =>
+          row.original.user.dateOfBirth
+            ? format(new Date(row.original.user.dateOfBirth), "dd/MM/yyyy")
+            : "-",
+      },
       {
         accessorKey: "status",
         header: "Statut",
@@ -133,20 +140,6 @@ export function usePatientColumns({
         ),
         cell: ({ row }) =>
           format(new Date(row.original.user.createdAt), "dd/MM/yyyy"),
-      },
-      {
-        accessorKey: "lastLogin",
-        header: ({ column }) => (
-          <div
-            className="flex items-center cursor-pointer"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Dernière connexion
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </div>
-        ),
-        cell: ({ row }) =>
-          format(new Date(row.original.user.updatedAt), "dd/MM/yyyy HH:mm"),
       },
       {
         accessorKey: "appointmentsCount",

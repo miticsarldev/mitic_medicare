@@ -23,6 +23,17 @@ interface PatientDetailsModalProps {
   onEdit: (patient: Patient) => void;
 }
 
+const bloodTypeColors: Record<string, string> = {
+  A_POSITIVE: "bg-red-100 text-red-700",
+  A_NEGATIVE: "bg-red-200 text-red-800",
+  B_POSITIVE: "bg-blue-100 text-blue-700",
+  B_NEGATIVE: "bg-blue-200 text-blue-800",
+  AB_POSITIVE: "bg-purple-100 text-purple-700",
+  AB_NEGATIVE: "bg-purple-200 text-purple-800",
+  O_POSITIVE: "bg-green-100 text-green-700",
+  O_NEGATIVE: "bg-green-200 text-green-800",
+};
+
 export default function PatientDetailsModal({
   isOpen,
   onClose,
@@ -47,8 +58,24 @@ export default function PatientDetailsModal({
     }
   };
 
+  function getBloodTypeBadge(bloodType: string | null | undefined) {
+    if (!bloodType) {
+      return <Badge className="bg-gray-200 text-gray-600">Non renseigné</Badge>;
+    }
+
+    const label = bloodType
+      .replace("_POSITIVE", "+")
+      .replace("_NEGATIVE", "−")
+      .replace("_", " ");
+
+    const classes =
+      bloodTypeColors[bloodType] || "bg-muted text-muted-foreground";
+
+    return <Badge className={classes}>{label}</Badge>;
+  }
+
   // Format date helper
-  const formatDate = (date: string | Date | null) => {
+  const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return "N/A";
     return format(new Date(date), "d MMMM yyyy", { locale: fr });
   };
@@ -103,13 +130,19 @@ export default function PatientDetailsModal({
                   <div className="text-sm font-medium text-muted-foreground">
                     Date de naissance
                   </div>
-                  <div>{formatDate(patient.dateOfBirth)}</div>
+                  <div>{formatDate(patient.user.dateOfBirth)}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">
                     Genre
                   </div>
-                  <div>{patient.user.profile?.genre || "Non renseigné"}</div>
+                  <div>
+                    {patient.user.profile?.genre === "FEMALE"
+                      ? "Féminin"
+                      : patient.user.profile?.genre === "MALE"
+                        ? "Masculin"
+                        : "Non renseigné"}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -159,7 +192,7 @@ export default function PatientDetailsModal({
                   <div className="text-sm font-medium text-muted-foreground">
                     Groupe sanguin
                   </div>
-                  <div>{patient.bloodType || "Non renseigné"}</div>
+                  <div>{getBloodTypeBadge(patient.bloodType)}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">
@@ -171,27 +204,6 @@ export default function PatientDetailsModal({
                       ? patient.allergies.join(", ")
                       : "Aucune allergie connue"}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Insurance Information */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Assurance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">
-                    Assureur
-                  </div>
-                  <div>{patient.insuranceProvider || "Non renseigné"}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">
-                    Numéro d&apos;assuré
-                  </div>
-                  <div>{patient.insuranceNumber || "Non renseigné"}</div>
                 </div>
               </CardContent>
             </Card>

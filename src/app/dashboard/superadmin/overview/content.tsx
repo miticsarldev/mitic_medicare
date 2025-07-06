@@ -12,13 +12,7 @@ import {
   Calendar,
   Check,
   CreditCard,
-  Download,
-  FileText,
-  LifeBuoy,
-  LineChart,
-  MoreHorizontal,
   RefreshCw,
-  Settings,
   ShieldCheck,
   User,
   Users,
@@ -44,13 +38,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -313,28 +300,6 @@ export function DashboardContent({
                 Évolution du nombre d&apos;utilisateurs par catégorie
               </CardDescription>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Download className="mr-2 h-4 w-4" />
-                  Télécharger PNG
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Exporter CSV
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Paramètres
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -381,28 +346,6 @@ export function DashboardContent({
                 Revenus générés par les abonnements et services
               </CardDescription>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Download className="mr-2 h-4 w-4" />
-                  Télécharger PNG
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Exporter CSV
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Paramètres
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -421,40 +364,30 @@ export function DashboardContent({
                     <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
                     <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient
-                    id="colorServices"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip
-                  formatter={(value) => [`${value} €`, ""]}
-                  labelFormatter={(label) => `Date: ${label}`}
+                  formatter={(value) => [
+                    `${new Intl.NumberFormat("fr-FR", {
+                      style: "currency",
+                      currency: "XOF",
+                    }).format(
+                      typeof value === "number" ? value : Number(value)
+                    )}`,
+                    "",
+                  ]}
+                  labelFormatter={(label) => `Date : ${label}`}
                 />
                 <Legend />
                 <Area
                   type="monotone"
                   dataKey="subscriptions"
-                  name="Abonnements"
+                  name="Revenus Abonnements"
                   stroke="#8884d8"
                   fillOpacity={1}
                   fill="url(#colorSubscriptions)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="services"
-                  name="Services"
-                  stroke="#82ca9d"
-                  fillOpacity={1}
-                  fill="url(#colorServices)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -472,19 +405,19 @@ export function DashboardContent({
               Répartition par type d&apos;utilisateur
             </CardDescription>
           </CardHeader>
-          <CardContent className="h-[200px]">
+          <CardContent className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <RechartsPieChart>
                 <Pie
                   data={stats.userDistributionData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  nameKey="name"
                   label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
+                    `${name}: ${(percent * 100).toFixed(0)}%`
                   }
                 >
                   {stats.userDistributionData.map((entry, index) => (
@@ -494,7 +427,11 @@ export function DashboardContent({
                     />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, ""]} />
+                <Tooltip
+                  formatter={(value, name) => [`${value}%`, name]}
+                  separator=": "
+                />
+                <Legend verticalAlign="bottom" height={36} />
               </RechartsPieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -636,7 +573,7 @@ export function DashboardContent({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <Button
               variant="outline"
               className="h-auto flex-col items-center justify-center p-4 gap-2"
@@ -685,36 +622,6 @@ export function DashboardContent({
               <a href="/dashboard/superadmin/users/doctors">
                 <Users2 className="h-6 w-6 text-red-500" />
                 <span>Docteurs</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col items-center justify-center p-4 gap-2"
-              asChild
-            >
-              <a href="/admin/support">
-                <LifeBuoy className="h-6 w-6 text-cyan-500" />
-                <span>Support</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col items-center justify-center p-4 gap-2"
-              asChild
-            >
-              <a href="/admin/settings">
-                <Settings className="h-6 w-6 text-gray-500" />
-                <span>Paramètres</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col items-center justify-center p-4 gap-2"
-              asChild
-            >
-              <a href="/admin/statistics">
-                <LineChart className="h-6 w-6 text-indigo-500" />
-                <span>Statistiques</span>
               </a>
             </Button>
           </div>

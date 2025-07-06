@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
 import React, { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Calendar as CalendarIcon,
@@ -111,22 +117,30 @@ type MedicalHistory = {
 };
 
 const FILE_ICONS = {
-  'application/pdf': <FileText className="w-5 h-5" />,
-  'application/msword': <FileText className="w-5 h-5" />,
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': <FileText className="w-5 h-5" />,
-  'image/jpeg': <FileImage className="w-5 h-5" />,
-  'image/png': <FileImage className="w-5 h-5" />,
-  'application/zip': <FileArchive className="w-5 h-5" />,
-  'application/x-rar-compressed': <FileArchive className="w-5 h-5" />,
-  'video/mp4': <FileVideo className="w-5 h-5" />,
-  default: <File className="w-5 h-5" />
-}
+  "application/pdf": <FileText className="w-5 h-5" />,
+  "application/msword": <FileText className="w-5 h-5" />,
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+    <FileText className="w-5 h-5" />
+  ),
+  "image/jpeg": <FileImage className="w-5 h-5" />,
+  "image/png": <FileImage className="w-5 h-5" />,
+  "application/zip": <FileArchive className="w-5 h-5" />,
+  "application/x-rar-compressed": <FileArchive className="w-5 h-5" />,
+  "video/mp4": <FileVideo className="w-5 h-5" />,
+  default: <File className="w-5 h-5" />,
+};
 
 export default function PatientProfilePage({ patient }: { patient: Patient }) {
-  const [appointments, setAppointments] = useState<Appointment[]>(patient.appointments || []);
-  const [medicalHistories] = useState<MedicalHistory[]>(patient.medicalHistories || []);
+  const [appointments, setAppointments] = useState<Appointment[]>(
+    patient.appointments || []
+  );
+  const [medicalHistories] = useState<MedicalHistory[]>(
+    patient.medicalHistories || []
+  );
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<Appointment['medicalRecord'] | null>(null);
+  const [selectedMedicalRecord, setSelectedMedicalRecord] = useState<
+    Appointment["medicalRecord"] | null
+  >(null);
 
   if (!patient) return <div className="p-4 text-center">Chargement...</div>;
 
@@ -153,7 +167,6 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
     return map[bloodType] || bloodType; // fallback si la valeur n’est pas reconnue
   }
 
-
   const addAppointment = (newAppointment: Appointment) => {
     setAppointments((prev) => [...prev, newAppointment]);
   };
@@ -172,9 +185,9 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
     ACTIVE: "bg-green-100 text-green-800",
     RESOLVED: "bg-blue-100 text-blue-800",
     CHRONIC: "bg-yellow-100 text-yellow-800",
-  }
+  };
 
-  // Traduction des statuts de l'istorique 
+  // Traduction des statuts de l'istorique
   const translateHistorique = (status: string) => {
     switch (status) {
       case "ACTIVE":
@@ -186,8 +199,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
       default:
         return status;
     }
-  }
-
+  };
 
   const translateStatus = (status: AppointmentStatus) => {
     switch (status) {
@@ -204,20 +216,22 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
       default:
         return status;
     }
-  }
+  };
 
   const getFileIcon = (fileType: string) => {
-    const icon = Object.entries(FILE_ICONS).find(([key]) => fileType.includes(key.split('/')[1]));
+    const icon = Object.entries(FILE_ICONS).find(([key]) =>
+      fileType.includes(key.split("/")[1])
+    );
     return icon ? icon[1] : FILE_ICONS.default;
-  }
+  };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -261,11 +275,13 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                 <CalendarIcon className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm font-medium">
-                    {patient.dateOfBirth
-                      ? new Date(patient.dateOfBirth).toLocaleDateString()
+                    {patient.user.dateOfBirth
+                      ? new Date(patient.user.dateOfBirth).toLocaleDateString()
                       : "Non renseignée"}
                   </p>
-                  <p className="text-xs text-muted-foreground">Date de naissance</p>
+                  <p className="text-xs text-muted-foreground">
+                    Date de naissance
+                  </p>
                 </div>
               </div>
 
@@ -300,10 +316,26 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
             <Tabs defaultValue="appointments" className="w-full">
               <TabsList className="w-full flex overflow-x-auto">
                 {[
-                  { value: 'appointments', label: 'Rendez-vous', icon: <Users2 className="w-4 h-4 mr-2" /> },
-                  { value: 'about', label: 'Informations', icon: <Info className="w-4 h-4 mr-2" /> },
-                  { value: 'vitals', label: 'Signes vitaux', icon: <HeartPulse className="w-4 h-4 mr-2" /> },
-                  { value: 'medicalHistory', label: 'Historique', icon: <History className="w-4 h-4 mr-2" /> },
+                  {
+                    value: "appointments",
+                    label: "Rendez-vous",
+                    icon: <Users2 className="w-4 h-4 mr-2" />,
+                  },
+                  {
+                    value: "about",
+                    label: "Informations",
+                    icon: <Info className="w-4 h-4 mr-2" />,
+                  },
+                  {
+                    value: "vitals",
+                    label: "Signes vitaux",
+                    icon: <HeartPulse className="w-4 h-4 mr-2" />,
+                  },
+                  {
+                    value: "medicalHistory",
+                    label: "Historique",
+                    icon: <History className="w-4 h-4 mr-2" />,
+                  },
                 ].map((tab) => (
                   <TabsTrigger
                     key={tab.value}
@@ -331,23 +363,32 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                   <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4">
                     {appointments?.length ? (
                       appointments.map((appt) => (
-                        <Card key={appt.id} className="hover:shadow-md transition-shadow">
+                        <Card
+                          key={appt.id}
+                          className="hover:shadow-md transition-shadow"
+                        >
                           <CardContent className="p-4">
                             <div className="flex flex-col sm:flex-row justify-between gap-4">
                               <div className="space-y-2">
                                 <div className="flex items-center gap-3">
-                                  <div className="font-medium">{appt.doctor.user.name}</div>
+                                  <div className="font-medium">
+                                    {appt.doctor.user.name}
+                                  </div>
                                   <Badge variant="outline" className="text-xs">
                                     {appt.doctor.specialization}
                                   </Badge>
                                 </div>
                                 <div className="text-sm">
                                   <span className="font-medium">
-                                    {new Date(appt.scheduledAt).toLocaleDateString()}
+                                    {new Date(
+                                      appt.scheduledAt
+                                    ).toLocaleDateString()}
                                   </span>
                                   <span className="mx-2">•</span>
                                   <span>
-                                    {new Date(appt.scheduledAt).toLocaleTimeString([], {
+                                    {new Date(
+                                      appt.scheduledAt
+                                    ).toLocaleTimeString([], {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                     })}
@@ -358,7 +399,9 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 </div>
                               </div>
                               <div className="flex flex-col sm:items-end gap-2">
-                                <Badge className={`${statusColors[appt.status]} capitalize`}>
+                                <Badge
+                                  className={`${statusColors[appt.status]} capitalize`}
+                                >
                                   {translateStatus(appt.status)}
                                 </Badge>
                                 {appt.medicalRecord && (
@@ -366,7 +409,11 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                     variant="outline"
                                     size="sm"
                                     className="gap-2"
-                                    onClick={() => setSelectedMedicalRecord(appt.medicalRecord)}
+                                    onClick={() =>
+                                      setSelectedMedicalRecord(
+                                        appt.medicalRecord
+                                      )
+                                    }
                                   >
                                     <FileSearch className="h-4 w-4" />
                                     Voir dossier
@@ -388,29 +435,36 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                   </div>
                 </TabsContent>
 
-
                 {/* Informations du patient */}
                 <TabsContent value="about">
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-xl font-semibold mb-4">Informations personnelles</h2>
+                      <h2 className="text-xl font-semibold mb-4">
+                        Informations personnelles
+                      </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <h3 className="text-sm font-medium text-muted-foreground">Coordonnées</h3>
+                          <h3 className="text-sm font-medium text-muted-foreground">
+                            Coordonnées
+                          </h3>
                           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                             <Mail className="h-5 w-5 text-primary" />
                             <span>{patient.user.email}</span>
                           </div>
                           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                             <Phone className="h-5 w-5 text-primary" />
-                            <span>{patient.user.phone || 'Non renseigné'}</span>
+                            <span>{patient.user.phone || "Non renseigné"}</span>
                           </div>
                           <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                             <MapPin className="h-5 w-5 text-primary mt-1" />
                             <div>
-                              <p>{patient.user.profile?.address || 'Non renseignée'}</p>
+                              <p>
+                                {patient.user.profile?.address ||
+                                  "Non renseignée"}
+                              </p>
                               <p className="text-sm text-muted-foreground">
-                                {patient.user.profile?.city}, {patient.user.profile?.zipCode}
+                                {patient.user.profile?.city},{" "}
+                                {patient.user.profile?.zipCode}
                               </p>
                             </div>
                           </div>
@@ -421,10 +475,14 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                     <Separator />
 
                     <div>
-                      <h2 className="text-xl font-semibold mb-4">Informations médicales</h2>
+                      <h2 className="text-xl font-semibold mb-4">
+                        Informations médicales
+                      </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <h3 className="text-sm font-medium text-muted-foreground">Allergies</h3>
+                          <h3 className="text-sm font-medium text-muted-foreground">
+                            Allergies
+                          </h3>
                           <div className="p-3 bg-muted/50 rounded-lg">
                             {patient.allergies?.length ? (
                               <ul className="list-disc list-inside space-y-1">
@@ -433,22 +491,30 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 ))}
                               </ul>
                             ) : (
-                              <p className="text-muted-foreground">Aucune allergie déclarée</p>
+                              <p className="text-muted-foreground">
+                                Aucune allergie déclarée
+                              </p>
                             )}
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <h3 className="text-sm font-medium text-muted-foreground">Conditions chroniques</h3>
+                          <h3 className="text-sm font-medium text-muted-foreground">
+                            Conditions chroniques
+                          </h3>
                           <div className="p-3 bg-muted/50 rounded-lg">
                             {patient.chronicConditions?.length ? (
                               <ul className="list-disc list-inside space-y-1">
-                                {patient.chronicConditions.map((condition, i) => (
-                                  <li key={i}>{condition}</li>
-                                ))}
+                                {patient.chronicConditions.map(
+                                  (condition, i) => (
+                                    <li key={i}>{condition}</li>
+                                  )
+                                )}
                               </ul>
                             ) : (
-                              <p className="text-muted-foreground">Aucune condition déclarée</p>
+                              <p className="text-muted-foreground">
+                                Aucune condition déclarée
+                              </p>
                             )}
                           </div>
                         </div>
@@ -460,7 +526,9 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                 {/* Signes vitaux */}
                 <TabsContent value="vitals">
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">Signes vitaux</h2>
+                    <h2 className="text-xl font-semibold mb-4">
+                      Signes vitaux
+                    </h2>
                     <p className="text-sm text-muted-foreground mb-6">
                       Historique des mesures physiologiques du patient
                     </p>
@@ -468,34 +536,56 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                     {patient.vitalSigns?.length ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Card className="p-4 border bg-muted/50">
-                          <div>Température : {patient.vitalSigns[0].temperature} °C</div>
-                          <div>Pression artérielle : {patient.vitalSigns[0].bloodPressureDiastolic}</div>
-                          <div>Fréquence respiratoire : {patient.vitalSigns[0].respiratoryRate} /min</div>
-                          <div>Oxygénation : {patient.vitalSigns[0].oxygenSaturation} %</div>
+                          <div>
+                            Température : {patient.vitalSigns[0].temperature} °C
+                          </div>
+                          <div>
+                            Pression artérielle :{" "}
+                            {patient.vitalSigns[0].bloodPressureDiastolic}
+                          </div>
+                          <div>
+                            Fréquence respiratoire :{" "}
+                            {patient.vitalSigns[0].respiratoryRate} /min
+                          </div>
+                          <div>
+                            Oxygénation :{" "}
+                            {patient.vitalSigns[0].oxygenSaturation} %
+                          </div>
                           <div>Poids : {patient.vitalSigns[0].weight} kg</div>
                           <div>Taille : {patient.vitalSigns[0].height} cm</div>
-                          <div>Fréquence cardiaque : {patient.vitalSigns[0].heartRate} bpm</div>
-                          <div>Autres Infos : {patient.vitalSigns[0].notes}</div>
+                          <div>
+                            Fréquence cardiaque :{" "}
+                            {patient.vitalSigns[0].heartRate} bpm
+                          </div>
+                          <div>
+                            Autres Infos : {patient.vitalSigns[0].notes}
+                          </div>
                           <div className="text-xs mt-2">
-                            Relevé le : {new Date(patient.vitalSigns[0].createdAt).toLocaleDateString()}
+                            Relevé le :{" "}
+                            {new Date(
+                              patient.vitalSigns[0].createdAt
+                            ).toLocaleDateString()}
                           </div>
                         </Card>
                       </div>
                     ) : (
                       <div className="text-center py-10 space-y-2">
                         <HeartPulse className="mx-auto h-8 w-8 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">Aucun relevé trouvé</p>
+                        <p className="text-sm text-muted-foreground">
+                          Aucun relevé trouvé
+                        </p>
                       </div>
                     )}
                   </div>
                 </TabsContent>
 
-
                 {/* Historique médical */}
                 <TabsContent value="medicalHistory">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h2 className="text-xl font-semibold">Historique médical</h2>
+                      <h2 className="text-xl font-semibold">
+                        Historique médical
+                      </h2>
                       <p className="text-sm text-muted-foreground">
                         Conditions et antécédents du patient
                       </p>
@@ -520,12 +610,17 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                 )}
                               </div>
                               <div className="flex flex-col items-end gap-2">
-                                <Badge variant="outline" className={`${historiqueColors[history.status]} capitalize`}>
+                                <Badge
+                                  variant="outline"
+                                  className={`${historiqueColors[history.status]} capitalize`}
+                                >
                                   {translateHistorique(history.status)}
                                 </Badge>
                                 {history.diagnosedDate && (
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(history.diagnosedDate).toLocaleDateString()}
+                                    {new Date(
+                                      history.diagnosedDate
+                                    ).toLocaleDateString()}
                                   </p>
                                 )}
                               </div>
@@ -537,7 +632,9 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                   ) : (
                     <div className="text-center py-10 space-y-2">
                       <History className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Aucun historique médical trouvé</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aucun historique médical trouvé
+                      </p>
                     </div>
                   )}
                 </TabsContent>
@@ -584,21 +681,27 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                 <div className="text-sm text-muted-foreground">Rendez-vous</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl font-bold">{medicalHistories.length}</div>
+                <div className="text-2xl font-bold">
+                  {medicalHistories.length}
+                </div>
                 <div className="text-sm text-muted-foreground">Antécédents</div>
               </div>
               <div className="space-y-1">
-                <div className="text-2xl font-bold">{patient.vitalSigns?.length || 0}</div>
+                <div className="text-2xl font-bold">
+                  {patient.vitalSigns?.length || 0}
+                </div>
                 <div className="text-sm text-muted-foreground">Relevés</div>
               </div>
             </CardContent>
           </Card>
-
         </div>
       </div>
 
       {/* Modal pour afficher le dossier médical */}
-      <Dialog open={!!selectedMedicalRecord} onOpenChange={(open) => !open && setSelectedMedicalRecord(null)}>
+      <Dialog
+        open={!!selectedMedicalRecord}
+        onOpenChange={(open) => !open && setSelectedMedicalRecord(null)}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedMedicalRecord && (
             <div className="space-y-4">
@@ -628,7 +731,8 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                 <div>
                   <p className="font-semibold">Notes complémentaires</p>
                   <p className="whitespace-pre-line mt-2 p-3 bg-muted/50 rounded-md">
-                    {selectedMedicalRecord.notes || "Aucune note supplémentaire"}
+                    {selectedMedicalRecord.notes ||
+                      "Aucune note supplémentaire"}
                   </p>
                 </div>
 
@@ -636,25 +740,39 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <p className="font-semibold">Suivi nécessaire</p>
-                    <p>{selectedMedicalRecord.followUpNeeded ? "Oui" : "Non"}</p>
+                    <p>
+                      {selectedMedicalRecord.followUpNeeded ? "Oui" : "Non"}
+                    </p>
                     {selectedMedicalRecord.followUpNeeded && (
                       <p className="mt-2">
                         <span className="font-semibold">Date de suivi: </span>
                         {selectedMedicalRecord.followUpDate
-                          ? format(new Date(selectedMedicalRecord.followUpDate), "PPpp", { locale: fr })
+                          ? format(
+                              new Date(selectedMedicalRecord.followUpDate),
+                              "PPpp",
+                              { locale: fr }
+                            )
                           : "Non précisée"}
                       </p>
                     )}
                   </div>
                   <div>
                     <p className="font-semibold">Dernière mise à jour</p>
-                    <p>{format(new Date(selectedMedicalRecord.updatedAt), "PPpp", { locale: fr })}</p>
+                    <p>
+                      {format(
+                        new Date(selectedMedicalRecord.updatedAt),
+                        "PPpp",
+                        { locale: fr }
+                      )}
+                    </p>
                   </div>
                 </div>
 
                 {/* Pièces jointes */}
                 <div className="space-y-3">
-                  <p className="font-semibold">Pièces jointes ({selectedMedicalRecord.attachments.length})</p>
+                  <p className="font-semibold">
+                    Pièces jointes ({selectedMedicalRecord.attachments.length})
+                  </p>
                   {selectedMedicalRecord.attachments.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {selectedMedicalRecord.attachments.map((file) => (
@@ -662,11 +780,16 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                           key={file.id}
                           className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
                         >
-                          <div className="flex-shrink-0">{getFileIcon(file.fileType)}</div>
+                          <div className="flex-shrink-0">
+                            {getFileIcon(file.fileType)}
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{file.fileName}</p>
+                            <p className="font-medium truncate">
+                              {file.fileName}
+                            </p>
                             <p className="text-xs text-muted-foreground">
-                              {formatFileSize(file.fileSize)} • {format(new Date(file.uploadedAt), "PP")}
+                              {formatFileSize(file.fileSize)} •{" "}
+                              {format(new Date(file.uploadedAt), "PP")}
                             </p>
                           </div>
                           <Button
@@ -689,22 +812,30 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
 
                 {/* Prescriptions */}
                 <div className="space-y-3 pt-4">
-                  <p className="font-semibold">Prescriptions ({selectedMedicalRecord.prescription?.length || 0})</p>
+                  <p className="font-semibold">
+                    Prescriptions (
+                    {selectedMedicalRecord.prescription?.length || 0})
+                  </p>
                   {(selectedMedicalRecord.prescription?.length ?? 0) > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {selectedMedicalRecord.prescription?.map((prescription) => (
-                        <div
-                          key={prescription.id}
-                          className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{prescription.medicationName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {prescription.dosage} • {prescription.frequency} • {prescription.duration}
-                            </p>
+                      {selectedMedicalRecord.prescription?.map(
+                        (prescription) => (
+                          <div
+                            key={prescription.id}
+                            className="flex items-center gap-3 p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">
+                                {prescription.medicationName}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {prescription.dosage} • {prescription.frequency}{" "}
+                                • {prescription.duration}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </div>
                   ) : (
                     <div className="p-4 bg-muted/30 text-sm text-muted-foreground rounded-md">
