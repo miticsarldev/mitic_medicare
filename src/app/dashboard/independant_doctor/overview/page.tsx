@@ -155,7 +155,7 @@ export default function Dashboard() {
           title="Rendez-vous du jour"
           value={data.patientsToday}
           icon={<Users className="h-5 w-5" />}
-          trend="+20% vs période précédente"
+          trend=""
           trendPositive
           color="blue"
         />
@@ -164,7 +164,7 @@ export default function Dashboard() {
           title="Rendez-vous confirmés"
           value={data.confirmedAppointments}
           icon={<CheckCircle className="h-5 w-5" />}
-          trend="-5% vs période précédente"
+          trend=""
           trendPositive={false}
           color="green"
         />
@@ -173,7 +173,7 @@ export default function Dashboard() {
           title="Consultations en attente"
           value={data.pendingAppointments}
           icon={<ClipboardList className="h-5 w-5" />}
-          trend="+10% vs période précédente"
+          trend=""
           trendPositive
           color="orange"
         />
