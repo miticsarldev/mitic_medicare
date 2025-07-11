@@ -61,6 +61,10 @@ export const superAdminNavItems = [
         title: "Liste des abonnements",
         url: "/dashboard/superadmin/subscriptions/all",
       },
+      {
+        title: "Abonnement en attente",
+        url: "/dashboard/superadmin/subscriptions/pending",
+      },
     ],
   },
   {
@@ -79,7 +83,7 @@ export const superAdminNavItems = [
     icon: FileText,
     url: "/dashboard/superadmin/content",
     items: [
-      { title: "Articles & Blog", url: "/dashboard/superadmin/content/blogs" },
+      
       { title: "FAQ", url: "/dashboard/superadmin/content/faq" },
       {
         title: "Avis & Témoignages",
@@ -96,15 +100,15 @@ export const superAdminNavItems = [
         title: "Centre de notifications",
         url: "/dashboard/superadmin/notifications/center",
       },
-      {
-        title: "Tickets de support",
-        url: "/dashboard/superadmin/notifications/tickets",
-        icon: LifeBuoy,
-      },
-      {
-        title: "Emails & Alertes",
-        url: "/dashboard/superadmin/notifications/emails",
-      },
+      // {
+      //   title: "Tickets de support",
+      //   url: "/dashboard/superadmin/notifications/tickets",
+      //   icon: LifeBuoy,
+      // },
+      // {
+      //   title: "Emails & Alertes",
+      //   url: "/dashboard/superadmin/notifications/emails",
+      // },
     ],
   },
 ];

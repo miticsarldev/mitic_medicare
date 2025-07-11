@@ -8,7 +8,6 @@ import {
   Check,
   Edit,
   Eye,
-  Filter,
   MessageSquare,
   MoreHorizontal,
   Search,
@@ -545,11 +544,7 @@ export default function ReviewsPage() {
               et la plateforme
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" /> Exporter
-            </Button>
-          </div>
+          
         </div>
 
         <div className="grid gap-6 md:grid-cols-4">
