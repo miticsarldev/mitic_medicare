@@ -3,18 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   ChevronDown,
-  Download,
   Filter,
   Plus,
   Search,
   Trash2,
-  Mail,
   ChevronLeft,
   ChevronRight,
   User,
   UserCheck,
   UserPlus,
-  Calendar,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   type SortingState,
@@ -74,6 +72,10 @@ import PatientCreateEditModal from "./patient-create-edit-modal";
 import PatientDeleteModal from "./patient-delete-modal";
 import { usePatientColumns } from "./patient-columns";
 import { PatientAnalyticsType } from "@/types";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 export default function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,6 +99,34 @@ export default function PatientsPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [birthDateFilter, setBirthDateFilter] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({ start: null, end: null });
+
+  const filterPatientsByBirthDate = useCallback((patients: Patient[]) => {
+    if (!birthDateFilter.start && !birthDateFilter.end) {
+      return patients;
+    }
+
+    return patients.filter((patient) => {
+      if (!patient.user?.dateOfBirth) return false;
+
+      const birthDate = new Date(patient.user.dateOfBirth);
+      const start = birthDateFilter.start ? new Date(birthDateFilter.start) : null;
+      const end = birthDateFilter.end ? new Date(birthDateFilter.end) : null;
+
+      if (start && end) {
+        return birthDate >= start && birthDate <= end;
+      } else if (start) {
+        return birthDate >= start;
+      } else if (end) {
+        return birthDate <= end;
+      }
+
+      return true;
+    });
+  }, [birthDateFilter]);
 
   const openPatientDetail = async (patient: Patient) => {
     try {
@@ -159,8 +189,10 @@ export default function PatientsPage() {
     openDeleteDialog,
   });
 
+  const filteredPatients = filterPatientsByBirthDate(patients);
+
   const table = useReactTable({
-    data: patients,
+    data: filteredPatients,
     columns,
     onSortingChange: (updatedSorting) => {
       setSorting(updatedSorting);
@@ -382,9 +414,7 @@ export default function PatientsPage() {
           <Button onClick={openPatientCreate}>
             <Plus className="mr-2 h-4 w-4" /> Ajouter un patient
           </Button>
-          <Button variant="outline" onClick={() => handleBulkAction("export")}>
-            <Download className="mr-2 h-4 w-4" /> Exporter
-          </Button>
+
         </div>
       </div>
 
@@ -439,6 +469,79 @@ export default function PatientsPage() {
                       </DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 gap-1">
+                        <CalendarIcon className="h-4 w-4" />
+                        <span className="hidden sm:inline">Date de naissance</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="start-date">De</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-[180px] justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {birthDateFilter.start ? format(birthDateFilter.start, "PPP") : "Sélectionner"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={birthDateFilter.start || undefined}
+                                onSelect={(date) => setBirthDateFilter(prev => ({ ...prev, start: date || null }))}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="end-date">À</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-[180px] justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {birthDateFilter.end ? format(birthDateFilter.end, "PPP") : "Sélectionner"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={birthDateFilter.end || undefined}
+                                onSelect={(date) => setBirthDateFilter(prev => ({ ...prev, end: date || null }))}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setBirthDateFilter({ start: null, end: null });
+                            }}
+                          >
+                            Réinitialiser
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))}
+                          >
+                            Appliquer
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Select
                     value={itemsPerPage.toString()}
                     onValueChange={(value) => {
@@ -470,7 +573,7 @@ export default function PatientsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
+                        {/* <DropdownMenuItem
                           onClick={() => handleBulkAction("export")}
                         >
                           <Download className="mr-2 h-4 w-4" />
@@ -481,7 +584,7 @@ export default function PatientsPage() {
                         >
                           <Mail className="mr-2 h-4 w-4" />
                           Envoyer un email
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleBulkAction("delete")}
@@ -507,9 +610,9 @@ export default function PatientsPage() {
                             {header.isPlaceholder
                               ? null
                               : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
                           </TableHead>
                         ))}
                       </TableRow>
@@ -688,7 +791,7 @@ export default function PatientsPage() {
                     <CardTitle className="text-sm font-medium">
                       Rendez-vous
                     </CardTitle>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
@@ -715,8 +818,8 @@ export default function PatientsPage() {
                   </CardHeader>
                   <CardContent className="h-[300px]">
                     {analytics &&
-                    analytics.patientActivity &&
-                    analytics.patientActivity.length > 0 ? (
+                      analytics.patientActivity &&
+                      analytics.patientActivity.length > 0 ? (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -773,8 +876,8 @@ export default function PatientsPage() {
                           <p className="text-sm text-muted-foreground">
                             {analytics.patientActivity.length >= 2
                               ? analytics.patientActivity[
-                                  analytics.patientActivity.length - 1
-                                ].count >
+                                analytics.patientActivity.length - 1
+                              ].count >
                                 analytics.patientActivity[
                                   analytics.patientActivity.length - 2
                                 ].count
@@ -803,8 +906,8 @@ export default function PatientsPage() {
                   </CardHeader>
                   <CardContent className="h-[300px]">
                     {analytics &&
-                    analytics.geographicalDistribution &&
-                    analytics.geographicalDistribution.length > 0 ? (
+                      analytics.geographicalDistribution &&
+                      analytics.geographicalDistribution.length > 0 ? (
                       <div className="space-y-4 overflow-auto max-h-[250px] pr-2">
                         <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4 font-medium text-sm">
                           <div>Région</div>

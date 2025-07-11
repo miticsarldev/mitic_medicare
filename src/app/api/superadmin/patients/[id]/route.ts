@@ -164,40 +164,102 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const patientId = params.id;
+    const userId = params.id; // Renommer pour plus de clarté
 
-    // Find the patient record
-    const patient = await prisma.patient.findFirst({
-      where: {
-        user: {
-          id: patientId,
-        },
-      },
+    // Vérifier l'existence du patient et de l'utilisateur
+    const patient = await prisma.patient.findUnique({
+      where: { userId },
+      include: { user: true }
     });
 
     if (!patient) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
-    // Delete the patient and related data
-    // Note: This assumes you have proper cascading deletes set up in your schema
-    await prisma.user.delete({
-      where: {
-        id: patientId,
-      },
+    // Transaction pour garantir l'intégrité
+    await prisma.$transaction(async (prisma) => {
+      // 1. Supprimer les dépendances du patient
+      await prisma.prescriptionOrder.deleteMany({
+        where: { patientId: patient.id }
+      });
+
+      await prisma.prescription.deleteMany({
+        where: { patientId: patient.id }
+      });
+
+      await prisma.review.deleteMany({
+        where: { authorId: userId } // Note: utiliser userId ici
+      });
+
+      // Supprimer les attachments avant les medical records
+      await prisma.medicalRecordAttachment.deleteMany({
+        where: { medicalRecord: { patientId: patient.id } }
+      });
+
+      await prisma.medicalRecord.deleteMany({
+        where: { patientId: patient.id }
+      });
+
+      await prisma.medicalHistory.deleteMany({
+        where: { patientId: patient.id }
+      });
+
+      await prisma.appointment.deleteMany({
+        where: { patientId: patient.id }
+      });
+
+      await prisma.vitalSign.deleteMany({
+        where: { patientId: patient.id }
+      });
+
+      // 2. Supprimer le profil utilisateur s'il existe
+      await prisma.userProfile.deleteMany({
+        where: { userId }
+      });
+
+      // 3. Supprimer les sessions et comptes
+      await prisma.session.deleteMany({
+        where: { userId }
+      });
+
+      await prisma.account.deleteMany({
+        where: { userId }
+      });
+
+      // 4. Supprimer les favoris (relations many-to-many)
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          favoriteDoctors: { set: [] },
+          favoriteHospitals: { set: [] }
+        }
+      });
+
+      // 5. Supprimer le patient
+      await prisma.patient.delete({
+        where: { id: patient.id }
+      });
+
+      // 6. Enfin supprimer l'utilisateur
+      await prisma.user.delete({
+        where: { id: userId }
+      });
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting patient:", error);
     return NextResponse.json(
-      { error: "Failed to delete patient" },
+      {
+        error: "Failed to delete patient",
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
 }
+
