@@ -30,9 +30,11 @@ export default function PatientDeleteModal({
   const handleDeletePatient = async () => {
     if (!patient) return;
 
+    console.log("Deleting patient:", patient);
+
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/superadmin/patients/${patient.id}`, {
+      const response = await fetch(`/api/superadmin/patients/${patient.user.id}`, {
         method: "DELETE",
       });
 
