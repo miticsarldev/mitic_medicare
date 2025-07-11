@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const sortBy = searchParams.get("sortBy") || "startDate";
     const sortOrder = searchParams.get("sortOrder") || "desc";
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     // Calculate pagination
     const skip = (page - 1) * limit;
@@ -49,6 +51,19 @@ export async function GET(request: NextRequest) {
     // Plan filter
     if (plan !== "all") {
       where.plan = plan as SubscriptionPlan;
+    }
+
+    // Date range filters
+    if (startDate) {
+      where.startDate = {
+        gte: new Date(startDate),
+      };
+    }
+
+    if (endDate) {
+      where.endDate = {
+        lte: new Date(endDate),
+      };
     }
 
     // Search filter (search in doctor or hospital names)
