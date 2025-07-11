@@ -12,7 +12,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-
+import { toast } from "@/hooks/use-toast";
 // Add the pagination component imports
 import {
   Pagination,
@@ -305,6 +305,80 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+  const handleExport = async (appointment: AppointmentWithRelations) => {
+  try {
+    const response = await fetch(`/api/appointments/export/${appointment.id}`, {
+      method: "GET", // ou POST si vous préférez envoyer l'ID dans le corps
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Échec de l'exportation du rendez-vous");
+    }
+
+    const data = await response.json();
+
+    // Formatage des données pour le CSV
+    const exportData = [{
+      id: data.id,
+      patientName: data.patient.user.name,
+      patientEmail: data.patient.user.email,
+      patientPhone: data.patient.user.phone || "Non renseigné",
+      doctorName: data.doctor.user.name,
+      specialization: data.doctor.specialization,
+      hospitalName: data.doctor.hospital?.name || "Médecin indépendant",
+      scheduledAt: format(new Date(data.scheduledAt), "dd/MM/yyyy HH:mm", { locale: fr }),
+      endTime: data.endTime ? format(new Date(data.endTime), "dd/MM/yyyy HH:mm", { locale: fr }) : "Non défini",
+      status: data.status,
+      reason: data.reason || "Non renseigné",
+      type: data.type || "Consultation standard",
+      notes: data.notes || "Aucune note",
+      createdAt: format(new Date(data.createdAt), "dd/MM/yyyy HH:mm", { locale: fr }),
+      updatedAt: format(new Date(data.updatedAt), "dd/MM/yyyy HH:mm", { locale: fr }),
+      completedAt: data.completedAt ? format(new Date(data.completedAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "N/A",
+      cancelledAt: data.cancelledAt ? format(new Date(data.cancelledAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "N/A",
+      cancellationReason: data.cancellationReason || "N/A",
+    }];
+
+    // Créer le contenu CSV
+    const headers = Object.keys(exportData[0]).join(",");
+    const rows = exportData
+      .map((item) =>
+        Object.values(item)
+          .map((value) =>
+            typeof value === "string" ? `"${value.replace(/"/g, '""')}"` : value
+          )
+          .join(",")
+      )
+      .join("\n");
+    const csvContent = `${headers}\n${rows}`;
+
+    // Créer le lien de téléchargement
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `appointment_${appointment.id}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Succès",
+      description: "Rendez-vous exporté avec succès",
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'exportation:", error);
+    toast({
+      title: "Erreur",
+      description: "Échec de l'exportation du rendez-vous",
+      variant: "destructive",
+    });
+  }
+};
 
   const getInitials = (name: string) => {
     return name
@@ -685,7 +759,7 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
                             >
                               Voir les détails
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleExport(appointment)}>
                               <Download className="mr-2 h-4 w-4" />
                               Exporter
                             </DropdownMenuItem>
