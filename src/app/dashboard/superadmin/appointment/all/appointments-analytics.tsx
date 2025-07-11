@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format, subDays, subMonths, subYears } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Clock, FileDown, RefreshCw, Users } from "lucide-react";
+import { Calendar, Clock, RefreshCw, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -194,9 +194,9 @@ export function AppointmentsAnalytics({
             />
             Actualiser
           </Button>
-          <Button variant="outline">
+          {/* <Button variant="outline">
             <FileDown className="mr-2 h-4 w-4" /> Exporter
-          </Button>
+          </Button> */}
         </div>
       </div>
 
