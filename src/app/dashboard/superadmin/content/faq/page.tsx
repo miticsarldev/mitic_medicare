@@ -114,7 +114,7 @@ const faqItems = [
     id: "3",
     question: "Comment modifier ou annuler un rendez-vous ?",
     answer:
-      "Pour modifier ou annuler un rendez-vous, connectez-vous à votre compte, accédez à la section 'Mes rendez-vous', sélectionnez le rendez-vous concerné, puis cliquez sur 'Modifier' ou 'Annuler'. Les annulations doivent être effectuées au moins 24 heures à l'avance pour éviter des frais.",
+      "Pour modifier ou annuler un rendez-vous, connectez-vous à votre compte, accédez à la section 'Mes rendez-vous', sélectionnez le rendez-vous concerné, puis cliquez sur 'Modifier' ou 'Annuler'. Les annulations doivent être effectuées au moins 24 heures à l'avance.",
     category: "Rendez-vous",
     isPublished: true,
     order: 3,
@@ -122,18 +122,7 @@ const faqItems = [
     updatedAt: "2024-02-05T16:30:00",
     views: 875,
   },
-  {
-    id: "4",
-    question: "Comment fonctionne la téléconsultation ?",
-    answer:
-      "La téléconsultation vous permet de consulter un médecin à distance via vidéo. Pour l'utiliser, prenez rendez-vous en sélectionnant l'option 'Téléconsultation', puis connectez-vous 5 minutes avant l'heure prévue. Assurez-vous d'avoir une bonne connexion internet et un appareil avec caméra et microphone fonctionnels.",
-    category: "Téléconsultation",
-    isPublished: true,
-    order: 4,
-    createdAt: "2024-02-01T13:20:00",
-    updatedAt: "2024-02-01T13:20:00",
-    views: 1560,
-  },
+  
   {
     id: "5",
     question: "Comment sont protégées mes données médicales ?",
@@ -146,18 +135,7 @@ const faqItems = [
     updatedAt: "2024-02-15T11:30:00",
     views: 720,
   },
-  {
-    id: "6",
-    question: "Comment obtenir le remboursement d'une consultation ?",
-    answer:
-      "Le remboursement d'une consultation se fait automatiquement si vous avez renseigné vos informations d'assurance maladie dans votre profil. Après la consultation, une feuille de soins électronique est transmise à l'Assurance Maladie. Pour les complémentaires santé, vous pouvez télécharger votre facture dans la section 'Mes documents'.",
-    category: "Facturation",
-    isPublished: false,
-    order: 6,
-    createdAt: "2024-02-10T14:45:00",
-    updatedAt: "2024-02-10T14:45:00",
-    views: 0,
-  },
+  
   {
     id: "7",
     question: "Comment mettre à jour mes informations personnelles ?",
