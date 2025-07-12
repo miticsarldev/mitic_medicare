@@ -1,4 +1,3 @@
-// components/subscription/SubscriptionManager.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,10 +11,9 @@ import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { SubscriptionCardProps, SubscriptionWithDetails } from "@/types/superadmin/subscription";
-import { 
-  AlertCircle, 
-  Info, 
+import {
+  AlertCircle,
+  Info,
   RotateCw,
   Eye,
   Check,
@@ -29,9 +27,65 @@ import {
   Wallet,
   Mail
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Types basés sur votre schéma Prisma et API
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+type Doctor = {
+  id: string;
+  user: User;
+  specialization: string;
+  isVerified: boolean;
+};
+
+type Hospital = {
+  id: string;
+  admin: User;
+  name: string;
+  isVerified: boolean;
+};
+
+type SubscriptionPayment = {
+  id: string;
+  paymentMethod: string;
+  status: string;
+  paymentDate: Date;
+  amount: number;
+  currency: string;
+};
+
+type Subscription = {
+  id: string;
+  subscriberType: 'DOCTOR' | 'HOSPITAL';
+  doctor: Doctor | null;
+  hospital: Hospital | null;
+  plan: 'FREE' | 'STANDARD' | 'PREMIUM';
+  status: 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'TRIAL' | 'EXPIRED';
+  startDate: Date | null;
+  endDate: Date | null;
+  amount: number;
+  currency: string;
+  autoRenew: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  payments: SubscriptionPayment[];
+};
+
+type SubscriptionCardProps = {
+  subscription: Subscription;
+  onViewDetails: (id: string) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+};
 
 export function SubscriptionManager() {
-  const [subscriptions, setSubscriptions] = useState<SubscriptionWithDetails[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<string | null>(null);
@@ -43,16 +97,22 @@ export function SubscriptionManager() {
     const fetchSubscriptions = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/superadmin/subscriptions/pending");
-        
+        const response = await fetch("/api/superadmin/subscriptions/pending", {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
         if (!response.ok) {
-          throw new Error("Failed to fetch subscriptions");
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to fetch subscriptions");
         }
-        
+
         const data = await response.json();
         setSubscriptions(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred");
+        console.error("Fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -66,20 +126,26 @@ export function SubscriptionManager() {
     try {
       const response = await fetch(`/api/superadmin/subscriptions/${id}/approve`, {
         method: "PUT",
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to approve subscription");
+        throw new Error(data.error || "Failed to approve subscription");
       }
 
       setSubscriptions(subscriptions.filter(sub => sub.id !== id));
-      
+
       toast({
         title: "Succès",
         description: "L'abonnement a été validé avec succès",
         variant: "default",
       });
     } catch (err) {
+      console.error("Approval error:", err);
       toast({
         title: "Erreur",
         description: err instanceof Error ? err.message : "Une erreur est survenue",
@@ -97,20 +163,26 @@ export function SubscriptionManager() {
     try {
       const response = await fetch(`/api/superadmin/subscriptions/${id}/reject`, {
         method: "PUT",
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to reject subscription");
+        throw new Error(data.error || "Failed to reject subscription");
       }
 
       setSubscriptions(subscriptions.filter(sub => sub.id !== id));
-      
+
       toast({
         title: "Succès",
         description: "L'abonnement a été annulé avec succès",
         variant: "default",
       });
     } catch (err) {
+      console.error("Rejection error:", err);
       toast({
         title: "Erreur",
         description: err instanceof Error ? err.message : "Une erreur est survenue",
@@ -124,13 +196,58 @@ export function SubscriptionManager() {
   };
 
   const handleViewDetails = (id: string) => {
-    console.log("View details for subscription:", id);
+    const subscription = subscriptions.find(sub => sub.id === id);
+    console.log("Subscription details:", subscription);
   };
+
+  function SubscriptionCardSkeleton() {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <Skeleton className="h-6 w-16" />
+          </div>
+        </CardHeader>
+        <CardContent className="pb-2">
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between pt-3">
+          <Skeleton className="h-9 w-24" />
+          <div className="flex space-x-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <RotateCw className="h-8 w-8 animate-spin" />
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-6 w-20" />
+        </div>
+
+        <Separator />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <SubscriptionCardSkeleton key={i} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -198,12 +315,12 @@ export function SubscriptionManager() {
               {actionType === "approve" ? (
                 <>
                   <Check className="h-5 w-5" />
-                  Valider l&lsquo;abonnement
+                  Valider abonnement
                 </>
               ) : (
                 <>
                   <X className="h-5 w-5" />
-                  Annuler l&lsquo;abonnement
+                  Annuler abonnement
                 </>
               )}
             </AlertDialogTitle>
@@ -246,9 +363,8 @@ export function SubscriptionManager() {
 }
 
 function SubscriptionCard({ subscription, onViewDetails, onApprove, onReject }: SubscriptionCardProps) {
-  const subscriber = subscription.doctor || subscription.hospital;
   const subscriberType = subscription.doctor ? "Médecin" : "Hôpital";
-  const lastPayment = subscription.payments[0];
+  const lastPayment = subscription.payments?.[0];
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -261,11 +377,11 @@ function SubscriptionCard({ subscription, onViewDetails, onApprove, onReject }: 
               ) : (
                 <Hospital className="h-5 w-5 text-primary" />
               )}
-              {subscriber?.user.name}
+              {subscription.doctor ? subscription.doctor.user.name : subscription.hospital ? subscription.hospital.admin.name : 'N/A'}
             </CardTitle>
             <CardDescription className="text-sm flex items-center gap-1">
               <Mail className="h-4 w-4" />
-              {subscriber?.user.email}
+              {subscription.doctor ? subscription.doctor.user.email : subscription.hospital ? subscription.hospital.admin.email : 'N/A'}
             </CardDescription>
           </div>
           <Badge variant="secondary">
@@ -287,7 +403,7 @@ function SubscriptionCard({ subscription, onViewDetails, onApprove, onReject }: 
               <Wallet className="h-4 w-4" />
               Montant
             </p>
-            <p>{subscription.amount.toString()} {subscription.currency}</p>
+            <p>{subscription.amount} {subscription.currency}</p>
           </div>
           {lastPayment && (
             <>
