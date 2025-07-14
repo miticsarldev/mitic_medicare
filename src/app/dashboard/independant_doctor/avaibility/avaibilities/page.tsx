@@ -91,7 +91,14 @@ export default function DoctorAvailabilityPage() {
             }
 
             const data = await response.json();
-            setDoctor(data);
+            const merged: DoctorWithAvailabilities = {
+              id: data.doctor.id,
+              name: data.doctor.name,
+              specialization: data.doctor.specialization,
+              availabilities: data.availabilities,
+            };
+            setDoctor(merged);
+
         } catch (err) {
         if (err instanceof Error) {
             setError(err.message);
@@ -269,7 +276,7 @@ export default function DoctorAvailabilityPage() {
         <div className="container mx-auto px-4 py-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Disponibilités du Dr. {doctor.name} ({doctor.specialization})</CardTitle>
+                    <CardTitle>Disponibilités du {doctor.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="flex justify-end mb-4">
