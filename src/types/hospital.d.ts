@@ -5,8 +5,7 @@ import {
   SubscriptionStatus,
   UserRole,
 } from "@prisma/client";
-
-export type Hospital = {
+export interface Hospital {
   id: string;
   name: string;
   adminId: string;
@@ -24,8 +23,7 @@ export type Hospital = {
   status: HospitalStatus;
   createdAt: Date;
   updatedAt: Date;
-
-  admin: {
+  admin?: {
     id: string;
     name: string;
     email: string;
@@ -36,16 +34,23 @@ export type Hospital = {
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
+    profile?: {
+      avatarUrl?: string;
+    };
   };
-
   doctors?: {
     id: string;
     specialization: string;
     isVerified: boolean;
     isIndependent: boolean;
     availableForChat: boolean;
+    user: {
+      name: string;
+      profile?: {
+        avatarUrl?: string;
+      };
+    };
   }[];
-
   departments?: {
     id: string;
     name: string;
@@ -53,7 +58,6 @@ export type Hospital = {
     createdAt: Date;
     updatedAt: Date;
   }[];
-
   subscription?: {
     id: string;
     plan: SubscriptionPlan;
@@ -65,7 +69,7 @@ export type Hospital = {
     autoRenew: boolean;
     createdAt: Date;
     updatedAt: Date;
-    payments: {
+    payments?: {
       id: string;
       amount: number;
       currency: string;
@@ -76,7 +80,6 @@ export type Hospital = {
       createdAt: Date;
     }[];
   };
-
   reviews?: {
     id: string;
     title: string;
@@ -87,4 +90,28 @@ export type Hospital = {
     createdAt: Date;
     updatedAt: Date;
   }[];
-};
+  doctorsCount?: number;
+  rating?: number;
+  topDoctors?: Array<{
+    id: string;
+    name: string;
+    specialty: string;
+    image: string;
+  }>;
+}
+
+export interface ExportHospital {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  status: HospitalStatus;
+  verified: string; // "true" or "false" instead of boolean
+  doctorsCount: number;
+  createdAt: string; // ISO string instead of Date
+}

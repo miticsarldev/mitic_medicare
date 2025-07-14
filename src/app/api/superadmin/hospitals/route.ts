@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { type NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -26,10 +24,19 @@ export async function GET(request: NextRequest) {
     const limit = Number.parseInt(searchParams.get("limit") || "10");
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
-
     const locations = searchParams.getAll("location");
     const statuses = searchParams.getAll("status");
     const subscriptions = searchParams.getAll("subscription");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    // Validate date inputs
+    if (startDate && isNaN(new Date(startDate).getTime())) {
+      return NextResponse.json({ error: "Invalid startDate" }, { status: 400 });
+    }
+    if (endDate && isNaN(new Date(endDate).getTime())) {
+      return NextResponse.json({ error: "Invalid endDate" }, { status: 400 });
+    }
 
     const skip = (page - 1) * limit;
 
@@ -58,6 +65,21 @@ export async function GET(request: NextRequest) {
         plan: { in: subscriptions as SubscriptionPlan[] },
       };
     }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
+
+    // Log the where clause for debugging
+    console.log("Where Clause:", JSON.stringify(where, null, 2));
 
     let orderBy: Prisma.HospitalOrderByWithRelationInput = {
       createdAt: sortOrder === "asc" ? "asc" : "desc",
@@ -121,6 +143,15 @@ export async function GET(request: NextRequest) {
       orderBy,
     });
 
+    // Log the returned hospitals for debugging
+    console.log(
+      "Returned Hospitals:",
+      hospitals.map((h) => ({
+        id: h.id,
+        createdAt: h.createdAt,
+      }))
+    );
+
     const ratings = await prisma.review.groupBy({
       by: ["hospitalId"],
       where: {
@@ -174,14 +205,12 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const data = await request.json();
 
-    // Create hospital
     const hospital = await prisma.hospital.create({
       data: {
         name: data.name,
