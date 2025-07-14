@@ -179,7 +179,7 @@ export async function PUT(
         phone: data.phone,
         role: data.role as UserRole,
         password: hashedPassword,
-        isActive: data.isActive || false,
+        isActive: data.status === 'active',
         isApproved: data.isApproved || false,
       },
     });

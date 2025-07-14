@@ -71,6 +71,7 @@ import {
   PendingApprovalUser,
   SubscriptionStats,
 } from "./types";
+import { SubscriptionManager } from "@/components/superadmin/overview/SubscriptionManager";
 
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
@@ -467,6 +468,9 @@ export function DashboardContent({
         </Card>
       </div>
 
+
+
+      <SubscriptionManager />
       {/* Pending Verifications */}
       <Card>
         <CardHeader className="flex flex-row items-center">

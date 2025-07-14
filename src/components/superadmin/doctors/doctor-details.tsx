@@ -4,7 +4,6 @@ import { format } from "date-fns";
 import {
   Calendar,
   Check,
-  FileText,
   Pencil,
   ShieldCheck,
   Trash2,
@@ -26,6 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Doctor } from "@/types/doctor";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Link from "next/link";
 
 interface DoctorDetailsProps {
   isOpen: boolean;
@@ -43,10 +43,45 @@ export default function DoctorDetails({
   doctor,
   onEdit,
   onDelete,
-  onStatusChange,
-  onVerificationChange,
 }: DoctorDetailsProps) {
   if (!doctor) return null;
+
+  const toggleDoctorStatus = async (isActive: boolean) => {
+    try {
+      const response = await fetch(`/api/superadmin/doctors/${doctor.user.id}/activate`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isActive }),
+      });
+
+      if (!response.ok) throw new Error("Échec de la mise à jour");
+
+      // Rafraîchir les données après la mise à jour
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating doctor status:", error);
+    }
+  };
+
+  const toggleDoctorVerification = async (isVerified: boolean) => {
+    try {
+      const response = await fetch(`/api/superadmin/doctors/${doctor.user.id}/verify`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isVerified }),
+      });
+
+      if (!response.ok) throw new Error("Échec de la mise à jour");
+      // Rafraîchir les données après la mise à jour
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating doctor verification:", error);
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -244,29 +279,7 @@ export default function DoctorDetails({
                   </div>
                 )}
 
-                <div className="mt-6">
-                  <h4 className="text-sm font-semibold mb-2">
-                    Documents de vérification
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Diplôme médical</span>
-                    </div>
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Carte professionnelle</span>
-                    </div>
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Pièce d&apos;identité</span>
-                    </div>
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Assurance professionnelle</span>
-                    </div>
-                  </div>
-                </div>
+
               </TabsContent>
               <TabsContent value="activity" className="space-y-4 mt-4">
                 <div className="space-y-4">
@@ -275,7 +288,9 @@ export default function DoctorDetails({
                       Rendez-vous récents
                     </h4>
                     <Button variant="ghost" size="sm">
+                      <Link href={`/dashboard/superadmin/appointment/all`}>
                       Voir tout
+                      </Link>
                     </Button>
                   </div>
                   <div className="space-y-2">
@@ -340,37 +355,9 @@ export default function DoctorDetails({
                           {doctor._count?.appointments || 0}
                         </span>
                       </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-blue-500"
-                          style={{ width: "60%" }}
-                        ></div>
-                      </div>
+                      
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs">Taux de complétion</span>
-                        <span className="text-xs font-medium">92%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-green-500"
-                          style={{ width: "92%" }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs">Temps de réponse moyen</span>
-                        <span className="text-xs font-medium">4h</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-amber-500"
-                          style={{ width: "75%" }}
-                        ></div>
-                      </div>
-                    </div>
+                    
                   </div>
                 </div>
               </TabsContent>
@@ -378,9 +365,7 @@ export default function DoctorDetails({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-semibold">
-                        Statut du compte
-                      </h4>
+                      <h4 className="text-sm font-semibold">Statut du compte</h4>
                       <p className="text-xs text-muted-foreground">
                         Gérer l&apos;état du compte
                       </p>
@@ -389,7 +374,7 @@ export default function DoctorDetails({
                       <Button
                         variant={doctor.user.isActive ? "outline" : "default"}
                         size="sm"
-                        onClick={() => onStatusChange(doctor.id, "inactive")}
+                        onClick={() => toggleDoctorStatus(false)}
                         disabled={!doctor.user.isActive}
                       >
                         Désactiver
@@ -397,7 +382,7 @@ export default function DoctorDetails({
                       <Button
                         variant={doctor.user.isActive ? "default" : "outline"}
                         size="sm"
-                        onClick={() => onStatusChange(doctor.id, "active")}
+                        onClick={() => toggleDoctorStatus(true)}
                         disabled={doctor.user.isActive}
                       >
                         Activer
@@ -415,9 +400,7 @@ export default function DoctorDetails({
                     <Button
                       variant={doctor.isVerified ? "outline" : "default"}
                       size="sm"
-                      onClick={() =>
-                        onVerificationChange(doctor.id, !doctor.isVerified)
-                      }
+                      onClick={() => toggleDoctorVerification(!doctor.isVerified)}
                     >
                       {doctor.isVerified
                         ? "Retirer la vérification"

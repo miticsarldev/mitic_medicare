@@ -166,7 +166,7 @@ export default function DoctorCreateEditModal({
         }
       } else if (mode === "edit" && doctor) {
         // Update existing doctor
-        const response = await fetch(`/api/superadmin/doctors/${doctor.id}`, {
+        const response = await fetch(`/api/superadmin/doctors/${doctor.user.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",

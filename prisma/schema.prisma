@@ -430,6 +430,7 @@ enum SubscriptionStatus {
     INACTIVE
     TRIAL
     EXPIRED
+    PENDING
 }
 
 enum SubscriptionPlan {

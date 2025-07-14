@@ -220,6 +220,9 @@ export default function PatientCreateEditModal({
             {mode === "create"
               ? "Créez un nouveau compte patient en remplissant le formulaire ci-dessous"
               : `Modifiez les informations du patient ${patient?.user.name}`}
+            <div className="text-xs text-muted-foreground mt-1">
+              Les champs marqués d&lsquo;un <span className="text-red-500">*</span> sont obligatoires
+            </div>
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[80vh] pr-4">
@@ -228,7 +231,9 @@ export default function PatientCreateEditModal({
               {/* Left column */}
               <div className="space-y-2">
                 <div className="space-y-1">
-                  <Label htmlFor="name">Nom complet</Label>
+                  <Label htmlFor="name">
+                    Nom complet <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="name"
                     name="name"
@@ -238,7 +243,9 @@ export default function PatientCreateEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">
+                    Email <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="email"
                     name="email"
@@ -249,7 +256,9 @@ export default function PatientCreateEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
+                  <Label htmlFor="phone">
+                    Téléphone <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="phone"
                     name="phone"
@@ -260,7 +269,9 @@ export default function PatientCreateEditModal({
                 </div>
                 {mode === "create" && (
                   <div className="space-y-2">
-                    <Label htmlFor="password">Mot de passe</Label>
+                    <Label htmlFor="password">
+                      Mot de passe <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="password"
                       name="password"
@@ -272,7 +283,9 @@ export default function PatientCreateEditModal({
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Date de naissance</Label>
+                  <Label htmlFor="dateOfBirth">
+                    Date de naissance <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="dateOfBirth"
                     name="dateOfBirth"
@@ -283,12 +296,15 @@ export default function PatientCreateEditModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gender">Genre</Label>
+                  <Label htmlFor="gender">
+                    Genre <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={formData.gender}
                     onValueChange={(value) =>
                       handleSelectChange("gender", value)
                     }
+                    required
                   >
                     <SelectTrigger id="gender">
                       <SelectValue placeholder="Sélectionner un genre" />
