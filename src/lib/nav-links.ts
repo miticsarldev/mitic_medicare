@@ -171,17 +171,22 @@ export const doctorNavItems = [
         url: "/dashboard/independant_doctor/settings/profile",
       },
       {
-        title: "Tarification",
+        title: "Abonnement",
         url: "/dashboard/independant_doctor/settings/pricing",
       },
       {
         title: "Sécurité & Confidentialité",
         url: "/dashboard/independant_doctor/settings/security",
       },
+      {
+        title: "Avis & Feedback",
+        url: "/dashboard/independant_doctor/settings/reviews",
+      },
+
     ],
   },
   {
-    title: "Documentation & Assistance",
+    title: "Assistance & aide",
     icon: FileText,
     url: "/dashboard/independant_doctor/support",
     items: [

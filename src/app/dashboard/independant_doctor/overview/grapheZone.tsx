@@ -67,7 +67,7 @@ export default function DoctorDashboard() {
           range: availabilityRange,
           period: availabilityPeriod,
         })
-        const res = await fetch(`/api/hospital_doctor/dashboard?${params.toString()}`)
+        const res = await fetch(`/api/independant_doctor/dashboard?${params.toString()}`)
         if (!res.ok) throw new Error('Failed to fetch availability data')
         const data = await res.json()
         setAvailabilityData(data)
@@ -93,7 +93,7 @@ export default function DoctorDashboard() {
           range: appointmentsRange,
           period: appointmentsPeriod,
         })
-        const res = await fetch(`/api/hospital_doctor/dashboard?${params.toString()}`)
+        const res = await fetch(`/api/independant_doctor/dashboard?${params.toString()}`)
         if (!res.ok) throw new Error('Failed to fetch appointments data')
         const data = await res.json()
         setAppointmentsData(data)
@@ -115,7 +115,7 @@ export default function DoctorDashboard() {
   return (
     <div className="space-y-6">
 
-      {/* Availability Section */}
+      
       <section className="space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -132,9 +132,9 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Période" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="daily">Journalier</SelectItem>
-                <SelectItem value="weekly">Hebdomadaire</SelectItem>
-                <SelectItem value="monthly">Mensuel</SelectItem>
+                <SelectItem value="daily">Jour</SelectItem>
+                <SelectItem value="weekly">Semaine</SelectItem>
+                <SelectItem value="monthly">Mois</SelectItem>
               </SelectContent>
             </Select>
 
@@ -146,8 +146,8 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Intervalle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="current">En cours</SelectItem>
-                <SelectItem value="past">Historique</SelectItem>
+                <SelectItem value="current">Ce mois</SelectItem>
+                <SelectItem value="past">6 derniers mois</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -259,9 +259,9 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Période" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="daily">Journalier</SelectItem>
-                <SelectItem value="weekly">Hebdomadaire</SelectItem>
-                <SelectItem value="monthly">Mensuel</SelectItem>
+                <SelectItem value="daily">Jour</SelectItem>
+                <SelectItem value="weekly">Semaine</SelectItem>
+                <SelectItem value="monthly">Mois</SelectItem>
               </SelectContent>
             </Select>
 
@@ -273,8 +273,8 @@ export default function DoctorDashboard() {
                 <SelectValue placeholder="Intervalle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="current">En cours</SelectItem>
-                <SelectItem value="past">Historique</SelectItem>
+                <SelectItem value="current">Ce mois</SelectItem>
+                <SelectItem value="past">6 derniers mois</SelectItem>
               </SelectContent>
             </Select>
           </div>
