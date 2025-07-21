@@ -171,7 +171,7 @@ export const doctorNavItems = [
         url: "/dashboard/independant_doctor/settings/profile",
       },
       {
-        title: "Tarification",
+        title: "Abonnements",
         url: "/dashboard/independant_doctor/settings/pricing",
       },
       {
