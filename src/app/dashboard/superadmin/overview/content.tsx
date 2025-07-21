@@ -157,10 +157,10 @@ export function DashboardContent({
 
     try {
       if (actionType === "approve") {
-        await approveUser(selectedUser.id);
+        await approveUser(selectedUser);
         toast({
           title: "Utilisateur approuvé",
-          description: `${selectedUser.name} a été approuvé avec succès.`,
+          description: `${selectedUser.name} a été approuvé avec succès. \nEmail de confirmation envoyé.`,
         });
       } else {
         await rejectUser(selectedUser.id);
@@ -467,8 +467,6 @@ export function DashboardContent({
           </CardFooter>
         </Card>
       </div>
-
-
 
       <SubscriptionManager />
       {/* Pending Verifications */}

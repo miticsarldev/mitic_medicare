@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,36 +42,33 @@ const LoginForm = () => {
 
   useEffect(() => {
     if (session) {
+      console.log(session.user);
       if (!session.user.emailVerified) {
-        signOut({ redirect: false }).then(() => {
-          localStorage.setItem(
-            "mitic-pending-verification",
-            JSON.stringify({
-              email: session.user.email,
-              role: session.user.role,
-            })
-          );
-
-          router.push(`/auth/email-verification-required`);
-        });
+        localStorage.setItem(
+          "mitic-pending-verification",
+          JSON.stringify({
+            email: session.user.email,
+            role: session.user.role,
+          })
+        );
+        router.push(`/auth/email-verification-required`);
       } else if (
         !session.user.isApproved &&
         (session.user.role === "HOSPITAL_ADMIN" ||
           session.user.role === "INDEPENDENT_DOCTOR")
       ) {
-        signOut({ redirect: false }).then(() => {
-          localStorage.setItem(
-            "mitic-pending-approval",
-            JSON.stringify({
-              email: session.user.email,
-              role: session.user.role,
-            })
-          );
+        localStorage.setItem(
+          "mitic-pending-approval",
+          JSON.stringify({
+            email: session.user.email,
+            role: session.user.role,
+          })
+        );
 
-          router.push(`/auth/approval-required`);
-        });
+        router.push(`/auth/approval-required`);
       } else {
         router.push("/dashboard");
+        localStorage.removeItem("mitic-pending-approval");
       }
     }
   }, [session, router]);

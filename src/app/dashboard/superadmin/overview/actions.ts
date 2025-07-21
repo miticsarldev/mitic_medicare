@@ -16,6 +16,7 @@ import type {
   StatisticsData,
   StatisticsDataPoint,
 } from "./types";
+import { sendApprovingEmail } from "@/lib/email";
 
 // ➤ Détermine les bornes de la période et de la période précédente
 function getPeriodRange(timeRange: string): {
@@ -526,13 +527,19 @@ export async function getSubscriptionStats(): Promise<SubscriptionStats> {
   }
 }
 
-export async function approveUser(userId: string): Promise<void> {
+export async function approveUser(user: PendingApprovalUser): Promise<void> {
   try {
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: user.id },
       data: { isApproved: true },
     });
 
+    await sendApprovingEmail(
+      user.name,
+      user.email,
+      user.role,
+      user.hospital?.name ?? "Hopital"
+    );
     revalidatePath("/admin/dashboard");
     revalidatePath("/admin/verification");
   } catch (error) {
