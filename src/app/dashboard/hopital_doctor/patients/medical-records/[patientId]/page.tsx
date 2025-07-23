@@ -1,9 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Activity, User, HeartPulse, Calendar, AlertCircle, Plus, User2, FileSearch, FileText, Edit, Trash2 } from "lucide-react";
+import {
+  Activity,
+  User,
+  HeartPulse,
+  Calendar,
+  AlertCircle,
+  Plus,
+  User2,
+  FileSearch,
+  FileText,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,12 +153,12 @@ export default function PatientMedicalRecord() {
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [recordData, setRecordData] = useState<MedicalRecord | null>(null);
 
-  const fetchPatientData = async () => {
+  const fetchPatientData = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/hospital_doctor/patient/${patientId}`);
       if (!response.ok) {
-        throw new Error('Patient non trouvé');
+        throw new Error("Patient non trouvé");
       }
       const data = await response.json();
       setPatient(data);
@@ -164,58 +176,73 @@ export default function PatientMedicalRecord() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [patientId]);
 
   useEffect(() => {
     fetchPatientData();
-  }, [patientId]);
+  }, [patientId, fetchPatientData]);
 
   const formatDate = (date: Date) => new Date(date).toLocaleDateString();
-  
+
   const formatBloodType = (type?: string) => {
-    if (!type) return 'Non spécifié';
+    if (!type) return "Non spécifié";
     const types: Record<string, string> = {
-      'A_POSITIVE': 'A+',
-      'A_NEGATIVE': 'A-',
-      'B_POSITIVE': 'B+',
-      'B_NEGATIVE': 'B-',
-      'AB_POSITIVE': 'AB+',
-      'AB_NEGATIVE': 'AB-',
-      'O_POSITIVE': 'O+',
-      'O_NEGATIVE': 'O-'
+      A_POSITIVE: "A+",
+      A_NEGATIVE: "A-",
+      B_POSITIVE: "B+",
+      B_NEGATIVE: "B-",
+      AB_POSITIVE: "AB+",
+      AB_NEGATIVE: "AB-",
+      O_POSITIVE: "O+",
+      O_NEGATIVE: "O-",
     };
-    return types[type] || type.replace('_', ' ');
+    return types[type] || type.replace("_", " ");
   };
 
   const completedAppointments = Array.isArray(patient?.appointments)
     ? patient.appointments
-        .filter(app => app.status === 'COMPLETED')
-        .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime())
+        .filter((app) => app.status === "COMPLETED")
+        .sort(
+          (a, b) =>
+            new Date(b.scheduledAt).getTime() -
+            new Date(a.scheduledAt).getTime()
+        )
     : [];
 
   const latestVitalSigns = useMemo(() => {
     if (!patient?.vitalSigns || patient.vitalSigns.length === 0) return null;
     return patient.vitalSigns.reduce((latest, current) =>
-      new Date(current.recordedAt) > new Date(latest.recordedAt) ? current : latest
+      new Date(current.recordedAt) > new Date(latest.recordedAt)
+        ? current
+        : latest
     );
   }, [patient?.vitalSigns]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, condition, details, diagnosedDate: diagnosedDate || undefined, status: 'ACTIVE' })
-      });
-      
+      const response = await fetch(
+        `/api/hospital_doctor/patient/${patientId}/medical-history`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            condition,
+            details,
+            diagnosedDate: diagnosedDate || undefined,
+            status: "ACTIVE",
+          }),
+        }
+      );
+
       if (response.ok) {
         await fetchPatientData();
         setIsModalOpen(false);
-        setTitle('');
-        setCondition('');
-        setDetails('');
-        setDiagnosedDate('');
+        setTitle("");
+        setCondition("");
+        setDetails("");
+        setDiagnosedDate("");
         toast({
           title: "Succès",
           description: "Antécédent médical ajouté avec succès",
@@ -233,10 +260,13 @@ export default function PatientMedicalRecord() {
 
   const handleDeleteHistory = async (historyId: string) => {
     try {
-      const response = await fetch(`/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`, {
-        method: 'DELETE',
-      });
-      
+      const response = await fetch(
+        `/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
       if (response.ok) {
         await fetchPatientData();
         toast({
@@ -259,12 +289,17 @@ export default function PatientMedicalRecord() {
 
   const handleViewDiagnosis = async (appointmentId: string) => {
     try {
-      const res = await fetch(`/api/hospital_doctor/history/record?appointmentId=${appointmentId}`);
+      const res = await fetch(
+        `/api/hospital_doctor/history/record?appointmentId=${appointmentId}`
+      );
       const data = await res.json();
-      setRecordData(data[0]); 
+      setRecordData(data[0]);
       setIsRecordModalOpen(true);
     } catch (error) {
-      console.error("Erreur lors de la récupération du dossier médical:", error);
+      console.error(
+        "Erreur lors de la récupération du dossier médical:",
+        error
+      );
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -275,12 +310,12 @@ export default function PatientMedicalRecord() {
 
   const translateStatus = (status: string) => {
     const statusTranslations: Record<string, string> = {
-      'ACTIVE': 'Actif',
-      'INACTIVE': 'Inactif', 
-      'CHRONIC': 'Chronique',
-      'RESOLVED': 'Résolu',
-      'PENDING': 'En attente',
-      'CONTROLLED': 'Contrôlé'
+      ACTIVE: "Actif",
+      INACTIVE: "Inactif",
+      CHRONIC: "Chronique",
+      RESOLVED: "Résolu",
+      PENDING: "En attente",
+      CONTROLLED: "Contrôlé",
     };
     return statusTranslations[status] || status;
   };
@@ -288,19 +323,22 @@ export default function PatientMedicalRecord() {
   const handleVitalSignsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/hospital_doctor/patient/${patientId}/vital-signs`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          temperature: temperature || null,
-          heartRate: heartRate || null,
-          bloodPressureSystolic: bloodPressureSystolic || null,
-          bloodPressureDiastolic: bloodPressureDiastolic || null,
-          oxygenSaturation: oxygenSaturation || null,
-          weight: weight || null,
-          height: height || null
-        })
-      });
+      const response = await fetch(
+        `/api/hospital_doctor/patient/${patientId}/vital-signs`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            temperature: temperature || null,
+            heartRate: heartRate || null,
+            bloodPressureSystolic: bloodPressureSystolic || null,
+            bloodPressureDiastolic: bloodPressureDiastolic || null,
+            oxygenSaturation: oxygenSaturation || null,
+            weight: weight || null,
+            height: height || null,
+          }),
+        }
+      );
 
       if (response.ok) {
         await fetchPatientData();
@@ -315,11 +353,15 @@ export default function PatientMedicalRecord() {
         toast({
           variant: "destructive",
           title: "Erreur",
-          description: errorData.error || "Échec de la mise à jour des signes vitaux",
+          description:
+            errorData.error || "Échec de la mise à jour des signes vitaux",
         });
       }
     } catch (err) {
-      console.error("Erreur réseau lors de la mise à jour des signes vitaux", err);
+      console.error(
+        "Erreur réseau lors de la mise à jour des signes vitaux",
+        err
+      );
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -370,9 +412,10 @@ export default function PatientMedicalRecord() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {patient.user?.name || "Nom inconnu"}
-                </h1>                
+                </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Date de naissance: {formatDate(patient.dateOfBirth)} | Groupe sanguin : {formatBloodType(patient.bloodType)}
+                  Date de naissance: {formatDate(patient.dateOfBirth)} | Groupe
+                  sanguin : {formatBloodType(patient.bloodType)}
                 </p>
               </div>
             </CardTitle>
@@ -391,7 +434,9 @@ export default function PatientMedicalRecord() {
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-green-500" />
               <p className="text-sm text-gray-900 dark:text-gray-100">
-                Dernière consultation : {formatDate(completedAppointments[0].scheduledAt)} avec Dr. {completedAppointments[0].doctor.user.name}
+                Dernière consultation :{" "}
+                {formatDate(completedAppointments[0].scheduledAt)} avec Dr.{" "}
+                {completedAppointments[0].doctor.user.name}
               </p>
             </div>
           )}
@@ -399,7 +444,12 @@ export default function PatientMedicalRecord() {
       </Card>
 
       {/* Système d'onglets */}
-      <Tabs defaultValue="infos" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs
+        defaultValue="infos"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="infos">
             <User2 className="w-4 h-4 mr-2" />
@@ -430,38 +480,58 @@ export default function PatientMedicalRecord() {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Coordonnées</h3>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Coordonnées
+                  </h3>
                   <div className="space-y-2">
                     <div className="flex items-start gap-3">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Email:</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                        Email:
+                      </span>
                       <p className="text-sm text-gray-900 dark:text-gray-100">
                         {patient.user?.email || "Email inconnu"}
                       </p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Téléphone:</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                        Téléphone:
+                      </span>
                       <p className="text-sm text-gray-900 dark:text-gray-100">
                         {patient.user?.phone || "phone inconnu"}
-                      </p> 
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Informations médicales</h3>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Informations médicales
+                  </h3>
                   <div className="space-y-2">
                     <div className="flex items-start gap-3">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Date de naissance:</span>
-                      <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(patient.dateOfBirth)}</p>
+                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                        Date de naissance:
+                      </span>
+                      <p className="text-sm text-gray-900 dark:text-gray-100">
+                        {formatDate(patient.dateOfBirth)}
+                      </p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Groupe sanguin:</span>
-                      <p className="text-sm text-gray-900 dark:text-gray-100">{formatBloodType(patient.bloodType)}</p>
+                      <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                        Groupe sanguin:
+                      </span>
+                      <p className="text-sm text-gray-900 dark:text-gray-100">
+                        {formatBloodType(patient.bloodType)}
+                      </p>
                     </div>
                     {patient.allergies && (
                       <div className="flex items-start gap-3">
-                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Allergies:</span>
-                        <p className="text-sm text-gray-900 dark:text-gray-100">{patient.allergies}</p>
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          Allergies:
+                        </span>
+                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                          {patient.allergies}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -470,24 +540,38 @@ export default function PatientMedicalRecord() {
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Urgence</h3>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Urgence
+                  </h3>
                   <div className="space-y-2">
                     {patient.emergencyContact && (
                       <div className="flex items-start gap-3">
-                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Contact:</span>
-                        <p className="text-sm text-gray-900 dark:text-gray-100">{patient.emergencyContact}</p>
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          Contact:
+                        </span>
+                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                          {patient.emergencyContact}
+                        </p>
                       </div>
                     )}
                     {patient.emergencyPhone && (
                       <div className="flex items-start gap-3">
-                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Téléphone:</span>
-                        <p className="text-sm text-gray-900 dark:text-gray-100">{patient.emergencyPhone}</p>
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          Téléphone:
+                        </span>
+                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                          {patient.emergencyPhone}
+                        </p>
                       </div>
                     )}
                     {patient.emergencyRelation && (
                       <div className="flex items-start gap-3">
-                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">Relation:</span>
-                        <p className="text-sm text-gray-900 dark:text-gray-100">{patient.emergencyRelation}</p>
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          Relation:
+                        </span>
+                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                          {patient.emergencyRelation}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -515,26 +599,34 @@ export default function PatientMedicalRecord() {
               {patient.medicalHistories?.length > 0 ? (
                 <ul className="space-y-3">
                   {patient.medicalHistories.map((history) => (
-                    <li key={history.id} className="flex items-center justify-between gap-4 p-3 border rounded-md dark:border-gray-700">
+                    <li
+                      key={history.id}
+                      className="flex items-center justify-between gap-4 p-3 border rounded-md dark:border-gray-700"
+                    >
                       <div className="flex items-center gap-4">
                         <Badge variant="outline" className="shrink-0">
                           {translateStatus(history.status)}
                         </Badge>
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{history.title} - {history.condition}</p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">
+                            {history.title} - {history.condition}
+                          </p>
                           {history.diagnosedDate && (
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                              Diagnostiqué le: {formatDate(history.diagnosedDate)}
+                              Diagnostiqué le:{" "}
+                              {formatDate(history.diagnosedDate)}
                             </p>
                           )}
                           {history.details && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{history.details}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {history.details}
+                            </p>
                           )}
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setHistoryToDelete(history.id);
                           setIsDeleteDialogOpen(true);
@@ -547,7 +639,9 @@ export default function PatientMedicalRecord() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400">Aucun antécédent médical enregistré</p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Aucun antécédent médical enregistré
+                </p>
               )}
             </CardContent>
           </Card>
@@ -568,7 +662,7 @@ export default function PatientMedicalRecord() {
                   ) : (
                     <Plus className="mr-2 h-4 w-4" />
                   )}
-                  {latestVitalSigns ? 'Modifier' : 'Ajouter'}
+                  {latestVitalSigns ? "Modifier" : "Ajouter"}
                 </Button>
               </div>
             </CardHeader>
@@ -578,40 +672,64 @@ export default function PatientMedicalRecord() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {latestVitalSigns.temperature !== undefined && (
                       <div className="border rounded-md p-3">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Température</p>
-                        <p className="font-medium">{latestVitalSigns.temperature}°C</p>
-                      </div>
-                    )}
-                    {latestVitalSigns.bloodPressureSystolic !== undefined && latestVitalSigns.bloodPressureDiastolic !== undefined && (
-                      <div className="border rounded-md p-3">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Pression artérielle</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Température
+                        </p>
                         <p className="font-medium">
-                          {latestVitalSigns.bloodPressureSystolic}/{latestVitalSigns.bloodPressureDiastolic} mmHg
+                          {latestVitalSigns.temperature}°C
                         </p>
                       </div>
                     )}
+                    {latestVitalSigns.bloodPressureSystolic !== undefined &&
+                      latestVitalSigns.bloodPressureDiastolic !== undefined && (
+                        <div className="border rounded-md p-3">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Pression artérielle
+                          </p>
+                          <p className="font-medium">
+                            {latestVitalSigns.bloodPressureSystolic}/
+                            {latestVitalSigns.bloodPressureDiastolic} mmHg
+                          </p>
+                        </div>
+                      )}
                     {latestVitalSigns.heartRate !== undefined && (
                       <div className="border rounded-md p-3">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Rythme cardiaque</p>
-                        <p className="font-medium">{latestVitalSigns.heartRate} bpm</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Rythme cardiaque
+                        </p>
+                        <p className="font-medium">
+                          {latestVitalSigns.heartRate} bpm
+                        </p>
                       </div>
                     )}
                     {latestVitalSigns.oxygenSaturation !== undefined && (
                       <div className="border rounded-md p-3">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Saturation O₂</p>
-                        <p className="font-medium">{latestVitalSigns.oxygenSaturation}%</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Saturation O₂
+                        </p>
+                        <p className="font-medium">
+                          {latestVitalSigns.oxygenSaturation}%
+                        </p>
                       </div>
                     )}
                     {latestVitalSigns.weight !== undefined && (
                       <div className="border rounded-md p-3">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Poids</p>
-                        <p className="font-medium">{latestVitalSigns.weight} kg</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Poids
+                        </p>
+                        <p className="font-medium">
+                          {latestVitalSigns.weight} kg
+                        </p>
                       </div>
                     )}
                     {latestVitalSigns.height !== undefined && (
                       <div className="border rounded-md p-3">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Taille</p>
-                        <p className="font-medium">{latestVitalSigns.height} cm</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Taille
+                        </p>
+                        <p className="font-medium">
+                          {latestVitalSigns.height} cm
+                        </p>
                       </div>
                     )}
                   </div>
@@ -620,7 +738,9 @@ export default function PatientMedicalRecord() {
                   </p>
                 </>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400">Aucun signe vital enregistré</p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Aucun signe vital enregistré
+                </p>
               )}
             </CardContent>
           </Card>
@@ -640,12 +760,17 @@ export default function PatientMedicalRecord() {
           {completedAppointments?.length ? (
             <div className="space-y-4">
               {completedAppointments.map((appt) => (
-                <Card key={appt.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={appt.id}
+                  className="hover:shadow-md transition-shadow"
+                >
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row justify-between gap-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
-                          <div className="font-medium">{appt.doctor.user.name}</div>
+                          <div className="font-medium">
+                            {appt.doctor.user.name}
+                          </div>
                         </div>
                         <div className="text-sm">
                           <span className="font-medium">
@@ -653,15 +778,20 @@ export default function PatientMedicalRecord() {
                           </span>
                           <span className="mx-2">•</span>
                           <span>
-                            {new Date(appt.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(appt.scheduledAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </span>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          Motif : {appt.reason || 'Non spécifié'}
+                          Motif : {appt.reason || "Non spécifié"}
                         </div>
                       </div>
                       <div className="flex flex-col sm:items-end gap-2">
-                        <Badge className={`${statusColors[appt.status]} capitalize`}>
+                        <Badge
+                          className={`${statusColors[appt.status]} capitalize`}
+                        >
                           {appt.status.toLowerCase()}
                         </Badge>
                         {appt.medicalRecord && (
@@ -684,7 +814,9 @@ export default function PatientMedicalRecord() {
           ) : (
             <div className="text-center py-10 space-y-2">
               <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Aucun rendez-vous trouvé</p>
+              <p className="text-sm text-muted-foreground">
+                Aucun rendez-vous trouvé
+              </p>
             </div>
           )}
         </TabsContent>
@@ -721,7 +853,9 @@ export default function PatientMedicalRecord() {
               />
             </div>
             <div>
-              <Label htmlFor="diagnosedDate">Date de diagnostic (optionnel)</Label>
+              <Label htmlFor="diagnosedDate">
+                Date de diagnostic (optionnel)
+              </Label>
               <Input
                 id="diagnosedDate"
                 type="date"
@@ -764,8 +898,12 @@ export default function PatientMedicalRecord() {
                 <Input
                   id="temperature"
                   type="number"
-                  value={temperature || ''}
-                  onChange={(e) => setTemperature(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  value={temperature || ""}
+                  onChange={(e) =>
+                    setTemperature(
+                      e.target.value ? parseFloat(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Ex: 36.6"
                   step="0.1"
                 />
@@ -775,28 +913,44 @@ export default function PatientMedicalRecord() {
                 <Input
                   id="heartRate"
                   type="number"
-                  value={heartRate || ''}
-                  onChange={(e) => setHeartRate(e.target.value ? parseInt(e.target.value) : undefined)}
+                  value={heartRate || ""}
+                  onChange={(e) =>
+                    setHeartRate(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Ex: 72"
                 />
               </div>
               <div>
-                <Label htmlFor="bloodPressureSystolic">Pression art. systolique (mmHg)</Label>
+                <Label htmlFor="bloodPressureSystolic">
+                  Pression art. systolique (mmHg)
+                </Label>
                 <Input
                   id="bloodPressureSystolic"
                   type="number"
-                  value={bloodPressureSystolic || ''}
-                  onChange={(e) => setBPsys(e.target.value ? parseInt(e.target.value) : undefined)}
+                  value={bloodPressureSystolic || ""}
+                  onChange={(e) =>
+                    setBPsys(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Ex: 120"
                 />
               </div>
               <div>
-                <Label htmlFor="bloodPressureDiastolic">Pression art. diastolique (mmHg)</Label>
+                <Label htmlFor="bloodPressureDiastolic">
+                  Pression art. diastolique (mmHg)
+                </Label>
                 <Input
                   id="bloodPressureDiastolic"
                   type="number"
-                  value={bloodPressureDiastolic || ''}
-                  onChange={(e) => setBPdia(e.target.value ? parseInt(e.target.value) : undefined)}
+                  value={bloodPressureDiastolic || ""}
+                  onChange={(e) =>
+                    setBPdia(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Ex: 80"
                 />
               </div>
@@ -805,8 +959,12 @@ export default function PatientMedicalRecord() {
                 <Input
                   id="oxygenSaturation"
                   type="number"
-                  value={oxygenSaturation || ''}
-                  onChange={(e) => setOxy(e.target.value ? parseInt(e.target.value) : undefined)}
+                  value={oxygenSaturation || ""}
+                  onChange={(e) =>
+                    setOxy(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Ex: 98"
                   min="0"
                   max="100"
@@ -817,8 +975,12 @@ export default function PatientMedicalRecord() {
                 <Input
                   id="weight"
                   type="number"
-                  value={weight || ''}
-                  onChange={(e) => setWeight(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  value={weight || ""}
+                  onChange={(e) =>
+                    setWeight(
+                      e.target.value ? parseFloat(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Ex: 70.5"
                   step="0.1"
                 />
@@ -828,15 +990,22 @@ export default function PatientMedicalRecord() {
                 <Input
                   id="height"
                   type="number"
-                  value={height || ''}
-                  onChange={(e) => setHeight(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  value={height || ""}
+                  onChange={(e) =>
+                    setHeight(
+                      e.target.value ? parseFloat(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Ex: 175"
                   step="0.1"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsVitalModalOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsVitalModalOpen(false)}
+              >
                 Annuler
               </Button>
               <Button type="submit">Enregistrer</Button>
@@ -846,18 +1015,24 @@ export default function PatientMedicalRecord() {
       </Dialog>
 
       {/* Modal de confirmation de suppression */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action supprimera définitivement cet antécédent médical et ne pourra pas être annulée.
+              Cette action supprimera définitivement cet antécédent médical et
+              ne pourra pas être annulée.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => historyToDelete && handleDeleteHistory(historyToDelete)}
+            <AlertDialogAction
+              onClick={() =>
+                historyToDelete && handleDeleteHistory(historyToDelete)
+              }
               className="bg-red-600 hover:bg-red-700"
             >
               Supprimer
@@ -878,23 +1053,34 @@ export default function PatientMedicalRecord() {
               <div>
                 <h3 className="font-medium mb-2">Diagnostic</h3>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  {recordData.diagnosis || 'Non spécifié'}
+                  {recordData.diagnosis || "Non spécifié"}
                 </div>
               </div>
 
               <div>
                 <h3 className="font-medium mb-2">Traitement</h3>
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  {recordData.treatment || 'Non spécifié'}
+                  {recordData.treatment || "Non spécifié"}
                 </div>
               </div>
 
               <div>
-                <h3 className="font-medium mb-2">Informations sur le rendez-vous</h3>
+                <h3 className="font-medium mb-2">
+                  Informations sur le rendez-vous
+                </h3>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                  <p><strong>Hôpital :</strong> {recordData.hospital?.name || 'N/A'}</p>
-                  <p><strong>Date du dossier :</strong> {new Date(recordData.createdAt).toLocaleDateString()}</p>
-                  <p><strong>Motif de consultation :</strong> {recordData.appointment?.reason || 'N/A'}</p>
+                  <p>
+                    <strong>Hôpital :</strong>{" "}
+                    {recordData.hospital?.name || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Date du dossier :</strong>{" "}
+                    {new Date(recordData.createdAt).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>Motif de consultation :</strong>{" "}
+                    {recordData.appointment?.reason || "N/A"}
+                  </p>
                 </div>
               </div>
 
