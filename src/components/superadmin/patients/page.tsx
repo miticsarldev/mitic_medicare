@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronDown,
   Download,
   Filter,
   Plus,
   Search,
-  Trash2,
-  Mail,
   ChevronLeft,
   ChevronRight,
   User,
@@ -61,10 +59,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import {
-  bulkDeletePatients,
-  bulkExportPatients,
-} from "@/app/actions/patient-actions";
+import { bulkExportPatients } from "@/app/actions/patient-actions";
 import type { Patient } from "@/types/patient";
 
 // Import our custom components
@@ -97,6 +92,26 @@ export default function PatientsPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  const isInvalidDateRange = useMemo(() => {
+    if (!dateFrom || !dateTo) return false;
+    const from = new Date(dateFrom);
+    const to = new Date(dateTo);
+    if (Number.isNaN(+from) || Number.isNaN(+to)) return false;
+    return to < from;
+  }, [dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (isInvalidDateRange) {
+      toast({
+        title: "Filtre de dates invalide",
+        description: "La date de fin est antérieure à la date de début.",
+        variant: "destructive",
+      });
+    }
+  }, [isInvalidDateRange]);
 
   const openPatientDetail = async (patient: Patient) => {
     try {
@@ -207,11 +222,29 @@ export default function PatientsPage() {
   }, [itemsPerPage]);
 
   const fetchPatients = useCallback(async () => {
+    if (isInvalidDateRange) {
+      setIsLoading(false);
+      setPatients([]);
+      setTotalPatients(0);
+      setTotalPages(1);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/superadmin/patients?search=${searchQuery}&status=${selectedStatus}&page=${currentPage}&limit=${itemsPerPage}&sortBy=${sortBy}&sortOrder=${sortOrder}`
-      );
+      const qs = new URLSearchParams({
+        search: searchQuery,
+        status: selectedStatus,
+        page: String(currentPage),
+        limit: String(itemsPerPage),
+        sortBy,
+        sortOrder,
+      });
+
+      if (dateFrom) qs.set("dateFrom", dateFrom);
+      if (dateTo) qs.set("dateTo", dateTo);
+
+      const response = await fetch(`/api/superadmin/patients?${qs.toString()}`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch patients");
@@ -238,6 +271,9 @@ export default function PatientsPage() {
     itemsPerPage,
     sortBy,
     sortOrder,
+    dateFrom,
+    dateTo,
+    isInvalidDateRange,
   ]);
 
   // Fetch patients data
@@ -272,97 +308,93 @@ export default function PatientsPage() {
 
   // Handle bulk actions
   const handleBulkAction = async (action: string) => {
-    const selectedRows = Object.keys(rowSelection).map(
-      (index) => patients[Number.parseInt(index)].id
-    );
+    const selectedIds = table
+      .getSelectedRowModel()
+      .flatRows.map((r) => r.original.id as string);
 
-    if (selectedRows.length === 0) {
-      toast({
-        title: "Info",
-        description: "No patients selected",
-      });
+    if (selectedIds.length === 0) {
+      toast({ title: "Info", description: "Pas de patients sélectionnés" });
       return;
     }
 
-    if (action === "delete") {
+    if (action === "export") {
       try {
-        const result = await bulkDeletePatients(selectedRows);
+        const result = await bulkExportPatients(selectedIds);
+        if (result?.error) throw new Error(result.error);
 
-        if (result.error) {
-          throw new Error(result.error);
-        }
+        if (Array.isArray(result?.data) && result.data.length > 0) {
+          // Stable column order
+          const columns = [
+            "id",
+            "name",
+            "email",
+            "phone",
+            "dateOfBirth",
+            "gender",
+            "address",
+            "status",
+            "emergencyContact",
+            "bloodType",
+            "allergies",
+          ];
 
-        toast({
-          title: "Success",
-          description: `${selectedRows.length} patients deleted successfully`,
-        });
+          // CSV header
+          const header = columns.join(",");
 
-        setRowSelection({});
-        fetchPatients();
-      } catch (error) {
-        console.error("Error bulk deleting patients:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete patients",
-          variant: "destructive",
-        });
-      }
-    } else if (action === "export") {
-      try {
-        const result = await bulkExportPatients(selectedRows);
+          // CSV rows
+          const rows = result.data.map((row: Record<string, unknown>) =>
+            columns
+              .map((key) => {
+                let value = row[key];
 
-        if (result.error) {
-          throw new Error(result.error);
-        }
+                // Normalize values
+                if (value === null || value === undefined) value = "";
+                if (value instanceof Date) value = value.toISOString();
 
-        // Create CSV content
-        if (result?.data) {
-          const headers = Object.keys(result?.data[0]).join(",");
-          const rows = result?.data
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .map((patient: any) =>
-              Object.values(patient)
-                .map((value) =>
-                  typeof value === "string"
-                    ? `"${value.replace(/"/g, '""')}"`
-                    : value
-                )
-                .join(",")
-            )
-            .join("\n");
-          const csvContent = `${headers}\n${rows}`;
-          // Create download link
-          const blob = new Blob([csvContent], {
-            type: "text/csv;charset=utf-8;",
-          });
+                // Ensure string + CSV escaped
+                const s = String(value);
+                const escaped = `"${s.replace(/"/g, '""')}"`;
+                return escaped;
+              })
+              .join(",")
+          );
+
+          // Excel-friendly UTF-8 BOM
+          const csv = "\uFEFF" + [header, ...rows].join("\n");
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
-          link.setAttribute("href", url);
-          link.setAttribute("download", "patients_export.csv");
-          link.style.visibility = "hidden";
+          link.href = url;
+          const ts = new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replace(/[:T]/g, "-");
+          link.download = `patients_export_${ts}.csv`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
+          URL.revokeObjectURL(url);
 
           toast({
-            title: "Success",
-            description: `${selectedRows.length} patients exported successfully`,
+            title: "Export terminé",
+            description: `${selectedIds.length} patient(s) exporté(s)`,
+          });
+        } else {
+          toast({
+            title: "Aucune donnée",
+            description:
+              "Les patients sélectionnés n'ont pas de données exportables.",
           });
         }
       } catch (error) {
         console.error("Error exporting patients:", error);
         toast({
-          title: "Error",
-          description: "Failed to export patients",
+          title: "Erreur",
+          description: "Échec de l’export",
           variant: "destructive",
         });
       }
-    } else if (action === "email") {
-      // In a real app, this would open an email composer or send emails
-      toast({
-        title: "Info",
-        description: `Email functionality would be implemented here for ${selectedRows.length} patients`,
-      });
     }
   };
 
@@ -381,9 +413,6 @@ export default function PatientsPage() {
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button onClick={openPatientCreate}>
             <Plus className="mr-2 h-4 w-4" /> Ajouter un patient
-          </Button>
-          <Button variant="outline" onClick={() => handleBulkAction("export")}>
-            <Download className="mr-2 h-4 w-4" /> Exporter
           </Button>
         </div>
       </div>
@@ -456,6 +485,34 @@ export default function PatientsPage() {
                       <SelectItem value="50">50 par page</SelectItem>
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-9 w-[150px]"
+                      aria-label="Date de début"
+                    />
+                    <span className="text-muted-foreground">→</span>
+                    <Input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-9 w-[150px]"
+                      aria-label="Date de fin"
+                    />
+                  </div>
+                  {isInvalidDateRange && (
+                    <span className="text-xs text-destructive mt-1">
+                      La date de fin doit être postérieure à la date de début.
+                    </span>
+                  )}
                 </div>
                 {Object.keys(rowSelection).length > 0 && (
                   <div className="flex items-center gap-2">
@@ -476,20 +533,7 @@ export default function PatientsPage() {
                           <Download className="mr-2 h-4 w-4" />
                           Exporter
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction("email")}
-                        >
-                          <Mail className="mr-2 h-4 w-4" />
-                          Envoyer un email
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction("delete")}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Supprimer
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -569,7 +613,7 @@ export default function PatientsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
+                    disabled={currentPage === 1 || isInvalidDateRange}
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Précédent
@@ -597,7 +641,7 @@ export default function PatientsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
+                    disabled={currentPage === totalPages || isInvalidDateRange}
                   >
                     Suivant
                     <ChevronRight className="h-4 w-4 ml-1" />

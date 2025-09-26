@@ -35,10 +35,10 @@ export async function getAllPatients(options: GetPatientsOptions) {
       isActive: status === "all" ? undefined : status === "active",
       OR: search
         ? [
-          { name: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { id: { contains: search, mode: "insensitive" } },
-        ]
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { id: { contains: search, mode: "insensitive" } },
+          ]
         : undefined,
     },
   };
@@ -352,48 +352,86 @@ export async function bulkDeletePatients(patientIds: string[]) {
   }
 }
 
+const BLOOD_LABEL: Record<string, string> = {
+  A_POSITIVE: "A+",
+  A_NEGATIVE: "A-",
+  B_POSITIVE: "B+",
+  B_NEGATIVE: "B-",
+  AB_POSITIVE: "AB+",
+  AB_NEGATIVE: "AB-",
+  O_POSITIVE: "O+",
+  O_NEGATIVE: "O-",
+};
+
 export async function bulkExportPatients(patientIds: string[]) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
 
-    // Get patient data for export
+    if (!Array.isArray(patientIds) || patientIds.length === 0) {
+      return { error: "No ids provided" };
+    }
+
+    // IMPORTANT: filter by Patient.id (NOT user.id)
     const patients = await prisma.patient.findMany({
-      where: {
-        user: {
-          id: {
-            in: patientIds,
-          },
-        },
-      },
+      where: { id: { in: patientIds } },
       include: {
         user: {
-          include: {
-            profile: true,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            isActive: true,
+            dateOfBirth: true,
+            profile: {
+              select: {
+                address: true,
+                city: true,
+                state: true,
+                country: true,
+                zipCode: true,
+                genre: true,
+              },
+            },
           },
         },
       },
     });
 
-    // Format data for export
-    const exportData = patients.map((patient) => ({
-      id: patient.user.id,
-      name: patient.user.name,
-      email: patient.user.email,
-      phone: patient.user.phone,
-      dateOfBirth: patient?.user?.dateOfBirth?.toISOString().split("T")[0],
-      gender: patient.user.profile?.genre === "MALE" ? "Homme" : "Femme",
-      address: patient.user.profile?.address || "",
-      status: patient.user.isActive ? "active" : "inactive",
-      insuranceProvider: patient.insuranceProvider || "",
-      insuranceNumber: patient.insuranceNumber || "",
-      emergencyContact: patient.emergencyContact || "",
-      bloodType: patient.bloodType || "",
-      allergies: patient.allergies || "",
+    const exportData = patients.map((p) => ({
+      // choose what you want as the primary id in CSV
+      patientId: p.id,
+      userId: p.user?.id ?? "",
+      name: p.user?.name ?? "",
+      email: p.user?.email ?? "",
+      phone: p.user?.phone ?? "",
+      dateOfBirth: p.user?.dateOfBirth
+        ? new Date(p.user.dateOfBirth).toISOString().split("T")[0]
+        : "",
+      gender:
+        p.user?.profile?.genre === "MALE"
+          ? "Homme"
+          : p.user?.profile?.genre === "FEMALE"
+            ? "Femme"
+            : "",
+      address: p.user?.profile?.address ?? "",
+      city: p.user?.profile?.city ?? "",
+      state: p.user?.profile?.state ?? "",
+      zipCode: p.user?.profile?.zipCode ?? "",
+      country: p.user?.profile?.country ?? "",
+      status: p.user?.isActive ? "active" : "inactive",
+      emergencyContact: p.emergencyContact ?? "",
+      emergencyPhone: p.emergencyPhone ?? "",
+      bloodType: p.bloodType ? (BLOOD_LABEL[p.bloodType] ?? p.bloodType) : "",
+      allergies: p.allergies ?? "",
+      insuranceProvider: p.insuranceProvider ?? "",
+      insuranceNumber: p.insuranceNumber ?? "",
+      medicalNotes: p.medicalNotes ?? "",
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
     }));
 
     return { success: true, data: exportData };
@@ -481,17 +519,17 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       ...data.user,
       profile: data.user.profile
         ? {
-          address: data.user.profile.address ?? undefined,
-          city: data.user.profile.city ?? undefined,
-          state: data.user.profile.state ?? undefined,
-          zipCode: data.user.profile.zipCode ?? undefined,
-          country: data.user.profile.country ?? undefined,
-          bio: data.user.profile.bio ?? undefined,
-          avatarUrl: data.user.profile.avatarUrl ?? undefined,
-          genre: data.user.profile.genre ?? undefined,
-          createdAt: data.user.profile.createdAt ?? undefined,
-          updatedAt: data.user.profile.updatedAt ?? undefined,
-        }
+            address: data.user.profile.address ?? undefined,
+            city: data.user.profile.city ?? undefined,
+            state: data.user.profile.state ?? undefined,
+            zipCode: data.user.profile.zipCode ?? undefined,
+            country: data.user.profile.country ?? undefined,
+            bio: data.user.profile.bio ?? undefined,
+            avatarUrl: data.user.profile.avatarUrl ?? undefined,
+            genre: data.user.profile.genre ?? undefined,
+            createdAt: data.user.profile.createdAt ?? undefined,
+            updatedAt: data.user.profile.updatedAt ?? undefined,
+          }
         : undefined,
     },
 
@@ -517,64 +555,64 @@ export const getPatientById = async (id: string): Promise<Patient> => {
       },
       hospital: a.hospital
         ? {
-          id: a.hospital.id,
-          name: a.hospital.name,
-          city: a.hospital.city,
-        }
+            id: a.hospital.id,
+            name: a.hospital.name,
+            city: a.hospital.city,
+          }
         : undefined,
       medicalRecord: a.medicalRecord
         ? {
-          id: a.medicalRecord.id,
-          diagnosis: a.medicalRecord.diagnosis,
-          treatment: a.medicalRecord.treatment ?? undefined,
-          notes: a.medicalRecord.notes ?? undefined,
-          followUpNeeded: a.medicalRecord.followUpNeeded,
-          followUpDate: a.medicalRecord.followUpDate ?? undefined,
-          createdAt: a.medicalRecord.createdAt,
-          updatedAt: a.medicalRecord.updatedAt,
-          hospital: a.medicalRecord.hospital
-            ? {
-              id: a.medicalRecord.hospital.id,
-              name: a.medicalRecord.hospital.name,
-            }
-            : undefined,
-          doctor: {
-            id: a.medicalRecord.doctor.id,
-            user: {
-              id: a.medicalRecord.doctor.user.id,
-              name: a.medicalRecord.doctor.user.name,
-            },
-          },
-          attachments: a.medicalRecord.attachments.map((att) => ({
-            id: att.id,
-            fileName: att.fileName,
-            fileType: att.fileType,
-            fileUrl: att.fileUrl,
-            fileSize: att.fileSize,
-            uploadedAt: att.uploadedAt,
-          })),
-          prescriptions: a.medicalRecord.prescription.map((p) => ({
-            id: p.id,
-
-            medicationName: p.medicationName,
-            dosage: p.dosage,
-            frequency: p.frequency,
-            duration: p.duration ?? undefined,
-            instructions: p.instructions ?? undefined,
-            isActive: p.isActive,
-            startDate: p.startDate,
-            endDate: p.endDate ?? undefined,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt,
+            id: a.medicalRecord.id,
+            diagnosis: a.medicalRecord.diagnosis,
+            treatment: a.medicalRecord.treatment ?? undefined,
+            notes: a.medicalRecord.notes ?? undefined,
+            followUpNeeded: a.medicalRecord.followUpNeeded,
+            followUpDate: a.medicalRecord.followUpDate ?? undefined,
+            createdAt: a.medicalRecord.createdAt,
+            updatedAt: a.medicalRecord.updatedAt,
+            hospital: a.medicalRecord.hospital
+              ? {
+                  id: a.medicalRecord.hospital.id,
+                  name: a.medicalRecord.hospital.name,
+                }
+              : undefined,
             doctor: {
-              id: p.doctor.id,
+              id: a.medicalRecord.doctor.id,
               user: {
-                id: p.doctor.user.id,
-                name: p.doctor.user.name,
+                id: a.medicalRecord.doctor.user.id,
+                name: a.medicalRecord.doctor.user.name,
               },
             },
-          })),
-        }
+            attachments: a.medicalRecord.attachments.map((att) => ({
+              id: att.id,
+              fileName: att.fileName,
+              fileType: att.fileType,
+              fileUrl: att.fileUrl,
+              fileSize: att.fileSize,
+              uploadedAt: att.uploadedAt,
+            })),
+            prescriptions: a.medicalRecord.prescription.map((p) => ({
+              id: p.id,
+
+              medicationName: p.medicationName,
+              dosage: p.dosage,
+              frequency: p.frequency,
+              duration: p.duration ?? undefined,
+              instructions: p.instructions ?? undefined,
+              isActive: p.isActive,
+              startDate: p.startDate,
+              endDate: p.endDate ?? undefined,
+              createdAt: p.createdAt,
+              updatedAt: p.updatedAt,
+              doctor: {
+                id: p.doctor.id,
+                user: {
+                  id: p.doctor.user.id,
+                  name: p.doctor.user.name,
+                },
+              },
+            })),
+          }
         : undefined,
     })),
 
@@ -629,4 +667,3 @@ export const getPatientById = async (id: string): Promise<Patient> => {
 
   return mapped;
 };
-

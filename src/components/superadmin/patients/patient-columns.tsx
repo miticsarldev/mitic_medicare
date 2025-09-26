@@ -61,15 +61,6 @@ export function usePatientColumns({
         enableHiding: false,
       },
       {
-        accessorKey: "id",
-        header: "ID",
-        cell: ({ row }) => (
-          <div className="font-medium">
-            {row.original.id.substring(0, 8)}...
-          </div>
-        ),
-      },
-      {
         accessorKey: "name",
         header: ({ column }) => (
           <div
@@ -141,7 +132,7 @@ export function usePatientColumns({
             className="flex items-center cursor-pointer"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            Dernière connexion
+            Dernière mise à jour
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),

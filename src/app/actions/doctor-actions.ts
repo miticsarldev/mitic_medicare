@@ -4,31 +4,67 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { SubscriptionPlan, UserRole } from "@prisma/client";
+import {
+  Prisma,
+  SubscriberType,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  UserRole,
+} from "@prisma/client";
 import { Availability } from "@/types/doctor";
 import { format } from "date-fns";
+import bcrypt from "bcryptjs";
 
 export async function createDoctor(formData: FormData) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
 
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const phone = formData.get("phone") as string;
-    const password =
-      (formData.get("password") as string) || "defaultPassword123";
-    const specialty = formData.get("specialty") as string;
-    const location = formData.get("location") as string;
-    const status = formData.get("status") as string;
-    const subscription = formData.get("subscription") as SubscriptionPlan;
-    const licenseNumber = formData.get("licenseNumber") as string;
-    const role = formData.get("role") as UserRole;
-    const hospitalId = (formData.get("hospitalId") as string) || null;
+    // Base fields
+    const name = (formData.get("name") as string)?.trim();
+    const email = (formData.get("email") as string)?.trim();
+    const phone = (formData.get("phone") as string)?.trim();
+    const passwordRaw =
+      ((formData.get("password") as string) ?? "").trim() ||
+      "defaultPassword123";
+    const specialty = (formData.get("specialty") as string)?.trim();
+    const location = (formData.get("location") as string)?.trim();
+    const status = ((formData.get("status") as string) ?? "active").trim();
+    const licenseNumber = (formData.get("licenseNumber") as string) ?? "";
+    const hospitalIdRaw = (formData.get("hospitalId") as string) ?? "";
+    const verified = (formData.get("verified") as string) === "on";
+    const doctorType = ((formData.get("doctorType") as string) ??
+      "hospital") as "independent" | "hospital";
+    const isIndependent = doctorType === "independent";
+
+    // Optional independent-only
+    const subscriptionPlanStr = (formData.get("subscription") as string) || "";
+    const subscriptionPlan = subscriptionPlanStr as SubscriptionPlan | "";
+
+    // Validate required
+    if (!name || !email || !specialty || !location) {
+      return { error: "Missing required fields." };
+    }
+    if (!passwordRaw) {
+      return { error: "Password is required." };
+    }
+    if (!isIndependent && !hospitalIdRaw) {
+      return { error: "Hospital is required for hospital doctors." };
+    }
+    if (isIndependent && !subscriptionPlan) {
+      return {
+        error: "Subscription plan is required for independent doctors.",
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(passwordRaw, 10);
+
+    // Role by type
+    const role: UserRole = isIndependent
+      ? UserRole.INDEPENDENT_DOCTOR
+      : UserRole.HOSPITAL_DOCTOR;
 
     // Create user
     const user = await prisma.user.create({
@@ -36,11 +72,11 @@ export async function createDoctor(formData: FormData) {
         name,
         email,
         phone,
-        password, // In a real app, you would hash this password
-        role: role,
+        password: hashedPassword,
+        role,
         isActive: status === "active",
         emailVerified: new Date(),
-        isApproved: true,
+        isApproved: verified, // or true if you want auto-approval
         profile: {
           create: {
             city: location,
@@ -49,31 +85,41 @@ export async function createDoctor(formData: FormData) {
       },
     });
 
-    await prisma.doctor.create({
+    // Create doctor
+    const doctor = await prisma.doctor.create({
       data: {
         userId: user.id,
         specialization: specialty,
-        hospitalId: hospitalId || null,
-        licenseNumber: licenseNumber,
-        isVerified: true,
-        isIndependent: !hospitalId, // optionnel : déterminer automatiquement le type
-        subscription: {
-          create: {
-            plan: subscription as SubscriptionPlan,
-            startDate: new Date(),
-            status: "ACTIVE",
-            amount: 0,
-            endDate: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000),
-            subscriberType: "HOSPITAL",
-          },
-        },
+        hospitalId: isIndependent ? null : hospitalIdRaw || null,
+        licenseNumber,
+        isVerified: verified,
+        isIndependent,
       },
     });
 
-    // In a real app, you would send an email here if sendEmail is true
+    // Independent → create doctor-level subscription
+    if (isIndependent) {
+      await prisma.subscription.create({
+        data: {
+          subscriberType: SubscriberType.DOCTOR,
+          doctorId: doctor.id,
+          plan: subscriptionPlan as SubscriptionPlan,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          endDate: new Date(
+            new Date().setFullYear(new Date().getFullYear() + 1)
+          ),
+          currency: "XOF",
+          autoRenew: true,
+          amount: new Prisma.Decimal(0),
+        },
+      });
+    }
+
+    // (Optional) send invite email if you kept `sendEmail` in the form
 
     revalidatePath("/doctors");
-    return { success: true, doctorId: user.id };
+    return { success: true, doctorId: doctor.id };
   } catch (error) {
     console.error("Error creating doctor:", error);
     return { error: "Failed to create doctor" };
@@ -120,35 +166,9 @@ export async function getDoctorById(id: string) {
   };
 }
 
-export async function updateDoctorStatus(doctorId: string, status: string) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
-    if (!session || session.user.role !== "SUPER_ADMIN") {
-      return { error: "Unauthorized" };
-    }
-
-    await prisma.user.update({
-      where: {
-        id: doctorId,
-      },
-      data: {
-        isActive: status === "active",
-      },
-    });
-
-    revalidatePath("/doctors");
-    return { success: true };
-  } catch (error) {
-    console.error("Error updating doctor status:", error);
-    return { error: "Failed to update doctor status" };
-  }
-}
-
-export async function updateDoctorVerification(
+export async function updateDoctorStatus(
   doctorId: string,
-  verified: boolean
+  status: "active" | "inactive"
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -158,21 +178,54 @@ export async function updateDoctorVerification(
       return { error: "Unauthorized" };
     }
 
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { userId: true },
+    });
+    if (!doctor) return { error: "Doctor not found" };
+
     await prisma.user.update({
-      where: {
-        id: doctorId,
-      },
-      data: {
-        isApproved: verified,
-      },
+      where: { id: doctor.userId },
+      data: { isActive: status === "active" },
     });
 
-    revalidatePath("/doctors");
+    revalidatePath("/dasboard/superadmin/users/doctors");
     return { success: true };
   } catch (error) {
-    console.error("Error updating doctor verification:", error);
-    return { error: "Failed to update doctor verification" };
+    console.error("Error updating doctor status:", error);
+    return { error: "Failed to update doctor status" };
   }
+}
+
+export async function updateDoctorVerification(
+  doctorId: string,
+  verified: boolean,
+  alsoApproveUser = true
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "SUPER_ADMIN")
+    return { error: "Unauthorized" };
+
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: doctorId },
+    select: { userId: true },
+  });
+  if (!doctor) return { error: "Doctor not found" };
+
+  await prisma.doctor.update({
+    where: { id: doctorId },
+    data: { isVerified: verified },
+  });
+
+  if (alsoApproveUser) {
+    await prisma.user.update({
+      where: { id: doctor.userId },
+      data: { isApproved: verified },
+    });
+  }
+
+  revalidatePath("/dasboard/superadmin/users/doctors"); // adjust to your page route
+  return { success: true };
 }
 
 export async function bulkDeleteDoctors(doctorIds: string[]) {
@@ -636,7 +689,6 @@ export async function getDoctorSlotsWithTakenStatus(
   return result;
 }
 
-
 // Lister toutes les disponibilités d'un médecin
 export async function getDoctorAvailabilities(doctorId: string) {
   return await prisma.doctorAvailability.findMany({
@@ -670,7 +722,6 @@ export async function upsertDoctorAvailability(availability: {
   }
 }
 
-
 // Supprimer une disponibilité
 export async function deleteDoctorAvailability(id: string) {
   return await prisma.doctorAvailability.delete({
@@ -678,7 +729,10 @@ export async function deleteDoctorAvailability(id: string) {
   });
 }
 
-export async function updateSlotDurationForAllAvailabilities(doctorId: string, slotDuration: number) {
+export async function updateSlotDurationForAllAvailabilities(
+  doctorId: string,
+  slotDuration: number
+) {
   return await prisma.doctorAvailability.updateMany({
     where: { doctorId },
     data: { slotDuration },
@@ -708,10 +762,10 @@ export async function updateAvailabilityForMultipleDoctors(
   try {
     // Pré-collecter les IDs existants pour chaque doctorId
     const existingAvailabilities = await Promise.all(
-      doctorIds.map(doctorId =>
+      doctorIds.map((doctorId) =>
         prisma.doctorAvailability.findFirst({
           where: { doctorId, dayOfWeek },
-          select: { id: true }
+          select: { id: true },
         })
       )
     );
@@ -720,7 +774,7 @@ export async function updateAvailabilityForMultipleDoctors(
       doctorIds.map((doctorId, idx) =>
         prisma.doctorAvailability.upsert({
           where: {
-            id: existingAvailabilities[idx]?.id ?? '', // Fournir une valeur par défaut qui forcera la création
+            id: existingAvailabilities[idx]?.id ?? "", // Fournir une valeur par défaut qui forcera la création
           },
           update: {
             startTime,
@@ -746,4 +800,3 @@ export async function updateAvailabilityForMultipleDoctors(
     throw new Error("Failed to update doctors' availabilities");
   }
 }
-

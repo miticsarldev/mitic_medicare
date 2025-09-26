@@ -1,14 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-  Calendar,
-  Check,
-  FileText,
-  Pencil,
-  ShieldCheck,
-  Trash2,
-} from "lucide-react";
+import { Calendar, Check, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +26,7 @@ interface DoctorDetailsProps {
   doctor: Doctor | null;
   onEdit: (doctor: Doctor) => void;
   onDelete: (doctor: Doctor) => void;
-  onStatusChange: (doctorId: string, status: string) => void;
+  onStatusChange: (doctorId: string, status: "active" | "inactive") => void;
   onVerificationChange: (doctorId: string, verified: boolean) => void;
 }
 
@@ -124,7 +117,7 @@ export default function DoctorDetails({
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
-                      Patients
+                      Rendez-vous
                     </Label>
                     <p className="text-sm font-medium">
                       {doctor._count?.appointments || 0}
@@ -179,22 +172,38 @@ export default function DoctorDetails({
                       Abonnement
                     </Label>
                     <div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          doctor.subscription?.plan === "FREE"
-                            ? "border-purple-500 text-purple-500"
-                            : doctor.subscription?.plan === "PREMIUM"
-                              ? "border-blue-500 text-blue-500"
-                              : doctor.subscription?.plan === "FREE"
-                                ? "border-amber-500 text-amber-500"
-                                : doctor.subscription?.plan === "STANDARD"
-                                  ? "border-red-500 text-red-500"
-                                  : "border-gray-500 text-gray-500"
+                      {(() => {
+                        const plan =
+                          doctor.subscription?.plan ??
+                          doctor.hospital?.subscription?.plan ??
+                          null;
+
+                        if (!plan) {
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="border-gray-500 text-gray-500"
+                            >
+                              Aucun
+                            </Badge>
+                          );
                         }
-                      >
-                        {doctor.subscription?.plan || "Medecin d'Hopital"}
-                      </Badge>
+
+                        const color =
+                          plan === "FREE"
+                            ? "border-purple-500 text-purple-500"
+                            : plan === "STANDARD"
+                              ? "border-blue-500 text-blue-500"
+                              : plan === "PREMIUM"
+                                ? "border-amber-500 text-amber-500"
+                                : "border-gray-500 text-gray-500";
+
+                        return (
+                          <Badge variant="outline" className={color}>
+                            {plan}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </div>
                   {doctor.hospital && (
@@ -243,30 +252,6 @@ export default function DoctorDetails({
                     <p className="text-sm">{doctor.experience}</p>
                   </div>
                 )}
-
-                <div className="mt-6">
-                  <h4 className="text-sm font-semibold mb-2">
-                    Documents de vérification
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Diplôme médical</span>
-                    </div>
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Carte professionnelle</span>
-                    </div>
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Pièce d&apos;identité</span>
-                    </div>
-                    <div className="rounded-md border p-2 flex items-center">
-                      <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-xs">Assurance professionnelle</span>
-                    </div>
-                  </div>
-                </div>
               </TabsContent>
               <TabsContent value="activity" className="space-y-4 mt-4">
                 <div className="space-y-4">
@@ -274,9 +259,6 @@ export default function DoctorDetails({
                     <h4 className="text-sm font-semibold">
                       Rendez-vous récents
                     </h4>
-                    <Button variant="ghost" size="sm">
-                      Voir tout
-                    </Button>
                   </div>
                   <div className="space-y-2">
                     {doctor.appointments && doctor.appointments.length > 0 ? (
@@ -325,52 +307,6 @@ export default function DoctorDetails({
                         Aucun rendez-vous récent
                       </div>
                     )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">Statistiques</h4>
-                  <div className="space-y-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs">Rendez-vous ce mois</span>
-                        <span className="text-xs font-medium">
-                          {doctor._count?.appointments || 0}
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-blue-500"
-                          style={{ width: "60%" }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs">Taux de complétion</span>
-                        <span className="text-xs font-medium">92%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-green-500"
-                          style={{ width: "92%" }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs">Temps de réponse moyen</span>
-                        <span className="text-xs font-medium">4h</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-amber-500"
-                          style={{ width: "75%" }}
-                        ></div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </TabsContent>
@@ -438,10 +374,6 @@ export default function DoctorDetails({
                     >
                       <Pencil className="mr-2 h-4 w-4" />
                       Modifier le profil
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      Gérer les permissions
                     </Button>
                     <Button
                       variant="outline"

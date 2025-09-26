@@ -10,6 +10,7 @@ import {
   ReviewStatus,
   ReviewTargetType,
   HospitalStatus,
+  BillingInterval,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
@@ -338,6 +339,50 @@ type PatientWithUser = {
   id: string;
   userId: string;
 };
+
+async function upsertPlan(
+  code: SubscriptionPlan,
+  price: number,
+  currency: string,
+  interval: BillingInterval,
+  name: string,
+  description: string,
+  limits: Partial<{
+    maxAppointments: number;
+    maxPatients: number;
+    maxDoctorsPerHospital: number;
+    storageGb: number;
+  }>
+) {
+  const priceDec = price.toFixed(2);
+  await prisma.planConfig.upsert({
+    where: { code },
+    create: {
+      code,
+      name,
+      description,
+      price: priceDec,
+      currency,
+      interval,
+      isActive: true,
+      limits: { create: { ...limits } },
+    },
+    update: {
+      name,
+      description,
+      price: priceDec,
+      currency,
+      interval,
+      isActive: true,
+      limits: {
+        upsert: {
+          create: { ...limits },
+          update: { ...limits },
+        },
+      },
+    },
+  });
+}
 
 async function main() {
   console.log("Starting database seeding...");
@@ -1255,6 +1300,35 @@ async function main() {
   }
 
   console.log("Created reviews");
+
+  await upsertPlan("FREE", 0, "USD", "MONTH", "Free", "Offre gratuite", {
+    maxAppointments: 20,
+    maxPatients: 50,
+    storageGb: 1,
+  });
+  await upsertPlan(
+    "STANDARD",
+    50000,
+    "XOF",
+    "MONTH",
+    "Standard",
+    "Pour les pros individuels",
+    { maxAppointments: 300, maxPatients: 1000, storageGb: 10 }
+  );
+  await upsertPlan(
+    "PREMIUM",
+    150000,
+    "XOF",
+    "MONTH",
+    "Premium",
+    "Pour les structures exigeantes",
+    {
+      maxAppointments: 2000,
+      maxPatients: 5000,
+      storageGb: 50,
+      maxDoctorsPerHospital: 50,
+    }
+  );
 
   console.log("Database seeding completed successfully!");
 }

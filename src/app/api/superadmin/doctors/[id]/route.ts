@@ -4,8 +4,15 @@ import { type NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { UserRole } from "@prisma/client";
+import {
+  Prisma,
+  SubscriberType,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  UserRole,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
 
 export async function GET(
   request: NextRequest,
@@ -143,8 +150,6 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -152,84 +157,131 @@ export async function PUT(
     const doctorId = params.id;
     const data = await request.json();
 
-    // Get doctor record
-    const doctor = await prisma.doctor.findFirst({
-      where: {
-        user: {
-          id: doctorId,
-        },
-      },
+    // Fetch doctor by doctor.id (NOT user.id), include linked user & subscription
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      include: { user: true, subscription: true },
     });
 
     if (!doctor) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
     }
 
-    const password = data.password || "defaultPassword123";
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const isIndependent =
+      typeof data.isIndependent === "boolean"
+        ? data.isIndependent
+        : doctor.isIndependent;
 
-    // Update user data
+    const hospitalId = isIndependent ? null : (data.hospitalId ?? null);
+    const verified = !!data.verified;
+
+    // Build user update (hash only if password provided)
+    const userUpdate: Prisma.UserUpdateInput = {
+      name: data.name ?? doctor.user.name,
+      email: data.email ?? doctor.user.email,
+      phone: data.phone ?? doctor.user.phone,
+      role: isIndependent
+        ? UserRole.INDEPENDENT_DOCTOR
+        : UserRole.HOSPITAL_DOCTOR,
+      isActive: data.status ? data.status === "active" : doctor.user.isActive,
+      isApproved:
+        typeof data.isApproved === "boolean"
+          ? data.isApproved
+          : doctor.user.isApproved,
+    };
+    if (data.password) {
+      userUpdate.password = await bcrypt.hash(data.password, 10);
+    }
+
     await prisma.user.update({
-      where: {
-        id: doctorId,
-      },
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        role: data.role as UserRole,
-        password: hashedPassword,
-        isActive: data.isActive || false,
-        isApproved: data.isApproved || false,
-      },
+      where: { id: doctor.userId },
+      data: userUpdate,
     });
 
-    // Update or create user profile
+    // Upsert profile
     await prisma.userProfile.upsert({
-      where: {
-        userId: doctorId,
-      },
+      where: { userId: doctor.userId },
       update: {
-        address: data.address,
-        city: data.location,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        bio: data.bio,
-        avatarUrl: data.avatarUrl,
-        genre: data.genre,
+        address: data.address ?? undefined,
+        city: data.location ?? undefined,
+        state: data.state ?? undefined,
+        zipCode: data.zipCode ?? undefined,
+        country: data.country ?? undefined,
+        bio: data.bio ?? undefined,
+        avatarUrl: data.avatarUrl ?? undefined,
+        genre: data.genre ?? undefined,
       },
       create: {
-        userId: doctorId,
-        address: data.address,
-        city: data.location,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        bio: data.bio,
-        avatarUrl: data.avatarUrl,
-        genre: data.genre,
+        userId: doctor.userId,
+        address: data.address ?? null,
+        city: data.location ?? null,
+        state: data.state ?? null,
+        zipCode: data.zipCode ?? null,
+        country: data.country ?? null,
+        bio: data.bio ?? null,
+        avatarUrl: data.avatarUrl ?? null,
+        genre: data.genre ?? null,
       },
     });
 
-    // Update doctor data
+    // Update doctor
     await prisma.doctor.update({
-      where: {
-        id: doctor.id,
-      },
+      where: { id: doctorId },
       data: {
-        specialization: data.specialization,
-        hospitalId: data.hospital?.id || null,
-        licenseNumber: data.licenseNumber,
-        departmentId: data.department?.id || null,
-        education: data.education,
-        experience: data.experience,
-        consultationFee: data.consultationFee,
-        isIndependent: data.isIndependent,
-        isVerified: data.isVerified,
+        specialization:
+          data.specialty ?? data.specialization ?? doctor.specialization,
+        hospitalId,
+        licenseNumber: data.licenseNumber ?? doctor.licenseNumber,
+        departmentId: data.departmentId ?? null, // if you pass plain id
+        education: data.education ?? doctor.education,
+        experience: data.experience ?? doctor.experience,
+        consultationFee: data.consultationFee ?? doctor.consultationFee,
+        isIndependent,
+        isVerified: verified,
       },
     });
 
+    // Subscription management
+    if (isIndependent) {
+      const plan: SubscriptionPlan | undefined = data.subscription;
+      if (plan) {
+        if (doctor.subscription) {
+          // Update existing doctor-level subscription
+          await prisma.subscription.update({
+            where: { id: doctor.subscription.id },
+            data: {
+              subscriberType: SubscriberType.DOCTOR,
+              plan: plan,
+              status: SubscriptionStatus.ACTIVE,
+            },
+          });
+        } else {
+          // Create if missing
+          await prisma.subscription.create({
+            data: {
+              subscriberType: SubscriberType.DOCTOR,
+              doctorId: doctorId,
+              plan: plan,
+              status: SubscriptionStatus.ACTIVE,
+              startDate: new Date(),
+              endDate: new Date(
+                new Date().setFullYear(new Date().getFullYear() + 1)
+              ),
+              currency: "XOF",
+              autoRenew: true,
+              amount: new Prisma.Decimal(0),
+            },
+          });
+        }
+      }
+    } else if (doctor.subscription) {
+      // If switching to hospital doctor, remove doctor-level subscription (optional policy)
+      await prisma.subscription.delete({
+        where: { id: doctor.subscription.id },
+      });
+    }
+
+    revalidatePath("/dashboard/superadmin/users/doctors");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating doctor:", error);
@@ -241,43 +293,63 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const doctorId = params.id;
+    const id = params.id;
 
-    // Find the doctor record
-    const doctor = await prisma.doctor.findFirst({
-      where: {
-        user: {
-          id: doctorId,
-        },
-      },
+    // We accept either a doctor.id or a user.id
+    // 1) Try to find a doctor by doctor.id
+    let doctor = await prisma.doctor.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
     });
 
+    // 2) If not found, maybe `id` is actually a user.id; find doctor by userId
     if (!doctor) {
-      return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
+      doctor = await prisma.doctor.findFirst({
+        where: { userId: id },
+        select: { id: true, userId: true },
+      });
+      if (!doctor) {
+        return NextResponse.json(
+          { error: "Doctor not found" },
+          { status: 404 }
+        );
+      }
     }
 
-    // Delete the doctor and related data
-    // Note: This assumes you have proper cascading deletes set up in your schema
+    // Delete the User — most relations are anchored to the user and/or
+    // set to cascade (per your schema). If some relations are not cascade,
+    // Prisma/DB will raise a FK error which we catch below.
     await prisma.user.delete({
-      where: {
-        id: doctorId,
-      },
+      where: { id: doctor.userId },
     });
 
+    revalidatePath("/dashboard/superadmin/users/doctors");
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting doctor:", error);
+  } catch (err: unknown) {
+    // Handle FK constraint errors cleanly (e.g., appointments/reviews exist)
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === "P2003") {
+        return NextResponse.json(
+          {
+            error:
+              "Impossible de supprimer ce médecin car des données associées existent (rendez-vous, dossiers, avis, etc.). " +
+              "Désactivez le compte ou supprimez d'abord les dépendances.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    console.error("Error deleting doctor:", err);
     return NextResponse.json(
       { error: "Failed to delete doctor" },
       { status: 500 }

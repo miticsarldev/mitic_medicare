@@ -23,6 +23,27 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
+
+    let createdAtRange: { gte?: Date; lte?: Date } | undefined = undefined;
+    if (dateFrom || dateTo) {
+      createdAtRange = {};
+      if (dateFrom) {
+        const d = new Date(dateFrom);
+        if (!Number.isNaN(+d))
+          createdAtRange.gte = new Date(d.setHours(0, 0, 0, 0));
+      }
+      if (dateTo) {
+        const d = new Date(dateTo);
+        if (!Number.isNaN(+d))
+          createdAtRange.lte = new Date(d.setHours(23, 59, 59, 999));
+      }
+      // If both are invalid, leave undefined
+      if (!createdAtRange.gte && !createdAtRange.lte)
+        createdAtRange = undefined;
+    }
+
     // Calculate pagination
     const skip = (page - 1) * limit;
 
@@ -30,6 +51,7 @@ export async function GET(request: NextRequest) {
       user: {
         role: "PATIENT",
         isActive: status === "all" ? undefined : status === "active",
+        createdAt: createdAtRange,
         OR: search
           ? [
               { name: { contains: search, mode: "insensitive" } },

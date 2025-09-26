@@ -484,6 +484,44 @@ model SubscriptionPayment {
     @@index([paymentDate])
 }
 
+// ======== BILLING ENUM ========
+enum BillingInterval {
+    MONTH
+    YEAR
+}
+
+// ======== PLAN CONFIG MODELS ========
+model PlanConfig {
+    id          String           @id @default(cuid())
+    code        SubscriptionPlan @unique // FREE | STANDARD | PREMIUM
+    name        String
+    description String?          @db.Text
+    price       Decimal          @db.Decimal(10, 2) // canonical price for the plan
+    currency    String           @default("USD")
+    interval    BillingInterval  @default(MONTH) // billing cadence for the price
+    isActive    Boolean          @default(true)
+    updatedAt   DateTime         @updatedAt
+    createdAt   DateTime         @default(now())
+
+    // 1-1 limits
+    limits PlanLimits?
+}
+
+model PlanLimits {
+    id           String     @id @default(cuid())
+    planConfigId String     @unique
+    plan         PlanConfig @relation(fields: [planConfigId], references: [id], onDelete: Cascade)
+
+    // configurable quotas (all optional; null means “unlimited”)
+    maxAppointments       Int?
+    maxPatients           Int?
+    maxDoctorsPerHospital Int?
+    storageGb             Int?
+
+    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+}
+
 // ======== REVIEW MODELS ========
 enum ReviewStatus {
     PENDING

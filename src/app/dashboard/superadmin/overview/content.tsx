@@ -5,9 +5,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Activity,
-  ArrowDown,
   ArrowRight,
-  ArrowUp,
   Building2,
   Calendar,
   Check,
@@ -78,6 +76,7 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
+  Label,
 } from "recharts";
 import {
   DashboardStats,
@@ -87,6 +86,7 @@ import {
 
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+const SHOW_CHART_ACTIONS = false;
 
 interface DashboardContentProps {
   dashboardStats: DashboardStats;
@@ -100,7 +100,7 @@ export function DashboardContent({
   subscriptionStats,
 }: DashboardContentProps) {
   const { toast } = useToast();
-  const [timeRange, setTimeRange] = useState<string>("30d");
+  const [timeRange, setTimeRange] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<PendingApprovalUser | null>(
     null
@@ -238,6 +238,7 @@ export function DashboardContent({
               <SelectValue placeholder="Période" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Tous les temps</SelectItem>
               <SelectItem value="24h">Dernières 24 heures</SelectItem>
               <SelectItem value="7d">7 derniers jours</SelectItem>
               <SelectItem value="30d">30 derniers jours</SelectItem>
@@ -281,23 +282,6 @@ export function DashboardContent({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center pt-1 text-xs">
-                {stat.trend === "up" ? (
-                  <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
-                ) : (
-                  <ArrowDown className="mr-1 h-3 w-3 text-red-500" />
-                )}
-                <span
-                  className={
-                    stat.trend === "up" ? "text-green-500" : "text-red-500"
-                  }
-                >
-                  {stat.change}
-                </span>
-                <span className="ml-1 text-muted-foreground">
-                  vs période précédente
-                </span>
-              </div>
             </CardContent>
           </Card>
         ))}
@@ -313,28 +297,6 @@ export function DashboardContent({
                 Évolution du nombre d&apos;utilisateurs par catégorie
               </CardDescription>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Download className="mr-2 h-4 w-4" />
-                  Télécharger PNG
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Exporter CSV
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Paramètres
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -381,28 +343,30 @@ export function DashboardContent({
                 Revenus générés par les abonnements et services
               </CardDescription>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Download className="mr-2 h-4 w-4" />
-                  Télécharger PNG
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Exporter CSV
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Paramètres
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {SHOW_CHART_ACTIONS ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled>
+                    <Download className="mr-2 h-4 w-4" />
+                    Télécharger PNG
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exporter CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Paramètres
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -418,26 +382,16 @@ export function DashboardContent({
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient
-                    id="colorServices"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
+                    <stop offset="5%" stopOpacity={0.8} />
+                    <stop offset="95%" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip
-                  formatter={(value) => [`${value} €`, ""]}
-                  labelFormatter={(label) => `Date: ${label}`}
+                  formatter={(v) => [`${v} XOF`, ""]}
+                  labelFormatter={(l) => `Date: ${l}`}
                 />
                 <Legend />
                 <Area
@@ -448,14 +402,6 @@ export function DashboardContent({
                   fillOpacity={1}
                   fill="url(#colorSubscriptions)"
                 />
-                <Area
-                  type="monotone"
-                  dataKey="services"
-                  name="Services"
-                  stroke="#82ca9d"
-                  fillOpacity={1}
-                  fill="url(#colorServices)"
-                />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -464,7 +410,7 @@ export function DashboardContent({
 
       {/* Additional Sections */}
       <div className="grid gap-4 md:grid-cols-2 grid-cols-1">
-        {/* User Distribution & System Health */}
+        {/* -------- Distribution des Utilisateurs -------- */}
         <Card>
           <CardHeader>
             <CardTitle>Distribution des Utilisateurs</CardTitle>
@@ -472,34 +418,120 @@ export function DashboardContent({
               Répartition par type d&apos;utilisateur
             </CardDescription>
           </CardHeader>
-          <CardContent className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPieChart>
-                <Pie
-                  data={stats.userDistributionData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                >
-                  {stats.userDistributionData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+
+          <CardContent className="h-[260px] sm:h-[300px] md:h-[340px]">
+            {(() => {
+              const total = (stats.userDistributionData ?? []).reduce(
+                (sum, d) => sum + (d?.value ?? 0),
+                0
+              );
+
+              // Empty state
+              if (!total) {
+                return (
+                  <div className="flex h-full flex-col items-center justify-center text-center">
+                    <div className="rounded-full bg-muted p-3 mb-3">
+                      {/* any icon you already have imported, e.g. Users */}
+                      <Users className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">
+                      Aucune donnée à afficher
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Les segments apparaîtront dès que des utilisateurs seront
+                      inscrits.
+                    </p>
+                    <div className="mt-3">
+                      <Button variant="outline" asChild>
+                        <a href="/dashboard/superadmin/users/patients">
+                          Voir les utilisateurs
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Chart when data exists
+              return (
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsPieChart
+                    margin={{ top: 8, right: 8, bottom: 24, left: 8 }}
+                  >
+                    <Pie
+                      data={stats.userDistributionData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="55%"
+                      outerRadius="80%"
+                      dataKey="value"
+                      labelLine={false}
+                      label={false}
+                      isAnimationActive={false}
+                    >
+                      {stats.userDistributionData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                      <Label
+                        position="center"
+                        content={({ viewBox }) => {
+                          if (!viewBox) return null;
+                          const { cx, cy } = viewBox as {
+                            cx: number;
+                            cy: number;
+                          };
+                          return (
+                            <g>
+                              <text
+                                x={cx}
+                                y={cy - 4}
+                                textAnchor="middle"
+                                className="fill-current"
+                                style={{ fontSize: 14, fontWeight: 600 }}
+                              >
+                                Total
+                              </text>
+                              <text
+                                x={cx}
+                                y={cy + 16}
+                                textAnchor="middle"
+                                className="fill-current"
+                                style={{ fontSize: 18, fontWeight: 700 }}
+                              >
+                                {total}
+                              </text>
+                            </g>
+                          );
+                        }}
+                      />
+                    </Pie>
+
+                    <Tooltip
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      formatter={(value: number, _name: string, props: any) => {
+                        const pct = props?.payload?.value
+                          ? `${Math.round((props.payload.value / total) * 100)}%`
+                          : "";
+                        return [`${value} • ${pct}`, "Utilisateurs"];
+                      }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, ""]} />
-              </RechartsPieChart>
-            </ResponsiveContainer>
+                    <Legend
+                      verticalAlign="bottom"
+                      align="center"
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: 12 }}
+                    />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              );
+            })()}
           </CardContent>
         </Card>
 
+        {/* -------- Abonnements -------- */}
         <Card>
           <CardHeader>
             <CardTitle>Abonnements</CardTitle>
@@ -507,19 +539,51 @@ export function DashboardContent({
               Répartition par type d&apos;abonnement
             </CardDescription>
           </CardHeader>
+
           <CardContent className="space-y-4">
-            {subStats.planStats.slice(0, 4).map((plan) => (
-              <div key={plan?.plan} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{plan.plan}</span>
-                  <span className="text-xs font-medium text-blue-500">
-                    {plan.count} utilisateurs
-                  </span>
+            {(() => {
+              const rows = (subStats?.planStats ?? []).slice(0, 4);
+              const hasData = rows.some((p) => (p?.count ?? 0) > 0);
+
+              if (!rows.length || !hasData) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="rounded-full bg-muted p-3 mb-3">
+                      <CreditCard className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">
+                      Aucun abonnement actif
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Les statistiques apparaîtront dès que des abonnements
+                      seront souscrits.
+                    </p>
+                    <div className="mt-3">
+                      <Button variant="outline" asChild>
+                        <a href="/dashboard/superadmin/subscriptions/all">
+                          Gérer les abonnements
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return rows.map((plan) => (
+                <div key={plan.plan} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{plan.plan}</span>
+                    <span className="text-xs font-medium text-blue-500">
+                      {plan.count}{" "}
+                      {plan.count > 1 ? "utilisateurs" : "utilisateur"}
+                    </span>
+                  </div>
+                  <Progress value={plan.percentage} className="h-2 bg-muted" />
                 </div>
-                <Progress value={plan.percentage} className="h-2 bg-muted" />
-              </div>
-            ))}
+              ));
+            })()}
           </CardContent>
+
           <CardFooter className="border-t bg-muted/50 px-6 py-3">
             <Button variant="ghost" className="w-full" asChild>
               <a href="/dashboard/superadmin/subscriptions/all">

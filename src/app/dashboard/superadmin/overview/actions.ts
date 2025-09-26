@@ -18,102 +18,20 @@ import type {
 } from "./types";
 import { sanitizePrisma } from "@/utils/sanitizePrisma";
 
-function calculatePercentageChange(current: number, previous: number): string {
-  const change = (current - previous) / Math.max(previous, 1); // doit etre multiplie par 100 pour le pourcentage
-  // const change = ((current - previous) / previous) * 100;
-  const formatted = `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
-  return formatted;
-}
-
 export async function getDashboardStats(
-  timeRange: string = "30d"
+  timeRange: string = "all"
 ): Promise<DashboardStats> {
   try {
-    // Get user counts
-    const totalUsers = await prisma.user.count();
-    const totalPatients = await prisma.user.count({
-      where: { role: "PATIENT" },
-    });
-    const totalDoctors = await prisma.user.count({
-      where: {
-        OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
-      },
-    });
-    const totalHospitals = await prisma.user.count({
-      where: { role: "HOSPITAL_ADMIN" },
-    });
-
-    let userData: number | null = null;
-
-    switch (timeRange) {
-      case "7d":
-        const sevenDaysAgo = subDays(new Date(), 7);
-        userData = await prisma.user.count({
-          where: {
-            createdAt: {
-              gte: sevenDaysAgo,
-            },
-          },
-        });
-        break;
-      case "30d":
-        const thirtyDaysAgo = subDays(new Date(), 30);
-        userData = await prisma.user.count({
-          where: {
-            createdAt: {
-              gte: thirtyDaysAgo,
-            },
-          },
-        });
-        break;
-      case "90d":
-        const ninetyDaysAgo = subDays(new Date(), 90);
-        userData = await prisma.user.count({
-          where: {
-            createdAt: {
-              gte: ninetyDaysAgo,
-            },
-          },
-        });
-        break;
-      case "6m":
-        const sixMonthsAgo = subMonths(new Date(), 6);
-        userData = await prisma.user.count({
-          where: {
-            createdAt: {
-              gte: sixMonthsAgo,
-            },
-          },
-        });
-        break;
-      case "1y":
-        const oneYearAgo = subMonths(new Date(), 12);
-        userData = await prisma.user.count({
-          where: {
-            createdAt: {
-              gte: oneYearAgo,
-            },
-          },
-        });
-        break;
-      default:
-        const defaultDaysAgo = subDays(new Date(), 30);
-        userData = await prisma.user.count({
-          where: {
-            createdAt: {
-              gte: defaultDaysAgo,
-            },
-          },
-        });
-        break;
-    }
-
-    // Get appointment counts
-    const totalAppointments = await prisma.appointment.count();
-
     // Calculate percentage changes (mock data for now)
     let periodDays = 30;
     switch (timeRange) {
+      case "all":
+        const p = new Date("2024-01-01");
+        const newDate = new Date();
+        const milliDate = newDate.getTime() - p.getTime();
+        const oneDayInMilliseconds = 1000 * 60 * 60 * 24;
+        periodDays = Math.floor(milliDate / oneDayInMilliseconds);
+        break;
       case "24h":
         periodDays = 1;
         break;
@@ -136,115 +54,76 @@ export async function getDashboardStats(
 
     const now = new Date();
     const periodStart = subDays(now, periodDays);
-    const previousPeriodStart = subDays(periodStart, periodDays);
 
     // ➤ Count for previous period
-    const [
-      previousUsers,
-      previousPatients,
-      previousDoctors,
-      previousAppointments,
-    ] = await Promise.all([
-      prisma.user.count({
-        where: { createdAt: { gte: previousPeriodStart, lt: periodStart } },
-      }),
-      prisma.user.count({
-        where: {
-          role: "PATIENT",
-          createdAt: { gte: previousPeriodStart, lt: periodStart },
-        },
-      }),
-      prisma.user.count({
-        where: {
-          OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
-          createdAt: { gte: previousPeriodStart, lt: periodStart },
-        },
-      }),
-      prisma.appointment.count({
-        where: { createdAt: { gte: previousPeriodStart, lt: periodStart } },
-      }),
-    ]);
+    const currentNewDoctors = await prisma.user.count({
+      where: {
+        createdAt: { gte: periodStart, lt: now },
+        OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
+      },
+    });
 
-    // ➤ Calculate percentage change
-    const userChange = calculatePercentageChange(userData, previousUsers);
-    const patientChange = calculatePercentageChange(
-      await prisma.user.count({
-        where: { role: "PATIENT", createdAt: { gte: periodStart } },
-      }),
-      previousPatients
-    );
-    const doctorChange = calculatePercentageChange(
-      await prisma.user.count({
-        where: {
-          OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
-          createdAt: { gte: periodStart },
-        },
-      }),
-      previousDoctors
-    );
-    const appointmentChange = calculatePercentageChange(
-      await prisma.appointment.count({
-        where: { createdAt: { gte: periodStart } },
-      }),
-      previousAppointments
-    );
-
-    // const userChange = "+12.5%";
-    // const patientChange = "+18.2%";
-    // const doctorChange = "+5.3%";
-    // const appointmentChange = "-2.1%";
+    // Get appointment counts
+    const totalAppointments = await prisma.appointment.count({
+      where: {
+        createdAt: { gte: periodStart, lt: now },
+      },
+    });
 
     const userGrowthData = await generateUserGrowthData(timeRange);
 
     const revenueData = await generateRevenueData(timeRange);
 
     // Generate user distribution data
+    const totalPatients = await prisma.user.count({
+      where: { role: "PATIENT" },
+    });
+    const totalDoctors = await prisma.user.count({
+      where: {
+        OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
+      },
+    });
+    const totalHospitals = await prisma.user.count({
+      where: { role: "HOSPITAL_ADMIN" },
+    });
+
     const userDistributionData = [
-      {
-        name: "Patients",
-        value: Math.round((totalPatients / totalUsers) * 100) || 0,
-      },
-      {
-        name: "Médecins",
-        value: Math.round((totalDoctors / totalUsers) * 100) || 0,
-      },
-      {
-        name: "Hôpitaux",
-        value: Math.round((totalHospitals / totalUsers) * 100) || 0,
-      },
+      { name: "Patients", value: totalPatients },
+      { name: "Médecins", value: totalDoctors },
+      { name: "Hôpitaux", value: totalHospitals },
     ];
 
     // Overview stats
     const overviewStats = [
       {
         title: "Utilisateurs Totaux",
-        value: totalUsers.toString(),
-        change: userChange,
-        trend: "up" as const,
+        value: await prisma.user
+          .count({
+            where: { createdAt: { gte: periodStart } },
+          })
+          .then((v) => v.toString()),
         icon: "Users",
         color: "blue",
       },
       {
-        title: "Nouveaux Patients",
-        value: userData.toString(),
-        change: patientChange,
-        trend: "up" as const,
+        title: "Nouveaux patients",
+        value: await prisma.user
+          .count({
+            where: { role: "PATIENT", createdAt: { gte: periodStart } },
+          })
+          .then((v) => v.toString()),
         icon: "User",
         color: "green",
       },
       {
-        title: "Médecins Actifs",
-        value: totalDoctors.toString(),
-        change: doctorChange,
-        trend: "up" as const,
+        title: "Nouveaux médecins",
+        value: currentNewDoctors.toString(),
         icon: "Activity",
         color: "purple",
       },
       {
         title: "Rendez-vous",
         value: totalAppointments.toString(),
-        change: appointmentChange,
-        trend: "down" as const,
         icon: "Calendar",
         color: "amber",
       },
@@ -271,6 +150,17 @@ async function generateUserGrowthData(
   let labelFormat: string;
 
   switch (timeRange) {
+    case "all":
+      const p = new Date("2023-07-01");
+      const newDate = new Date();
+      const diffInMonths =
+        (newDate.getFullYear() - p.getFullYear()) * 12 +
+        (newDate.getMonth() - p.getMonth());
+      startDate = subMonths(now, diffInMonths);
+      console.log({ startDate });
+      intervalDays = 30;
+      labelFormat = "MMM";
+      break;
     case "24h":
       startDate = subDays(now, 1);
       intervalDays = 1;
@@ -357,6 +247,17 @@ async function generateRevenueData(range: string): Promise<RevenueDataPoint[]> {
   let labelFormat = "dd/MM";
 
   switch (range) {
+    case "all":
+      const p = new Date("2023-07-01");
+      const newDate = new Date();
+      const diffInMonths =
+        (newDate.getFullYear() - p.getFullYear()) * 12 +
+        (newDate.getMonth() - p.getMonth());
+      startDate = subMonths(now, diffInMonths);
+      console.log({ startDate });
+      interval = 30;
+      labelFormat = "MMM";
+      break;
     case "24h":
       startDate = subDays(now, 1);
       interval = 1;
@@ -415,13 +316,12 @@ async function generateRevenueData(range: string): Promise<RevenueDataPoint[]> {
 
     const subscriptions = subscriptionRevenue._sum.amount?.toNumber() || 0;
     const services = 0; // 👈 tu peux adapter si tu as d'autres sources
-    const total = subscriptions + services;
 
     data.push({
       date: format(from, labelFormat, { locale: fr }),
       subscriptions,
       services,
-      total,
+      total: subscriptions,
     });
   }
 
@@ -432,21 +332,23 @@ export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {
   try {
     const users = await prisma.user.findMany({
       where: {
-        isApproved: false,
-        emailVerified: { not: null }, // Only users who have verified their email
-        role: {
-          in: ["HOSPITAL_ADMIN", "INDEPENDENT_DOCTOR"],
-        },
+        OR: [
+          // Independent doctors waiting for approval OR whose Doctor is not verified
+          {
+            role: "INDEPENDENT_DOCTOR",
+            OR: [{ isApproved: false }, { doctor: { isVerified: false } }],
+          },
+          // Hospital admins awaiting approval
+          { role: "HOSPITAL_ADMIN", isApproved: false },
+        ],
       },
       include: {
         profile: true,
         doctor: true,
         hospital: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 5, // Limit to 10 for dashboard
+      orderBy: { createdAt: "desc" },
+      take: 5,
     });
 
     return sanitizePrisma(users) as PendingApprovalUser[];
@@ -454,6 +356,25 @@ export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {
     console.error("Error fetching pending approvals:", error);
     throw new Error("Failed to fetch pending approvals");
   }
+}
+
+export async function getPendingSubscriptionPayments() {
+  const payments = await prisma.subscriptionPayment.findMany({
+    where: { status: "PENDING" },
+    orderBy: { paymentDate: "desc" },
+    take: 6,
+    include: {
+      subscription: {
+        include: {
+          doctor: {
+            include: { user: { select: { name: true, email: true } } },
+          },
+          hospital: { select: { name: true, email: true } },
+        },
+      },
+    },
+  });
+  return payments as SubscriptionPaymentWithRelations[];
 }
 
 export async function getSubscriptionStats(): Promise<SubscriptionStats> {
@@ -465,6 +386,8 @@ export async function getSubscriptionStats(): Promise<SubscriptionStats> {
       },
     });
 
+    console.log({ totalActiveSubscriptions });
+
     // Get total revenue (completed payments)
     const totalRevenue = await prisma.subscriptionPayment.aggregate({
       _sum: {
@@ -474,6 +397,8 @@ export async function getSubscriptionStats(): Promise<SubscriptionStats> {
         status: "COMPLETED",
       },
     });
+
+    console.log({ totalRevenue });
 
     // Get subscriptions by plan and subscriber type
     const subscriptionsByPlan = await prisma.subscription.groupBy({

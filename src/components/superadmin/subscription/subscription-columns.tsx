@@ -64,15 +64,6 @@ export function useSubscriptionColumns({
         enableHiding: false,
       },
       {
-        accessorKey: "id",
-        header: "ID",
-        cell: ({ row }) => (
-          <div className="font-medium">
-            {row.original.id.substring(0, 8)}...
-          </div>
-        ),
-      },
-      {
         accessorKey: "subscriberName",
         header: ({ column }) => (
           <div
@@ -98,7 +89,7 @@ export function useSubscriptionColumns({
 
           return (
             <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-8 w-8 bg-opacity-50">
                 <AvatarImage src={avatarUrl || ""} alt={name} />
                 <AvatarFallback>{name.charAt(0)}</AvatarFallback>
               </Avatar>

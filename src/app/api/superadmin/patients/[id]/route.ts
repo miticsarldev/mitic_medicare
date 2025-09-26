@@ -1,5 +1,4 @@
-export const dynamic = "force-dynamic";
-
+// app/api/superadmin/patients/[id]/route.ts
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -67,8 +66,6 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -76,70 +73,72 @@ export async function PUT(
     const patientId = params.id;
     const data = await request.json();
 
-    // Update user data
+    // ✅ resolve userId from Patient
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      select: { id: true, userId: true },
+    });
+    if (!patient) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+    }
+
+    // Update User
     await prisma.user.update({
-      where: {
-        id: patientId,
-      },
+      where: { id: patient.userId },
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone,
         isActive: data.status === "active",
-        dateOfBirth: new Date(data.dateOfBirth),
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
       },
     });
 
-    // Update or create user profile
+    // Upsert Profile
     await prisma.userProfile.upsert({
-      where: {
-        userId: patientId,
-      },
+      where: { userId: patient.userId },
       update: {
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        genre: data.gender === "Homme" ? "MALE" : "FEMALE",
+        address: data.address ?? null,
+        city: data.city ?? null,
+        state: data.state ?? null,
+        zipCode: data.zipCode ?? null,
+        country: data.country ?? null,
+        genre:
+          data.gender === "Homme"
+            ? "MALE"
+            : data.gender === "Femme"
+              ? "FEMALE"
+              : null,
       },
       create: {
-        userId: patientId,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        genre: data.gender === "Homme" ? "MALE" : "FEMALE",
+        userId: patient.userId,
+        address: data.address ?? null,
+        city: data.city ?? null,
+        state: data.state ?? null,
+        zipCode: data.zipCode ?? null,
+        country: data.country ?? null,
+        genre:
+          data.gender === "Homme"
+            ? "MALE"
+            : data.gender === "Femme"
+              ? "FEMALE"
+              : null,
       },
     });
 
-    // Get patient record
-    const patient = await prisma.patient.findFirst({
-      where: {
-        user: {
-          id: patientId,
-        },
-      },
-    });
-
-    if (!patient) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
-    }
-
-    // Update patient data
+    // Update Patient
     await prisma.patient.update({
-      where: {
-        id: patient.id,
-      },
+      where: { id: patient.id },
       data: {
         bloodType: data.bloodType || null,
-        allergies: data.allergies.join(","),
-        emergencyContact: data.emergencyContact,
-        emergencyPhone: data.emergencyPhone,
-        insuranceProvider: data.insuranceProvider,
-        insuranceNumber: data.insuranceNumber,
-        medicalNotes: data.chronicConditions.join(","),
+        allergies: Array.isArray(data.allergies)
+          ? data.allergies.join(",")
+          : null,
+        emergencyContact: data.emergencyContact ?? null,
+        emergencyPhone: data.emergencyPhone ?? null,
+        medicalNotes: Array.isArray(data.chronicConditions)
+          ? data.chronicConditions.join(",")
+          : null,
       },
     });
 
@@ -154,45 +153,79 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const patientId = params.id;
-
-    // Find the patient record
-    const patient = await prisma.patient.findFirst({
-      where: {
-        user: {
-          id: patientId,
-        },
-      },
+    // Resolve userId OUTSIDE the transaction (cheap + avoids extra time inside)
+    const link = await prisma.patient.findUnique({
+      where: { id: params.id },
+      select: { id: true, userId: true },
     });
-
-    if (!patient) {
+    if (!link) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
+    const { userId } = link;
 
-    // Delete the patient and related data
-    // Note: This assumes you have proper cascading deletes set up in your schema
-    await prisma.user.delete({
-      where: {
-        id: patientId,
+    // Phased hard delete with increased timeout.
+    await prisma.$transaction(
+      async (tx) => {
+        // Phase 1: children of MedicalRecord
+        await Promise.all([
+          tx.medicalRecordAttachment.deleteMany({
+            where: { medicalRecord: { patientId: params.id } },
+          }),
+          tx.prescription.deleteMany({
+            where: { medicalRecord: { patientId: params.id } },
+          }),
+          tx.prescriptionOrder.deleteMany({
+            where: { medicalRecord: { patientId: params.id } },
+          }),
+        ]);
+
+        // Phase 2: direct children of Patient
+        await Promise.all([
+          tx.prescription.deleteMany({ where: { patientId: params.id } }),
+          tx.prescriptionOrder.deleteMany({ where: { patientId: params.id } }),
+          tx.vitalSign.deleteMany({ where: { patientId: params.id } }),
+          tx.medicalHistory.deleteMany({ where: { patientId: params.id } }),
+          tx.appointment.deleteMany({ where: { patientId: params.id } }),
+        ]);
+
+        // Phase 3: medical records themselves
+        await tx.medicalRecord.deleteMany({ where: { patientId: params.id } });
+
+        // Phase 4: rows keyed by userId
+        await Promise.all([
+          tx.review.deleteMany({ where: { authorId: userId } }),
+          tx.session.deleteMany({ where: { userId } }),
+          tx.account.deleteMany({ where: { userId } }),
+          // Some apps store verification tokens by email/identifier, not userId.
+          // If yours links by userId, keep this; if by email, adjust accordingly.
+          tx.verificationToken
+            .deleteMany({ where: { identifier: userId } })
+            .catch(() => {}),
+        ]);
+
+        // Phase 5: parent rows (order matters if no DB cascades configured)
+        await tx.patient.delete({ where: { id: params.id } });
+        await tx.user.delete({ where: { id: userId } });
       },
-    });
+      // ⤵️ increase interactive transaction timeout (ms)
+      { timeout: 20_000, maxWait: 10_000 }
+    );
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting patient:", error);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    console.error("Error deleting patient:", err);
     return NextResponse.json(
-      { error: "Failed to delete patient" },
+      { error: err?.message ?? "Failed to delete patient" },
       { status: 500 }
     );
   }

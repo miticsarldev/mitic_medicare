@@ -23,6 +23,7 @@ export type Patient = {
     email: string;
     phone: string;
     role: UserRole;
+    dateOfBirth: Date | null;
     emailVerified: Date | null;
     isApproved: boolean;
     isActive: boolean;
@@ -109,7 +110,6 @@ export type Patient = {
         };
       }[];
     };
-
   }[];
 
   medicalHistories?: {

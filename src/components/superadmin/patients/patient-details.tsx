@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { Patient } from "@/types/patient";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BLOOD_LABEL, GENDER_LABEL } from "@/utils/patient-format";
 
 interface PatientDetailsModalProps {
   isOpen: boolean;
@@ -53,6 +54,14 @@ export default function PatientDetailsModal({
     return format(new Date(date), "d MMMM yyyy", { locale: fr });
   };
 
+  const gender = patient?.user?.profile?.genre
+    ? (GENDER_LABEL[patient.user.profile.genre] ?? "—")
+    : "—";
+
+  const blood = patient?.bloodType
+    ? (BLOOD_LABEL[patient.bloodType] ?? "—")
+    : "—";
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl">
@@ -73,8 +82,7 @@ export default function PatientDetailsModal({
             </div>
           </div>
           <DialogDescription>
-            ID: {patient.user.id} • Inscrit le{" "}
-            {formatDate(patient.user.createdAt)}
+            Inscrit le {formatDate(patient.user.createdAt)}
           </DialogDescription>
         </DialogHeader>
 
@@ -103,13 +111,13 @@ export default function PatientDetailsModal({
                   <div className="text-sm font-medium text-muted-foreground">
                     Date de naissance
                   </div>
-                  <div>{formatDate(patient.dateOfBirth)}</div>
+                  <div>{formatDate(patient.user.dateOfBirth)}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">
                     Genre
                   </div>
-                  <div>{patient.user.profile?.genre || "Non renseigné"}</div>
+                  <div>{gender || "Non renseigné"}</div>
                 </div>
               </CardContent>
             </Card>
@@ -159,7 +167,7 @@ export default function PatientDetailsModal({
                   <div className="text-sm font-medium text-muted-foreground">
                     Groupe sanguin
                   </div>
-                  <div>{patient.bloodType || "Non renseigné"}</div>
+                  <div>{blood || "Non renseigné"}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">
@@ -171,27 +179,6 @@ export default function PatientDetailsModal({
                       ? patient.allergies.join(", ")
                       : "Aucune allergie connue"}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Insurance Information */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Assurance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">
-                    Assureur
-                  </div>
-                  <div>{patient.insuranceProvider || "Non renseigné"}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">
-                    Numéro d&apos;assuré
-                  </div>
-                  <div>{patient.insuranceNumber || "Non renseigné"}</div>
                 </div>
               </CardContent>
             </Card>
