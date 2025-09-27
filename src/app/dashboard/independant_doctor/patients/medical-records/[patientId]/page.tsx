@@ -49,7 +49,7 @@ interface PatientDetails {
     name: string;
     email: string;
     phone: string;
-    dateOfBirth: Date;
+    dateOfBirth?: Date | null;
   };
   bloodType?: string;
   allergies?: string;
@@ -667,7 +667,7 @@ export default function PatientMedicalRecord() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Date de naissance:{" "}
                   {patient.user
-                    ? formatDate(patient.user.dateOfBirth)
+                    ? formatDate(patient.user.dateOfBirth ?? undefined)
                     : "Non spécifiée"}{" "}
                   | Groupe sanguin :{" "}
                   <Badge
@@ -771,7 +771,7 @@ export default function PatientMedicalRecord() {
                       </span>
                       <p className="text-sm text-gray-900 dark:text-gray-100">
                         {patient.user
-                          ? formatDate(patient.user.dateOfBirth)
+                          ? formatDate(patient.user.dateOfBirth ?? undefined)
                           : "Date de naissance non disponible"}
                       </p>
                     </div>
@@ -879,7 +879,7 @@ export default function PatientMedicalRecord() {
                           {history.diagnosedDate && (
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                               Diagnostiqué le:{" "}
-                              {formatDate(history.diagnosedDate)}
+                              {formatDate(history.diagnosedDate ?? undefined)}
                             </p>
                           )}
                           {history.details && (
