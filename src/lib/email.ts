@@ -1,5 +1,6 @@
 import transporter from "@/lib/transporter";
 import {
+  getApprovalEmailTemplate,
   getPasswordResetCodeEmailTemplate,
   getPasswordResetSuccessEmailTemplate,
   getVerificationEmailTemplate,
@@ -98,5 +99,44 @@ export async function sendPasswordResetSuccessEmail(
     console.log(`✅ Email envoyé à ${email}`);
   } catch (error) {
     console.error("❌ Erreur lors de l'envoi de l'email:", error);
+  }
+}
+
+export async function sendApprovingEmail(
+  name: string,
+  email: string,
+  userRole: UserRole = "INDEPENDENT_DOCTOR",
+  hospitalName: string
+) {
+  const subject = "MITIC CARE – Compte approuvé";
+  let htmlContent: string;
+  if (userRole === "INDEPENDENT_DOCTOR") {
+    htmlContent = await getApprovalEmailTemplate(
+      name,
+      hospitalName,
+      "INDEPENDENT_DOCTOR"
+    );
+  } else if (userRole === "HOSPITAL_ADMIN") {
+    htmlContent = await getApprovalEmailTemplate(
+      name,
+      hospitalName,
+      "HOSPITAL_ADMIN"
+    );
+  } else {
+    return;
+  }
+
+  const mailOptions = {
+    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject,
+    html: htmlContent,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Email d'approbation envoyé à ${email}`);
+  } catch (error) {
+    console.error("❌ Erreur lors de l'envoi de l'email d'approbation:", error);
   }
 }

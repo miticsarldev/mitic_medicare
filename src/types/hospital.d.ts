@@ -41,6 +41,14 @@ export interface Hospital {
   doctors?: {
     id: string;
     specialization: string;
+    user: {
+      name: string;
+      email: string;
+      phone: string;
+      profile: {
+        avatarUrl: string;
+      };
+    };
     isVerified: boolean;
     isIndependent: boolean;
     availableForChat: boolean;

@@ -29,7 +29,6 @@ export const authOptions: AuthOptions = {
 
         // Check if the identifier is an email or phone number
         const isEmail = identifier.includes("@");
-        console.log({ isEmail, identifier });
 
         const user = await prisma.user.findUnique({
           where: isEmail ? { email: identifier } : { phone: identifier },

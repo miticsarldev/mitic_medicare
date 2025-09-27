@@ -55,6 +55,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { signOut } from "next-auth/react";
 
 export default function AccountUnderReview() {
   const router = useRouter();
@@ -65,18 +66,30 @@ export default function AccountUnderReview() {
   const [email, setEmail] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
+  //   const [hasSignOut, setHasSignOut] = useState<boolean>(false);
 
   useEffect(() => {
     const storedData = localStorage.getItem("mitic-pending-approval");
-    if (storedData) {
-      const { email, name, role } = JSON.parse(storedData);
-      setEmail(email);
-      setRole(role);
-      setName(name);
-    } else {
-      router.push("/auth");
+
+    if (!storedData) {
+      router.replace("/auth");
+      return;
     }
-  }, [router]);
+
+    const { email, name, role } = JSON.parse(storedData);
+    setEmail(email);
+    setRole(role);
+    setName(name);
+
+    signOut({ redirect: false });
+
+    toast({
+      title: "Compte en attente de vérification",
+      description:
+        "Notre équipe doit approuver votre compte avant que vous puissiez vous connecter.",
+      variant: "destructive",
+    });
+  }, [router, toast]);
 
   // User type specific content
   const userTypeContent = {

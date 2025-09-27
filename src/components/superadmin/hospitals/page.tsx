@@ -287,48 +287,70 @@ export default function HospitalsPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  // Handle status change
-  const handleStatusChange = useCallback(
-    async (hospitalId: string, status: HospitalStatus) => {
-      const result = await updateHospitalStatus(hospitalId, status);
-
-      if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Hospital status updated successfully",
-        });
-        fetchHospitals();
-      }
+  // inside HospitalsPage component, near other useCallbacks
+  const patchHospitalLocally = useCallback(
+    (hospitalId: string, patch: Partial<Hospital>) => {
+      // list
+      setHospitals((prev) =>
+        prev.map((h) => (h.id === hospitalId ? { ...h, ...patch } : h))
+      );
+      // details pane (if open)
+      setSelectedHospital((prev) =>
+        prev && prev.id === hospitalId ? { ...prev, ...patch } : prev
+      );
     },
-    [fetchHospitals]
+    []
   );
 
-  // Handle verification change
-  const handleVerificationChange = useCallback(
-    async (hospitalId: string, verified: boolean) => {
-      const result = await updateHospitalVerification(hospitalId, verified);
+  // replace your handleStatusChange
+  const handleStatusChange = useCallback(
+    async (hospitalId: string, status: HospitalStatus) => {
+      // optimistic patch
+      patchHospitalLocally(hospitalId, { status });
 
-      if (result.error) {
+      const result = await updateHospitalStatus(hospitalId, status);
+      if (result?.error) {
         toast({
           title: "Error",
           description: result.error,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Success",
-          description: "Hospital verification updated successfully",
+        // rollback on failure
+        patchHospitalLocally(hospitalId, {
+          status: status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
         });
-        fetchHospitals();
+        return;
       }
+
+      toast({ title: "Success", description: "Statut mis à jour" });
+      // optional: keep server truth in sync
+      fetchHospitals();
     },
-    [fetchHospitals]
+    [patchHospitalLocally, fetchHospitals]
+  );
+
+  // replace your handleVerificationChange
+  const handleVerificationChange = useCallback(
+    async (hospitalId: string, verified: boolean) => {
+      // optimistic patch
+      patchHospitalLocally(hospitalId, { isVerified: verified });
+
+      const result = await updateHospitalVerification(hospitalId, verified);
+      if (result?.error) {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+        // rollback
+        patchHospitalLocally(hospitalId, { isVerified: !verified });
+        return;
+      }
+
+      toast({ title: "Success", description: "Vérification mise à jour" });
+      fetchHospitals();
+    },
+    [patchHospitalLocally, fetchHospitals]
   );
 
   // Get table columns using our custom hook
@@ -601,10 +623,6 @@ export default function HospitalsPage() {
             />
             Actualiser
           </Button>
-          <Button onClick={() => setIsAddHospitalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Ajouter un établissement
-          </Button>
         </div>
       </div>
 
@@ -697,7 +715,6 @@ export default function HospitalsPage() {
                         <TableRow
                           key={row.id}
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => openHospitalDetail(row.original)}
                         >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id}>

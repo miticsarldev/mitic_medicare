@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -64,86 +62,79 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const patientRecord = await prisma.patient.findUnique({
-      where: { id: params.id },
-      include: { user: true },
-    });
-
-    if (!patientRecord) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
-    }
-
-    const userId = patientRecord.user.id;
-
+    const patientId = params.id;
     const data = await request.json();
 
-    // Update user data
-    await prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        isActive: data.status,
-        dateOfBirth: new Date(data.dateOfBirth),
-      },
+    // ✅ resolve userId from Patient
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      select: { id: true, userId: true },
     });
-
-    // Update or create user profile
-    await prisma.userProfile.upsert({
-      where: {
-        userId: userId,
-      },
-      update: {
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        genre: data.gender,
-      },
-      create: {
-        userId: userId,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zipCode: data.zipCode,
-        country: data.country,
-        genre: data.gender,
-      },
-    });
-
-    // Get patient record
-    const patient = await prisma.patient.findFirst({
-      where: {
-        user: {
-          id: userId,
-        },
-      },
-    });
-
     if (!patient) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
-    // Update patient data
-    await prisma.patient.update({
-      where: {
-        id: patient.id,
+    // Update User
+    await prisma.user.update({
+      where: { id: patient.userId },
+      data: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        isActive: data.status === "active",
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
       },
+    });
+
+    // Upsert Profile
+    await prisma.userProfile.upsert({
+      where: { userId: patient.userId },
+      update: {
+        address: data.address ?? null,
+        city: data.city ?? null,
+        state: data.state ?? null,
+        zipCode: data.zipCode ?? null,
+        country: data.country ?? null,
+        genre:
+          data.gender === "Homme"
+            ? "MALE"
+            : data.gender === "Femme"
+              ? "FEMALE"
+              : null,
+      },
+      create: {
+        userId: patient.userId,
+        address: data.address ?? null,
+        city: data.city ?? null,
+        state: data.state ?? null,
+        zipCode: data.zipCode ?? null,
+        country: data.country ?? null,
+        genre:
+          data.gender === "Homme"
+            ? "MALE"
+            : data.gender === "Femme"
+              ? "FEMALE"
+              : null,
+      },
+    });
+
+    // Update Patient
+    await prisma.patient.update({
+      where: { id: patient.id },
       data: {
         bloodType: data.bloodType || null,
-        allergies: data.allergies.join(","),
-        emergencyContact: data.emergencyContact,
-        emergencyPhone: data.emergencyPhone,
+        allergies: Array.isArray(data.allergies)
+          ? data.allergies.join(",")
+          : null,
+        emergencyContact: data.emergencyContact ?? null,
+        emergencyPhone: data.emergencyPhone ?? null,
+        medicalNotes: Array.isArray(data.chronicConditions)
+          ? data.chronicConditions.join(",")
+          : null,
       },
     });
 
@@ -158,108 +149,80 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = params.id; // Renommer pour plus de clarté
-
-    // Vérifier l'existence du patient et de l'utilisateur
-    const patient = await prisma.patient.findUnique({
-      where: { userId },
-      include: { user: true }
+    // Resolve userId OUTSIDE the transaction (cheap + avoids extra time inside)
+    const link = await prisma.patient.findUnique({
+      where: { id: params.id },
+      select: { id: true, userId: true },
     });
-
-    if (!patient) {
+    if (!link) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
+    const { userId } = link;
 
-    // Transaction pour garantir l'intégrité
-    await prisma.$transaction(async (prisma) => {
-      // 1. Supprimer les dépendances du patient
-      await prisma.prescriptionOrder.deleteMany({
-        where: { patientId: patient.id }
-      });
+    // Phased hard delete with increased timeout.
+    await prisma.$transaction(
+      async (tx) => {
+        // Phase 1: children of MedicalRecord
+        await Promise.all([
+          tx.medicalRecordAttachment.deleteMany({
+            where: { medicalRecord: { patientId: params.id } },
+          }),
+          tx.prescription.deleteMany({
+            where: { medicalRecord: { patientId: params.id } },
+          }),
+          tx.prescriptionOrder.deleteMany({
+            where: { medicalRecord: { patientId: params.id } },
+          }),
+        ]);
 
-      await prisma.prescription.deleteMany({
-        where: { patientId: patient.id }
-      });
+        // Phase 2: direct children of Patient
+        await Promise.all([
+          tx.prescription.deleteMany({ where: { patientId: params.id } }),
+          tx.prescriptionOrder.deleteMany({ where: { patientId: params.id } }),
+          tx.vitalSign.deleteMany({ where: { patientId: params.id } }),
+          tx.medicalHistory.deleteMany({ where: { patientId: params.id } }),
+          tx.appointment.deleteMany({ where: { patientId: params.id } }),
+        ]);
 
-      await prisma.review.deleteMany({
-        where: { authorId: userId } // Note: utiliser userId ici
-      });
+        // Phase 3: medical records themselves
+        await tx.medicalRecord.deleteMany({ where: { patientId: params.id } });
 
-      // Supprimer les attachments avant les medical records
-      await prisma.medicalRecordAttachment.deleteMany({
-        where: { medicalRecord: { patientId: patient.id } }
-      });
+        // Phase 4: rows keyed by userId
+        await Promise.all([
+          tx.review.deleteMany({ where: { authorId: userId } }),
+          tx.session.deleteMany({ where: { userId } }),
+          tx.account.deleteMany({ where: { userId } }),
+          // Some apps store verification tokens by email/identifier, not userId.
+          // If yours links by userId, keep this; if by email, adjust accordingly.
+          tx.verificationToken
+            .deleteMany({ where: { identifier: userId } })
+            .catch(() => {}),
+        ]);
 
-      await prisma.medicalRecord.deleteMany({
-        where: { patientId: patient.id }
-      });
-
-      await prisma.medicalHistory.deleteMany({
-        where: { patientId: patient.id }
-      });
-
-      await prisma.appointment.deleteMany({
-        where: { patientId: patient.id }
-      });
-
-      await prisma.vitalSign.deleteMany({
-        where: { patientId: patient.id }
-      });
-
-      // 2. Supprimer le profil utilisateur s'il existe
-      await prisma.userProfile.deleteMany({
-        where: { userId }
-      });
-
-      // 3. Supprimer les sessions et comptes
-      await prisma.session.deleteMany({
-        where: { userId }
-      });
-
-      await prisma.account.deleteMany({
-        where: { userId }
-      });
-
-      // 4. Supprimer les favoris (relations many-to-many)
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          favoriteDoctors: { set: [] },
-          favoriteHospitals: { set: [] }
-        }
-      });
-
-      // 5. Supprimer le patient
-      await prisma.patient.delete({
-        where: { id: patient.id }
-      });
-
-      // 6. Enfin supprimer l'utilisateur
-      await prisma.user.delete({
-        where: { id: userId }
-      });
-    });
+        // Phase 5: parent rows (order matters if no DB cascades configured)
+        await tx.patient.delete({ where: { id: params.id } });
+        await tx.user.delete({ where: { id: userId } });
+      },
+      // ⤵️ increase interactive transaction timeout (ms)
+      { timeout: 20_000, maxWait: 10_000 }
+    );
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting patient:", error);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    console.error("Error deleting patient:", err);
     return NextResponse.json(
-      {
-        error: "Failed to delete patient",
-        details: error instanceof Error ? error.message : String(error)
-      },
+      { error: err?.message ?? "Failed to delete patient" },
       { status: 500 }
     );
   }
 }
-

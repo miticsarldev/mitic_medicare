@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { SubscriptionPlan } from "@prisma/client";
 
 export async function GET(
   request: NextRequest,
@@ -41,6 +42,7 @@ export async function GET(
                 id: true,
                 name: true,
                 email: true,
+                phone: true,
                 profile: {
                   select: {
                     avatarUrl: true,
@@ -88,8 +90,6 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -97,11 +97,9 @@ export async function PUT(
     const hospitalId = params.id;
     const data = await request.json();
 
-    // Update hospital data
+    // 1) Update hospital fields
     await prisma.hospital.update({
-      where: {
-        id: hospitalId,
-      },
+      where: { id: hospitalId },
       data: {
         name: data.name,
         email: data.email,
@@ -112,13 +110,33 @@ export async function PUT(
         zipCode: data.zipCode,
         country: data.country,
         status: data.status,
-        isVerified: data.verified,
-        subscription: data.subscription,
+        isVerified: data.isVerified ?? data.verified, // accept either key
         description: data.description,
         logoUrl: data.logoUrl,
         website: data.website,
       },
     });
+
+    // 2) Update/Upsert subscription plan if sent
+    if (data.subscription) {
+      await prisma.subscription.upsert({
+        where: { hospitalId: hospitalId }, // requires a unique constraint on hospitalId in your Subscription model
+        update: {
+          plan: data.subscription as SubscriptionPlan,
+        },
+        create: {
+          hospitalId,
+          subscriberType: "HOSPITAL",
+          plan: data.subscription as SubscriptionPlan,
+          status: "ACTIVE",
+          startDate: new Date(),
+          endDate: new Date(
+            new Date().setFullYear(new Date().getFullYear() + 1)
+          ),
+          amount: 0,
+        },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

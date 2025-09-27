@@ -45,6 +45,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ModeToggle } from "@/components/mode-toggle";
+import { signOut } from "next-auth/react";
 
 export default function EmailVerificationRequired() {
   const router = useRouter();
@@ -61,10 +62,17 @@ export default function EmailVerificationRequired() {
       const { email, role } = JSON.parse(storedData);
       setEmail(email);
       setRole(role);
-    } else {
-      router.push("/auth");
+
+      signOut({ redirect: false });
+
+      toast({
+        title: "Adresse email non vérifiée",
+        description:
+          "Veuillez vérifier votre adresse email en cliquant sur le lien que nous vous avons envoyé.",
+        variant: "destructive",
+      });
     }
-  }, [router]);
+  }, [router, toast]);
 
   // User type specific content
   const userTypeContent: Record<

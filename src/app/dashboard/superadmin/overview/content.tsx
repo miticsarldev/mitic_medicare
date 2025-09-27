@@ -5,9 +5,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Activity,
-  ArrowDown,
   ArrowRight,
-  ArrowUp,
   Building2,
   Calendar,
   Check,
@@ -71,7 +69,6 @@ import {
   PendingApprovalUser,
   SubscriptionStats,
 } from "./types";
-import { SubscriptionManager } from "@/components/superadmin/overview/SubscriptionManager";
 
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
@@ -88,7 +85,7 @@ export function DashboardContent({
   subscriptionStats,
 }: DashboardContentProps) {
   const { toast } = useToast();
-  const [timeRange, setTimeRange] = useState<string>("30d");
+  const [timeRange, setTimeRange] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<PendingApprovalUser | null>(
     null
@@ -157,10 +154,10 @@ export function DashboardContent({
 
     try {
       if (actionType === "approve") {
-        await approveUser(selectedUser.id);
+        await approveUser(selectedUser);
         toast({
           title: "Utilisateur approuvé",
-          description: `${selectedUser.name} a été approuvé avec succès.`,
+          description: `${selectedUser.name} a été approuvé avec succès. \nEmail de confirmation envoyé.`,
         });
       } else {
         await rejectUser(selectedUser.id);
@@ -226,6 +223,7 @@ export function DashboardContent({
               <SelectValue placeholder="Période" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Tous les temps</SelectItem>
               <SelectItem value="24h">Dernières 24 heures</SelectItem>
               <SelectItem value="7d">7 derniers jours</SelectItem>
               <SelectItem value="30d">30 derniers jours</SelectItem>
@@ -269,23 +267,6 @@ export function DashboardContent({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center pt-1 text-xs">
-                {stat.trend === "up" ? (
-                  <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
-                ) : (
-                  <ArrowDown className="mr-1 h-3 w-3 text-red-500" />
-                )}
-                <span
-                  className={
-                    stat.trend === "up" ? "text-green-500" : "text-red-500"
-                  }
-                >
-                  {stat.change}
-                </span>
-                <span className="ml-1 text-muted-foreground">
-                  vs période précédente
-                </span>
-              </div>
             </CardContent>
           </Card>
         ))}
@@ -398,7 +379,7 @@ export function DashboardContent({
 
       {/* Additional Sections */}
       <div className="grid gap-4 md:grid-cols-2 grid-cols-1">
-        {/* User Distribution & System Health */}
+        {/* -------- Distribution des Utilisateurs -------- */}
         <Card>
           <CardHeader>
             <CardTitle>Distribution des Utilisateurs</CardTitle>
@@ -438,6 +419,7 @@ export function DashboardContent({
           </CardContent>
         </Card>
 
+        {/* -------- Abonnements -------- */}
         <Card>
           <CardHeader>
             <CardTitle>Abonnements</CardTitle>
@@ -445,19 +427,51 @@ export function DashboardContent({
               Répartition par type d&apos;abonnement
             </CardDescription>
           </CardHeader>
+
           <CardContent className="space-y-4">
-            {subStats.planStats.slice(0, 4).map((plan) => (
-              <div key={plan?.plan} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{plan.plan}</span>
-                  <span className="text-xs font-medium text-blue-500">
-                    {plan.count} utilisateurs
-                  </span>
+            {(() => {
+              const rows = (subStats?.planStats ?? []).slice(0, 4);
+              const hasData = rows.some((p) => (p?.count ?? 0) > 0);
+
+              if (!rows.length || !hasData) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="rounded-full bg-muted p-3 mb-3">
+                      <CreditCard className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">
+                      Aucun abonnement actif
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Les statistiques apparaîtront dès que des abonnements
+                      seront souscrits.
+                    </p>
+                    <div className="mt-3">
+                      <Button variant="outline" asChild>
+                        <a href="/dashboard/superadmin/subscriptions/all">
+                          Gérer les abonnements
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return rows.map((plan) => (
+                <div key={plan.plan} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{plan.plan}</span>
+                    <span className="text-xs font-medium text-blue-500">
+                      {plan.count}{" "}
+                      {plan.count > 1 ? "utilisateurs" : "utilisateur"}
+                    </span>
+                  </div>
+                  <Progress value={plan.percentage} className="h-2 bg-muted" />
                 </div>
-                <Progress value={plan.percentage} className="h-2 bg-muted" />
-              </div>
-            ))}
+              ));
+            })()}
           </CardContent>
+
           <CardFooter className="border-t bg-muted/50 px-6 py-3">
             <Button variant="ghost" className="w-full" asChild>
               <a href="/dashboard/superadmin/subscriptions/all">
@@ -468,9 +482,7 @@ export function DashboardContent({
         </Card>
       </div>
 
-
-
-      <SubscriptionManager />
+      {/* <SubscriptionManager /> */}
       {/* Pending Verifications */}
       <Card>
         <CardHeader className="flex flex-row items-center">

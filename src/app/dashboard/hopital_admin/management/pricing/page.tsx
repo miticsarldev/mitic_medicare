@@ -185,7 +185,7 @@ export default function SubscriptionSection() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2 sm:p-4">
       {/* En-tête avec statut */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

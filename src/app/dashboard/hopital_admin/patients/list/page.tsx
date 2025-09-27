@@ -1,5 +1,11 @@
 "use client";
-import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Filter, Search, X } from "lucide-react";
@@ -118,47 +124,55 @@ export default function PatientList() {
     hasPreviousPage: false,
   });
 
-  const fetchPatients = useCallback(async (page: number = 1) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const url = new URL("/api/hospital_admin/patients/list", window.location.origin);
-      url.searchParams.set("page", page.toString());
-      url.searchParams.set("pageSize", ITEMS_PER_PAGE.toString());
+  const fetchPatients = useCallback(
+    async (page: number = 1) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const url = new URL(
+          "/api/hospital_admin/patients/list",
+          window.location.origin
+        );
+        url.searchParams.set("page", page.toString());
+        url.searchParams.set("pageSize", ITEMS_PER_PAGE.toString());
 
-      // Ajouter les paramètres de filtrage selon votre API
-      if (search) url.searchParams.set("name", search);
-      if (genderFilter.length > 0) url.searchParams.set("gender", genderFilter.join(','));
-      if (minAppointments > 0) url.searchParams.set("minAppointments", minAppointments.toString());
+        // Ajouter les paramètres de filtrage selon votre API
+        if (search) url.searchParams.set("name", search);
+        if (genderFilter.length > 0)
+          url.searchParams.set("gender", genderFilter.join(","));
+        if (minAppointments > 0)
+          url.searchParams.set("minAppointments", minAppointments.toString());
 
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Failed to fetch patients");
-      const data = await res.json();
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error("Failed to fetch patients");
+        const data = await res.json();
 
-      // Adapter selon la structure de votre réponse API
-      setPatients(data.patients);
-      if (data.pagination) {
-        setPagination({
-          currentPage: data.pagination.currentPage,
-          pageSize: data.pagination.pageSize,
-          totalItems: data.pagination.totalItems,
-          totalPages: data.pagination.totalPages,
-          hasNextPage: data.pagination.hasNextPage,
-          hasPreviousPage: data.pagination.hasPreviousPage,
+        // Adapter selon la structure de votre réponse API
+        setPatients(data.patients);
+        if (data.pagination) {
+          setPagination({
+            currentPage: data.pagination.currentPage,
+            pageSize: data.pagination.pageSize,
+            totalItems: data.pagination.totalItems,
+            totalPages: data.pagination.totalPages,
+            hasNextPage: data.pagination.hasNextPage,
+            hasPreviousPage: data.pagination.hasPreviousPage,
+          });
+        }
+      } catch (err) {
+        console.error("Error loading patients", err);
+        setError("Impossible de charger les patients");
+        toast({
+          title: "Erreur",
+          description: "Échec du chargement des patients",
+          variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error loading patients", err);
-      setError("Impossible de charger les patients");
-      toast({
-        title: "Erreur",
-        description: "Échec du chargement des patients",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [search, genderFilter, minAppointments]); // Ajouter les dépendances
+    },
+    [search, genderFilter, minAppointments]
+  ); // Ajouter les dépendances
 
   // Gestion du debounce pour la recherche
   useEffect(() => {
@@ -173,7 +187,6 @@ export default function PatientList() {
   useEffect(() => {
     fetchPatients(1);
   }, [genderFilter, minAppointments, fetchPatients]);
-
 
   const toggleGender = useCallback((gender: string) => {
     setGenderFilter((prev) =>
@@ -230,7 +243,7 @@ export default function PatientList() {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                ref={searchInputRef} 
+                ref={searchInputRef}
                 id="search"
                 type="search"
                 placeholder="Nom du patient..."
@@ -306,11 +319,13 @@ export default function PatientList() {
     );
   });
 
-  const handlePageChange = useCallback((page: number) => {
-    if (page < 1 || page > pagination.totalPages) return;
-    fetchPatients(page);
-  }, [fetchPatients, pagination.totalPages]);
-
+  const handlePageChange = useCallback(
+    (page: number) => {
+      if (page < 1 || page > pagination.totalPages) return;
+      fetchPatients(page);
+    },
+    [fetchPatients, pagination.totalPages]
+  );
 
   const ActiveFilters = React.memo(function ActiveFiltersComponent() {
     if (!search && genderFilter.length === 0 && minAppointments === 0)
@@ -464,7 +479,10 @@ export default function PatientList() {
     return (
       <div className="p-6 flex flex-col items-center justify-center space-y-4">
         <p className="text-red-500">{error}</p>
-        <Button variant="outline" onClick={() => fetchPatients(pagination.currentPage)}>
+        <Button
+          variant="outline"
+          onClick={() => fetchPatients(pagination.currentPage)}
+        >
           Réessayer
         </Button>
       </div>
@@ -472,7 +490,7 @@ export default function PatientList() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 p-4 md:p-6">
+    <div className="flex flex-col lg:flex-row gap-4 p-2 sm:p-4">
       <aside className="hidden lg:block w-64 flex-shrink-0">
         <FilterPanel />
       </aside>

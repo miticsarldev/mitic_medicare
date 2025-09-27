@@ -12,13 +12,36 @@ export async function middleware(req: NextRequest) {
     const callbackUrl = encodeURIComponent(
       req.nextUrl.pathname + req.nextUrl.search
     );
+
     return NextResponse.redirect(
       new URL(`/auth?callbackUrl=${callbackUrl}`, origin)
     );
-    // return NextResponse.redirect(new URL("/auth", req.url));
   }
 
   const userRole = token?.role as UserRole;
+  const isApproved = token?.isApproved;
+  const emailVerified = token?.emailVerified;
+
+  const isApprovalRequiredPath = pathname.startsWith("/auth/approval-required");
+  const isVerificationRequiredPath = pathname.startsWith(
+    "/auth/email-verification-required"
+  );
+
+  // Rediriger si l'email n’est pas vérifié
+  if (!emailVerified && !isVerificationRequiredPath) {
+    return NextResponse.redirect(
+      new URL("/auth/email-verification-required", origin)
+    );
+  }
+
+  // Si l'utilisateur n'est pas approuvé et est un ADMIN
+  if (
+    (userRole === "HOSPITAL_ADMIN" || userRole === "INDEPENDENT_DOCTOR") &&
+    isApproved === false &&
+    !isApprovalRequiredPath
+  ) {
+    return NextResponse.redirect(new URL("/auth/approval-required", origin));
+  }
 
   const rolePaths: Record<UserRole, string> = {
     SUPER_ADMIN: "/dashboard/superadmin",

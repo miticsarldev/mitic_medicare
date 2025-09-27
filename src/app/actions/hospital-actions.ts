@@ -54,135 +54,96 @@ export async function createHospital(formData: FormData) {
   }
 }
 
-export async function updateHospitalStatus(
-  hospitalId: string,
-  status: HospitalStatus
-) {
+export async function updateHospitalStatus(id: string, status: HospitalStatus) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
-    if (!session || session.user.role !== "SUPER_ADMIN") {
+    if (!session || session.user.role !== "SUPER_ADMIN")
       return { error: "Unauthorized" };
-    }
 
-    await prisma.hospital.update({
-      where: {
-        id: hospitalId,
-      },
-      data: {
-        status,
-      },
-    });
-
-    revalidatePath("/hospitals");
+    await prisma.hospital.update({ where: { id }, data: { status } });
+    revalidatePath("/dashboard/superadmin/users/hospitals");
     return { success: true };
-  } catch (error) {
-    console.error("Error updating hospital status:", error);
+  } catch (e) {
+    console.error(e);
     return { error: "Failed to update hospital status" };
   }
 }
 
 export async function updateHospitalVerification(
-  hospitalId: string,
+  id: string,
   verified: boolean
 ) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
-    if (!session || session.user.role !== "SUPER_ADMIN") {
+    if (!session || session.user.role !== "SUPER_ADMIN")
       return { error: "Unauthorized" };
-    }
 
     await prisma.hospital.update({
-      where: {
-        id: hospitalId,
-      },
-      data: {
-        isVerified: verified,
-      },
+      where: { id },
+      data: { isVerified: verified },
     });
-
-    revalidatePath("/hospitals");
+    revalidatePath("/dashboard/superadmin/users/hospitals");
     return { success: true };
-  } catch (error) {
-    console.error("Error updating hospital verification:", error);
+  } catch (e) {
+    console.error(e);
     return { error: "Failed to update hospital verification" };
   }
 }
 
-export async function bulkDeleteHospitals(hospitalIds: string[]) {
+export async function bulkDeleteHospitals(ids: string[]) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
-    if (!session || session.user.role !== "SUPER_ADMIN") {
+    if (!session || session.user.role !== "SUPER_ADMIN")
       return { error: "Unauthorized" };
-    }
 
-    // Delete hospitals
-    await prisma.hospital.deleteMany({
-      where: {
-        id: {
-          in: hospitalIds,
-        },
-      },
-    });
-
-    revalidatePath("/hospitals");
+    await prisma.hospital.deleteMany({ where: { id: { in: ids } } });
+    revalidatePath("/dashboard/superadmin/users/hospitals");
     return { success: true };
-  } catch (error) {
-    console.error("Error bulk deleting hospitals:", error);
+  } catch (e) {
+    console.error(e);
     return { error: "Failed to delete hospitals" };
   }
 }
 
-export async function bulkExportHospitals(hospitalIds: string[]) {
+export async function bulkExportHospitals(ids: string[]) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
-    if (!session || session.user.role !== "SUPER_ADMIN") {
+    if (!session || session.user.role !== "SUPER_ADMIN")
       return { error: "Unauthorized" };
-    }
 
-    // Get hospital data for export
-    const hospitals = await prisma.hospital.findMany({
-      where: {
-        id: {
-          in: hospitalIds,
-        },
-      },
-      include: {
-        _count: {
-          select: {
-            doctors: true,
-          },
-        },
+    const data = await prisma.hospital.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        city: true,
+        country: true,
+        status: true,
+        isVerified: true,
+        createdAt: true,
+        subscription: { select: { plan: true } },
       },
     });
 
-    // Format data for export
-    const exportData = hospitals.map((hospital) => ({
-      id: hospital.id,
-      name: hospital.name,
-      email: hospital.email,
-      phone: hospital.phone,
-      address: hospital.address,
-      city: hospital.city,
-      state: hospital.state,
-      zipCode: hospital.zipCode,
-      country: hospital.country,
-      status: hospital.status,
-      verified: hospital.isVerified ? "Yes" : "No",
-      doctorsCount: hospital._count.doctors,
-      createdAt: hospital.createdAt.toISOString(),
-    }));
-
-    return { success: true, data: exportData };
-  } catch (error) {
-    console.error("Error exporting hospitals:", error);
+    return {
+      success: true,
+      data: data.map((h) => ({
+        id: h.id,
+        name: h.name,
+        email: h.email,
+        phone: h.phone,
+        city: h.city,
+        country: h.country,
+        status: h.status,
+        verified: h.isVerified,
+        subscription: h.subscription?.plan ?? "FREE",
+        createdAt: h.createdAt.toISOString(),
+      })),
+    };
+  } catch (e) {
+    console.error(e);
     return { error: "Failed to export hospitals" };
   }
 }
@@ -208,7 +169,7 @@ export async function assignDoctorToHospital(
       },
     });
 
-    revalidatePath("/hospitals");
+    revalidatePath("/dashboard/superadmin/users/hospitals");
     return { success: true };
   } catch (error) {
     console.error("Error assigning doctor to hospital:", error);
@@ -234,7 +195,7 @@ export async function removeDoctorFromHospital(doctorId: string) {
       },
     });
 
-    revalidatePath("/hospitals");
+    revalidatePath("/dashboard/superadmin/users/hospitals");
     return { success: true };
   } catch (error) {
     console.error("Error removing doctor from hospital:", error);

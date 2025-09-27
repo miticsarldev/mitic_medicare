@@ -92,6 +92,8 @@ const VerifyEmail = () => {
               "Votre email a été vérifié et votre abonnement gratuit a été activé. Vous pouvez maintenant vous connecter.",
             variant: "default",
           });
+
+          localStorage.removeItem("mitic-pending-verification");
         } else {
           if (data.error === "Token manquant.") {
             setStatus("missing");
