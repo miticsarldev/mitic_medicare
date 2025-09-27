@@ -78,8 +78,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { Hospital } from "@/types/hospital";
-
+import type { ExportHospital, Hospital } from "@/types/hospital";
 import { Progress } from "@/components/ui/progress";
 import { useHospitalColumns } from "./hospital-columns";
 import HospitalDetails from "./hospital-details";
@@ -104,6 +103,8 @@ export default function HospitalsPage() {
   const [selectedSubscriptions, setSelectedSubscriptions] = useState<string[]>(
     []
   );
+  const [startDate, setStartDate] = useState<string>(""); // New state for start date
+  const [endDate, setEndDate] = useState<string>(""); // New state for end date
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(
     null
   );
@@ -155,6 +156,14 @@ export default function HospitalsPage() {
         queryParams.append("subscription", subscription);
       });
 
+      // Append date range filters
+      if (startDate) {
+        queryParams.append("startDate", startDate);
+      }
+      if (endDate) {
+        queryParams.append("endDate", endDate);
+      }
+
       const response = await fetch(
         `/api/superadmin/hospitals?${queryParams.toString()}`
       );
@@ -181,11 +190,13 @@ export default function HospitalsPage() {
     searchQuery,
     selectedStatuses,
     selectedLocations,
+    selectedSubscriptions,
+    startDate,
+    endDate,
     currentPage,
     itemsPerPage,
     sortBy,
     sortOrder,
-    selectedSubscriptions,
   ]);
 
   // Fetch hospitals data
@@ -445,38 +456,74 @@ export default function HospitalsPage() {
           throw new Error(result.error);
         }
 
-        // Create CSV content
         if (!result?.data) {
           toast({
             title: "Info",
-            description: "No hospitals selected",
+            description: "Aucun établissement sélectionné",
           });
           return;
         }
 
-        const headers = Object.keys(result.data[0]).join(",");
-        const rows = result.data
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((hospital: any) =>
-            Object.values(hospital)
-              .map((value) =>
-                typeof value === "string"
-                  ? `"${value.replace(/"/g, '""')}"`
-                  : value
-              )
-              .join(",")
-          )
+        const headers = [
+          "id",
+          "name",
+          "email",
+          "phone",
+          "address",
+          "city",
+          "state",
+          "zipCode",
+          "country",
+          "status",
+          "verified",
+          "doctorsCount",
+          "createdAt",
+        ].join(",");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows = (result.data as any[])
+          .map((hospital) => {
+            // Ensure all ExportHospital fields are present, fallback to empty string or 0 if missing
+            const exportHospital: ExportHospital = {
+              id: hospital.id,
+              name: hospital.name,
+              email: hospital.email,
+              phone: hospital.phone,
+              address: hospital.address ?? "",
+              city: hospital.city,
+              state: hospital.state ?? "",
+              zipCode: hospital.zipCode ?? "",
+              country: hospital.country,
+              status: hospital.status,
+              verified: hospital.verified,
+              doctorsCount: hospital.doctorsCount ?? 0,
+              createdAt: hospital.createdAt,
+            };
+            return [
+              exportHospital.id,
+              `"${exportHospital.name.replace(/"/g, '""')}"`,
+              `"${exportHospital.email.replace(/"/g, '""')}"`,
+              `"${exportHospital.phone.replace(/"/g, '""')}"`,
+              `"${exportHospital.address.replace(/"/g, '""')}"`,
+              `"${exportHospital.city.replace(/"/g, '""')}"`,
+              `"${exportHospital.state.replace(/"/g, '""')}"`,
+              `"${exportHospital.zipCode.replace(/"/g, '""')}"`,
+              `"${exportHospital.country.replace(/"/g, '""')}"`,
+              exportHospital.status,
+              exportHospital.verified,
+              exportHospital.doctorsCount,
+              exportHospital.createdAt,
+            ].join(",");
+          })
           .join("\n");
         const csvContent = `${headers}\n${rows}`;
 
-        // Create download link
         const blob = new Blob([csvContent], {
           type: "text/csv;charset=utf-8;",
         });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", "hospitals_export.csv");
+        link.setAttribute("download", "etablissements_export.csv");
         link.style.visibility = "hidden";
         document.body.appendChild(link);
         link.click();
@@ -553,6 +600,8 @@ export default function HospitalsPage() {
     setSelectedLocations([]);
     setSelectedStatuses([]);
     setSelectedSubscriptions([]);
+    setStartDate("");
+    setEndDate("");
   };
 
   // Function to handle refresh
@@ -1194,6 +1243,43 @@ export default function HospitalsPage() {
                       </label>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* === Date Range === */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold">Période de création</h4>
+                <div className="space-y-2">
+                  <div>
+                    <label
+                      htmlFor="start-date"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Date de début
+                    </label>
+                    <Input
+                      id="start-date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="end-date"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Date de fin
+                    </label>
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
