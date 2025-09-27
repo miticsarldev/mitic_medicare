@@ -516,7 +516,7 @@ export const getPatientById = async (id: string): Promise<Patient> => {
 
     user: {
       ...data.user,
-      dateOfBirth: data.user.dateOfBirth ?? undefined,
+      dateOfBirth: data.user.dateOfBirth ?? null,
       profile: data.user.profile
         ? {
             address: data.user.profile.address ?? undefined,
