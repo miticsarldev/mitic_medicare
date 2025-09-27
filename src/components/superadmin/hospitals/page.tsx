@@ -100,10 +100,14 @@ export default function HospitalsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedSubscriptions, setSelectedSubscriptions] = useState<string[]>([]);
+  const [selectedSubscriptions, setSelectedSubscriptions] = useState<string[]>(
+    []
+  );
   const [startDate, setStartDate] = useState<string>(""); // New state for start date
   const [endDate, setEndDate] = useState<string>(""); // New state for end date
-  const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
+  const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(
+    null
+  );
   const [locations, setLocations] = useState<string[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -160,7 +164,9 @@ export default function HospitalsPage() {
         queryParams.append("endDate", endDate);
       }
 
-      const response = await fetch(`/api/superadmin/hospitals?${queryParams.toString()}`);
+      const response = await fetch(
+        `/api/superadmin/hospitals?${queryParams.toString()}`
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch hospitals");
@@ -443,68 +449,85 @@ export default function HospitalsPage() {
         });
       }
     } else if (action === "export") {
-  try {
-    const result = await bulkExportHospitals(selectedRows);
+      try {
+        const result = await bulkExportHospitals(selectedRows);
 
-    if (result.error) {
-      throw new Error(result.error);
-    }
+        if (result.error) {
+          throw new Error(result.error);
+        }
 
-    if (!result?.data) {
-      toast({
-        title: "Info",
-        description: "Aucun établissement sélectionné",
-      });
-      return;
-    }
+        if (!result?.data) {
+          toast({
+            title: "Info",
+            description: "Aucun établissement sélectionné",
+          });
+          return;
+        }
 
-    const headers = [
-      "id",
-      "name",
-      "email",
-      "phone",
-      "address",
-      "city",
-      "state",
-      "zipCode",
-      "country",
-      "status",
-      "verified",
-      "doctorsCount",
-      "createdAt",
-    ].join(",");
-    const rows = result.data
-      .map((hospital: ExportHospital) =>
-        [
-          hospital.id,
-          `"${hospital.name.replace(/"/g, '""')}"`,
-          `"${hospital.email.replace(/"/g, '""')}"`,
-          `"${hospital.phone.replace(/"/g, '""')}"`,
-          `"${hospital.address.replace(/"/g, '""')}"`,
-          `"${hospital.city.replace(/"/g, '""')}"`,
-          `"${hospital.state.replace(/"/g, '""')}"`,
-          `"${hospital.zipCode.replace(/"/g, '""')}"`,
-          `"${hospital.country.replace(/"/g, '""')}"`,
-          hospital.status,
-          hospital.verified,
-          hospital.doctorsCount,
-          hospital.createdAt,
-        ].join(",")
-      )
-      .join("\n");
-    const csvContent = `${headers}\n${rows}`;
+        const headers = [
+          "id",
+          "name",
+          "email",
+          "phone",
+          "address",
+          "city",
+          "state",
+          "zipCode",
+          "country",
+          "status",
+          "verified",
+          "doctorsCount",
+          "createdAt",
+        ].join(",");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows = (result.data as any[])
+          .map((hospital) => {
+            // Ensure all ExportHospital fields are present, fallback to empty string or 0 if missing
+            const exportHospital: ExportHospital = {
+              id: hospital.id,
+              name: hospital.name,
+              email: hospital.email,
+              phone: hospital.phone,
+              address: hospital.address ?? "",
+              city: hospital.city,
+              state: hospital.state ?? "",
+              zipCode: hospital.zipCode ?? "",
+              country: hospital.country,
+              status: hospital.status,
+              verified: hospital.verified,
+              doctorsCount: hospital.doctorsCount ?? 0,
+              createdAt: hospital.createdAt,
+            };
+            return [
+              exportHospital.id,
+              `"${exportHospital.name.replace(/"/g, '""')}"`,
+              `"${exportHospital.email.replace(/"/g, '""')}"`,
+              `"${exportHospital.phone.replace(/"/g, '""')}"`,
+              `"${exportHospital.address.replace(/"/g, '""')}"`,
+              `"${exportHospital.city.replace(/"/g, '""')}"`,
+              `"${exportHospital.state.replace(/"/g, '""')}"`,
+              `"${exportHospital.zipCode.replace(/"/g, '""')}"`,
+              `"${exportHospital.country.replace(/"/g, '""')}"`,
+              exportHospital.status,
+              exportHospital.verified,
+              exportHospital.doctorsCount,
+              exportHospital.createdAt,
+            ].join(",");
+          })
+          .join("\n");
+        const csvContent = `${headers}\n${rows}`;
 
-    const blob = new Blob([csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "etablissements_export.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "etablissements_export.csv");
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
         toast({
           title: "Success",
