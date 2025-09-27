@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"; // pour App Router
+
 import { Suspense } from "react";
 import {
   getDashboardStats,

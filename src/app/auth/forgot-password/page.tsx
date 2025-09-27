@@ -1,142 +1,135 @@
-"use client";
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import Image from "next/image";
+import Link from "next/link";
+import { Lock, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/navbar";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail,  } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import ForgotPasswordForm from "@/components/forgot-password-form";
+import { ClientAnimationWrapper } from "@/components/client-animation-wrapper";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
+export default async function ForgotPasswordPage() {
+  const session = await getServerSession(authOptions);
 
-export default function ForgotPasswordPage() {
-  const [step, setStep] = useState(1);
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword1, setShowPassword1] = useState(false);
-  const [showPassword2, setShowPassword2] = useState(false);
-  const router = useRouter();
-
-  const handleNextStep = () => {
-    if (step === 1 && email) setStep(2);
-    else if (step === 2 && code) setStep(3);
-    else if (step === 3 && newPassword === confirmPassword) alert("Mot de passe réinitialisé !");
-  };
-
-  const handleResetPassword = () => {
-    if (newPassword === confirmPassword) {
-      alert("Mot de passe réinitialisé !");
-      router.push("/");
-    }
-  };
+  if (session?.user) {
+    redirect("/dashboard");
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-blue-100/50 dark:from-background dark:to-blue-950/50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-blue-950/30">
       <div className="max-w-screen-xl mx-auto">
+        {/* Header */}
         <Navbar />
-        <main className="container px-4 py-8 md:py-12">
-          <div className="max-w-md mx-auto space-y-6">
-            <h1 className="text-xl md:text-2xl font-semibold text-center">
-              Réinitialisation du mot de passe
-            </h1>
 
-            <div className="bg-card dark:bg-card/50 rounded-lg shadow-lg p-6">
-              {step === 1 && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="block text-sm font-medium">Adresse email</Label>
-                    <div className="relative">
-                      <Input
-                        type="email"
-                        placeholder="Saisissez votre email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pr-4 py-2"
-                      />
-                      <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        {/* Main Content */}
+        <main className="mx-auto px-4 py-2 md:py-4 lg:py-8">
+          <div className="flex flex-col-reverse items-center lg:flex-row lg:items-start justify-between gap-8 lg:gap-12">
+            {/* Left Column - Image and Text */}
+            <ClientAnimationWrapper
+              className="w-full lg:w-1/2 max-w-xl"
+              initialAnimation={{ opacity: 0, x: -20 }}
+              animateAnimation={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="text-center lg:text-left mb-8">
+                <Badge className="mb-4 px-3 py-1 bg-primary/10 text-primary border-primary/20 dark:bg-primary/20">
+                  Récupération sécurisée
+                </Badge>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">
+                  Récupérez votre accès
+                </h1>
+                <p className="text-lg text-gray-600 dark:text-gray-300 max-w-md mx-auto lg:mx-0">
+                  Pas de panique ! Nous allons vous aider à récupérer
+                  l&apos;accès à votre compte en toute sécurité.
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="hidden sm:block z-20 absolute -top-10 -left-10 w-40 h-40 bg-primary rounded-full blur-3xl" />
+                <div className="hidden sm:block z-20 absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500 rounded-full blur-3xl" />
+                <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl">
+                  <Image
+                    src="/healthcare-professional.webp"
+                    alt="Récupération de compte sécurisée"
+                    width={800}
+                    height={600}
+                    priority
+                    className="w-full h-auto object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6">
+                    <div className="text-white">
+                      <h3 className="text-xl font-bold mb-2">
+                        Sécurité renforcée
+                      </h3>
+                      <p className="text-white/80 mb-4">
+                        Processus de récupération sécurisé avec vérification par
+                        email
+                      </p>
                     </div>
                   </div>
-                  <Button className="w-full mt-4" onClick={handleNextStep}>
-                    Envoyer le code
-                  </Button>
-                </>
-              )}
+                </div>
+              </div>
+            </ClientAnimationWrapper>
 
-              {step === 2 && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="block text-sm font-medium">Code de vérification</Label>
-                    <Input
-                      type="text"
-                      placeholder="Entrez le code reçu"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      className="w-full"
-                    />
+            {/* Right Column - Forgot Password Form */}
+            <ClientAnimationWrapper
+              className="w-full lg:w-1/2 max-w-md"
+              initialAnimation={{ opacity: 0, x: 20 }}
+              animateAnimation={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center justify-center mb-6">
+                    <div className="flex items-center gap-0.5">
+                      <div className="relative w-auto h-6">
+                        <Image
+                          src="/logos/logo_mitic_dark.png"
+                          alt="Logo"
+                          className="h-6 w-auto object-cover"
+                          width={40}
+                          height={40}
+                          priority
+                          unoptimized
+                        />
+                      </div>
+                      <span className="font-semibold text-4xl hidden sm:inline-block">
+                        <span className="text-foreground">care</span>
+                      </span>
+                    </div>
                   </div>
-                  <Button className="w-full mt-4" onClick={handleNextStep}>
-                    Vérifier le code
-                  </Button>
-                  <div className="text-sm text-center mt-2">
-                    <button
-                      onClick={() => setStep(1)}
-                      className="text-primary hover:underline"
+
+                  <div className="mb-6">
+                    <Link
+                      href="/auth"
+                      className="inline-flex items-center text-sm text-primary hover:underline mb-4"
                     >
-                      Modifier mon email
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {step === 3 && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="block text-sm font-medium">Nouveau mot de passe</Label>
-                    <div className="relative">
-                      <Input
-                        type={showPassword1 ? "text" : "password"}
-                        placeholder="Confirmez le mot de passe"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full pl-3 pr-10 py-2"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword1(!showPassword1)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        >
-                        {showPassword1 ? <EyeOff /> : <Eye />}
-                      </button>
-                    </div>
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                      Retour à la connexion
+                    </Link>
                   </div>
 
-                  <div className="space-y-2 mt-4">
-                    <Label className="block text-sm font-medium">Confirmer le mot de passe</Label>
-                    <div className="relative">
-                      <Input
-                        type={showPassword2 ? "text" : "password"}
-                        placeholder="Confirmez le mot de passe"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full pl-3 pr-10 py-2"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword2(!showPassword2)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        >
-                        {showPassword2 ? <EyeOff /> : <Eye />}
-                      </button>
-                    </div>
-                  </div>
+                  <ForgotPasswordForm />
+                </div>
 
-                  <Button className="w-full mt-4" onClick={handleResetPassword}>
-                    Réinitialiser le mot de passe
-                  </Button>
-                </>
-              )}
-            </div>
+                <div className="p-6 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-center gap-2">
+                  <Lock className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Processus sécurisé et chiffré
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-8 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Besoin d&apos;aide ?{" "}
+                  <Link href="#" className="text-primary hover:underline">
+                    Contactez notre support
+                  </Link>
+                </p>
+              </div>
+            </ClientAnimationWrapper>
           </div>
         </main>
       </div>

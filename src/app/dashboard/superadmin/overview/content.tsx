@@ -10,13 +10,7 @@ import {
   Calendar,
   Check,
   CreditCard,
-  Download,
-  FileText,
-  LifeBuoy,
-  LineChart,
-  MoreHorizontal,
   RefreshCw,
-  Settings,
   ShieldCheck,
   User,
   Users,
@@ -42,13 +36,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -76,17 +63,16 @@ import {
   PieChart as RechartsPieChart,
   Pie,
   Cell,
-  Label,
 } from "recharts";
 import {
   DashboardStats,
   PendingApprovalUser,
   SubscriptionStats,
 } from "./types";
+import { SubscriptionManager } from "@/components/superadmin/overview/SubscriptionManager";
 
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
-const SHOW_CHART_ACTIONS = false;
 
 interface DashboardContentProps {
   dashboardStats: DashboardStats;
@@ -169,10 +155,10 @@ export function DashboardContent({
 
     try {
       if (actionType === "approve") {
-        await approveUser(selectedUser.id);
+        await approveUser(selectedUser);
         toast({
           title: "Utilisateur approuvé",
-          description: `${selectedUser.name} a été approuvé avec succès.`,
+          description: `${selectedUser.name} a été approuvé avec succès. \nEmail de confirmation envoyé.`,
         });
       } else {
         await rejectUser(selectedUser.id);
@@ -343,30 +329,6 @@ export function DashboardContent({
                 Revenus générés par les abonnements et services
               </CardDescription>
             </div>
-            {SHOW_CHART_ACTIONS ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem disabled>
-                    <Download className="mr-2 h-4 w-4" />
-                    Télécharger PNG
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Exporter CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Paramètres
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -382,22 +344,30 @@ export function DashboardContent({
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="5%" stopOpacity={0.8} />
-                    <stop offset="95%" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip
-                  formatter={(v) => [`${v} XOF`, ""]}
-                  labelFormatter={(l) => `Date: ${l}`}
+                  formatter={(value) => [
+                    `${new Intl.NumberFormat("fr-FR", {
+                      style: "currency",
+                      currency: "XOF",
+                    }).format(
+                      typeof value === "number" ? value : Number(value)
+                    )}`,
+                    "",
+                  ]}
+                  labelFormatter={(label) => `Date : ${label}`}
                 />
                 <Legend />
                 <Area
                   type="monotone"
                   dataKey="subscriptions"
-                  name="Abonnements"
+                  name="Revenus Abonnements"
                   stroke="#8884d8"
                   fillOpacity={1}
                   fill="url(#colorSubscriptions)"
@@ -418,116 +388,35 @@ export function DashboardContent({
               Répartition par type d&apos;utilisateur
             </CardDescription>
           </CardHeader>
-
-          <CardContent className="h-[260px] sm:h-[300px] md:h-[340px]">
-            {(() => {
-              const total = (stats.userDistributionData ?? []).reduce(
-                (sum, d) => sum + (d?.value ?? 0),
-                0
-              );
-
-              // Empty state
-              if (!total) {
-                return (
-                  <div className="flex h-full flex-col items-center justify-center text-center">
-                    <div className="rounded-full bg-muted p-3 mb-3">
-                      {/* any icon you already have imported, e.g. Users */}
-                      <Users className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm font-medium">
-                      Aucune donnée à afficher
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Les segments apparaîtront dès que des utilisateurs seront
-                      inscrits.
-                    </p>
-                    <div className="mt-3">
-                      <Button variant="outline" asChild>
-                        <a href="/dashboard/superadmin/users/patients">
-                          Voir les utilisateurs
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                );
-              }
-
-              // Chart when data exists
-              return (
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart
-                    margin={{ top: 8, right: 8, bottom: 24, left: 8 }}
-                  >
-                    <Pie
-                      data={stats.userDistributionData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius="55%"
-                      outerRadius="80%"
-                      dataKey="value"
-                      labelLine={false}
-                      label={false}
-                      isAnimationActive={false}
-                    >
-                      {stats.userDistributionData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                      <Label
-                        position="center"
-                        content={({ viewBox }) => {
-                          if (!viewBox) return null;
-                          const { cx, cy } = viewBox as {
-                            cx: number;
-                            cy: number;
-                          };
-                          return (
-                            <g>
-                              <text
-                                x={cx}
-                                y={cy - 4}
-                                textAnchor="middle"
-                                className="fill-current"
-                                style={{ fontSize: 14, fontWeight: 600 }}
-                              >
-                                Total
-                              </text>
-                              <text
-                                x={cx}
-                                y={cy + 16}
-                                textAnchor="middle"
-                                className="fill-current"
-                                style={{ fontSize: 18, fontWeight: 700 }}
-                              >
-                                {total}
-                              </text>
-                            </g>
-                          );
-                        }}
-                      />
-                    </Pie>
-
-                    <Tooltip
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      formatter={(value: number, _name: string, props: any) => {
-                        const pct = props?.payload?.value
-                          ? `${Math.round((props.payload.value / total) * 100)}%`
-                          : "";
-                        return [`${value} • ${pct}`, "Utilisateurs"];
-                      }}
+          <CardContent className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsPieChart>
+                <Pie
+                  data={stats.userDistributionData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, percent }) =>
+                    `${name}: ${(percent * 100).toFixed(0)}%`
+                  }
+                >
+                  {stats.userDistributionData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
                     />
-                    <Legend
-                      verticalAlign="bottom"
-                      align="center"
-                      iconType="circle"
-                      wrapperStyle={{ fontSize: 12 }}
-                    />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-              );
-            })()}
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => [`${value}%`, name]}
+                  separator=": "
+                />
+                <Legend verticalAlign="bottom" height={36} />
+              </RechartsPieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
@@ -594,6 +483,7 @@ export function DashboardContent({
         </Card>
       </div>
 
+      <SubscriptionManager />
       {/* Pending Verifications */}
       <Card>
         <CardHeader className="flex flex-row items-center">
@@ -700,7 +590,7 @@ export function DashboardContent({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             <Button
               variant="outline"
               className="h-auto flex-col items-center justify-center p-4 gap-2"
@@ -749,36 +639,6 @@ export function DashboardContent({
               <a href="/dashboard/superadmin/users/doctors">
                 <Users2 className="h-6 w-6 text-red-500" />
                 <span>Docteurs</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col items-center justify-center p-4 gap-2"
-              asChild
-            >
-              <a href="/admin/support">
-                <LifeBuoy className="h-6 w-6 text-cyan-500" />
-                <span>Support</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col items-center justify-center p-4 gap-2"
-              asChild
-            >
-              <a href="/admin/settings">
-                <Settings className="h-6 w-6 text-gray-500" />
-                <span>Paramètres</span>
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto flex-col items-center justify-center p-4 gap-2"
-              asChild
-            >
-              <a href="/admin/statistics">
-                <LineChart className="h-6 w-6 text-indigo-500" />
-                <span>Statistiques</span>
               </a>
             </Button>
           </div>

@@ -36,10 +36,51 @@ export default function DoctorDetails({
   doctor,
   onEdit,
   onDelete,
-  onStatusChange,
-  onVerificationChange,
 }: DoctorDetailsProps) {
   if (!doctor) return null;
+
+  const toggleDoctorStatus = async (isActive: boolean) => {
+    try {
+      const response = await fetch(
+        `/api/superadmin/doctors/${doctor.user.id}/activate`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isActive }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Échec de la mise à jour");
+
+      // Rafraîchir les données après la mise à jour
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating doctor status:", error);
+    }
+  };
+
+  const toggleDoctorVerification = async (isVerified: boolean) => {
+    try {
+      const response = await fetch(
+        `/api/superadmin/doctors/${doctor.user.id}/verify`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isVerified }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Échec de la mise à jour");
+      // Rafraîchir les données après la mise à jour
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating doctor verification:", error);
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -325,7 +366,7 @@ export default function DoctorDetails({
                       <Button
                         variant={doctor.user.isActive ? "outline" : "default"}
                         size="sm"
-                        onClick={() => onStatusChange(doctor.id, "inactive")}
+                        onClick={() => toggleDoctorStatus(false)}
                         disabled={!doctor.user.isActive}
                       >
                         Désactiver
@@ -333,7 +374,7 @@ export default function DoctorDetails({
                       <Button
                         variant={doctor.user.isActive ? "default" : "outline"}
                         size="sm"
-                        onClick={() => onStatusChange(doctor.id, "active")}
+                        onClick={() => toggleDoctorStatus(true)}
                         disabled={doctor.user.isActive}
                       >
                         Activer
@@ -352,7 +393,7 @@ export default function DoctorDetails({
                       variant={doctor.isVerified ? "outline" : "default"}
                       size="sm"
                       onClick={() =>
-                        onVerificationChange(doctor.id, !doctor.isVerified)
+                        toggleDoctorVerification(!doctor.isVerified)
                       }
                     >
                       {doctor.isVerified

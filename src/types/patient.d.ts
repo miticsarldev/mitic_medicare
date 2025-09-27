@@ -1,9 +1,8 @@
-import { BloodType } from "@prisma/client";
+import { BloodType, UserGenre } from "@prisma/client";
 
 export type Patient = {
   id: string;
   userId: string;
-  dateOfBirth: Date;
   bloodType?: BloodType;
   allergies?: string[];
   emergencyContact?: string;

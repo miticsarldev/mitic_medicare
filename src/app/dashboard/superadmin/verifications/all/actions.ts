@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { PendingApprovalUser } from "./types";
+import { sendApprovingEmail } from "@/lib/email";
 
 export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {
   try {
@@ -74,12 +75,20 @@ export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {
   }
 }
 
-export async function approveUser(userId: string): Promise<void> {
+export async function approveUser(user: PendingApprovalUser): Promise<void> {
+  ///
   try {
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: user.id },
       data: { isApproved: true },
     });
+
+    await sendApprovingEmail(
+      user.name,
+      user.email,
+      user.role,
+      user.hospital?.name ?? "Hopital"
+    );
 
     revalidatePath("/dashboard/superadmin/verifications/all");
   } catch (error) {

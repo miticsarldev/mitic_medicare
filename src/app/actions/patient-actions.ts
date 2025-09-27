@@ -499,7 +499,6 @@ export const getPatientById = async (id: string): Promise<Patient> => {
   }
 
   const mapped: Patient = {
-    dateOfBirth: data.user.dateOfBirth ?? new Date(0),
     id: data.id,
     userId: data.userId,
     bloodType: data.bloodType ?? undefined,
@@ -517,6 +516,7 @@ export const getPatientById = async (id: string): Promise<Patient> => {
 
     user: {
       ...data.user,
+      dateOfBirth: data.user.dateOfBirth ?? undefined,
       profile: data.user.profile
         ? {
             address: data.user.profile.address ?? undefined,

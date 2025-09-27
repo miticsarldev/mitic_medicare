@@ -1,156 +1,166 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Toggle } from "@/components/ui/toggle"
-import { LayoutGrid, List, Filter, Search, Plus } from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { DoctorCard } from "./DoctorCard"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/hooks/use-toast"
-import { Skeleton } from "@/components/ui/skeleton"
-import DoctorModal from "./DoctorModal"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
+import { LayoutGrid, List, Filter, Search, Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { DoctorCard } from "./DoctorCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import DoctorModal from "./DoctorModal";
 
 type Doctor = {
-  id: string
-  name: string
-  specialization: string
-  isVerified: boolean
-  isActive: boolean
-  availableForChat: boolean
-  averageRating: number
-  patientsCount: number
-  phone: string
+  id: string;
+  name: string;
+  specialization: string;
+  isVerified: boolean;
+  isActive: boolean;
+  availableForChat: boolean;
+  averageRating: number;
+  patientsCount: number;
+  phone: string;
   email: string;
-  address?: string
+  address?: string;
   department?: {
-    id: string
-    name: string
-  }
-  education?: string
-  experience?: string
-  consultationFee?: string
-  schedule?: { day: string; slots: string[] }[]
-}
+    id: string;
+    name: string;
+  };
+  education?: string;
+  experience?: string;
+  consultationFee?: string;
+  schedule?: { day: string; slots: string[] }[];
+};
 
 type Department = {
-  id: string
-  name: string
-  description: string
-}
+  id: string;
+  name: string;
+  description: string;
+};
 
-const ITEMS_PER_PAGE = 6
+const ITEMS_PER_PAGE = 6;
 
 export default function DoctorTable() {
   // États de base
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [search, setSearch] = useState("")
-  const [specialtyFilter, setSpecialtyFilter] = useState<string[]>([])
-  const [minRating, setMinRating] = useState(0)
-  const [doctors, setDoctors] = useState<Doctor[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [showMobileFilters, setShowMobileFilters] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [openAdd, setOpenAdd] = useState(false)
-  const [departments, setDepartments] = useState<Department[]>([])
-  const [showDeptModal, setShowDeptModal] = useState(false)
-  const [currentDoctor, setCurrentDoctor] = useState<Doctor | null>(null)
-  const [selectedDept, setSelectedDept] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [search, setSearch] = useState("");
+  const [specialtyFilter, setSpecialtyFilter] = useState<string[]>([]);
+  const [minRating, setMinRating] = useState(0);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [showDeptModal, setShowDeptModal] = useState(false);
+  const [currentDoctor, setCurrentDoctor] = useState<Doctor | null>(null);
+  const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Mémoïsation des données filtrées et paginées
   const filteredDoctors = useMemo(() => {
     return doctors.filter((doc) => {
-      const searchLower = search.toLowerCase()
+      const searchLower = search.toLowerCase();
       const matchesSearch =
         doc.name.toLowerCase().includes(searchLower) ||
-        doc.specialization.toLowerCase().includes(searchLower)
+        doc.specialization.toLowerCase().includes(searchLower);
       const matchesSpecialty =
-        specialtyFilter.length === 0 || specialtyFilter.includes(doc.specialization)
-      const matchesRating = doc.averageRating >= minRating
-      return matchesSearch && matchesSpecialty && matchesRating
-    })
-  }, [doctors, search, specialtyFilter, minRating])
+        specialtyFilter.length === 0 ||
+        specialtyFilter.includes(doc.specialization);
+      const matchesRating = doc.averageRating >= minRating;
+      return matchesSearch && matchesSpecialty && matchesRating;
+    });
+  }, [doctors, search, specialtyFilter, minRating]);
 
-  const totalPages = useMemo(() => Math.ceil(filteredDoctors.length / ITEMS_PER_PAGE), [filteredDoctors])
+  const totalPages = useMemo(
+    () => Math.ceil(filteredDoctors.length / ITEMS_PER_PAGE),
+    [filteredDoctors]
+  );
 
   const paginatedDoctors = useMemo(() => {
     return filteredDoctors.slice(
       (currentPage - 1) * ITEMS_PER_PAGE,
       currentPage * ITEMS_PER_PAGE
-    )
-  }, [filteredDoctors, currentPage])
+    );
+  }, [filteredDoctors, currentPage]);
 
   // Récupération des données
   const fetchData = useCallback(async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const [doctorsRes, departmentsRes] = await Promise.all([
         fetch("/api/hospital_admin/doctors"),
-        fetch("/api/hospital_admin/department")
-      ])
+        fetch("/api/hospital_admin/department"),
+      ]);
 
-      const doctorsData = await doctorsRes.json()
-      const departmentsData = await departmentsRes.json()
+      const doctorsData = await doctorsRes.json();
+      const departmentsData = await departmentsRes.json();
 
-      setDoctors(doctorsData.doctors)
-      setDepartments(departmentsData.departments)
+      setDoctors(doctorsData.doctors);
+      setDepartments(departmentsData.departments);
     } catch (err) {
-      console.error("Erreur lors de la récupération des données", err)
+      console.error("Erreur lors de la récupération des données", err);
       toast({
         title: "Erreur",
         description: "Impossible de charger les données",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchData();
+  }, [fetchData]);
 
   // Gestion des filtres
   const toggleSpecialty = useCallback((specialty: string) => {
-    setSpecialtyFilter(prev =>
+    setSpecialtyFilter((prev) =>
       prev.includes(specialty)
-        ? prev.filter(s => s !== specialty)
+        ? prev.filter((s) => s !== specialty)
         : [...prev, specialty]
-    )
-    setCurrentPage(1) // Reset à la première page lors du changement de filtre
-  }, [])
+    );
+    setCurrentPage(1); // Reset à la première page lors du changement de filtre
+  }, []);
 
   const resetFilters = useCallback(() => {
-    setSearch("")
-    setSpecialtyFilter([])
-    setMinRating(0)
-    setCurrentPage(1)
-  }, [])
+    setSearch("");
+    setSpecialtyFilter([]);
+    setMinRating(0);
+    setCurrentPage(1);
+  }, []);
 
   // Gestion des médecins
   const onChangeDepartmentRequest = useCallback((doctor: Doctor) => {
-    setCurrentDoctor(doctor)
-    setSelectedDept(doctor.department?.id ?? "")
-    setShowDeptModal(true)
-  }, [])
+    setCurrentDoctor(doctor);
+    setSelectedDept(doctor.department?.id ?? "");
+    setShowDeptModal(true);
+  }, []);
 
   const saveDepartment = useCallback(async () => {
-    if (!currentDoctor) return
+    if (!currentDoctor) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
       await fetch("/api/hospital_admin/doctors/updateDepartement", {
         method: "PATCH",
@@ -159,129 +169,139 @@ export default function DoctorTable() {
           doctorId: currentDoctor.id,
           departmentId: selectedDept || null,
         }),
-      })
+      });
 
-      await fetchData()
+      await fetchData();
 
       toast({
         title: "Succès",
         description: `Le département de ${currentDoctor.name} a été mis à jour.`,
-      })
-      setShowDeptModal(false)
+      });
+      setShowDeptModal(false);
     } catch {
       toast({
         title: "Erreur",
         description: "Échec de la mise à jour du département",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [currentDoctor, selectedDept, fetchData])
+  }, [currentDoctor, selectedDept, fetchData]);
 
-  const toggleActive = useCallback(async (doctorId: string, isActive: boolean) => {
-    setLoading(true)
-    try {
-      await fetch("/api/hospital_admin/doctors/toggle-active", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doctorId, isActive }),
-      })
+  const toggleActive = useCallback(
+    async (doctorId: string, isActive: boolean) => {
+      setLoading(true);
+      try {
+        await fetch("/api/hospital_admin/doctors/toggle-active", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ doctorId, isActive }),
+        });
 
-      await fetchData()
+        await fetchData();
 
-      toast({
-        title: "Succès",
-        description: `Le médecin a été ${isActive ? "activé" : "désactivé"}.`,
-      })
-    } catch (err) {
-      console.error("Erreur lors de la mise à jour", err)
-      toast({
-        title: "Erreur",
-        description: "Échec de la mise à jour du statut",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [fetchData])
+        toast({
+          title: "Succès",
+          description: `Le médecin a été ${isActive ? "activé" : "désactivé"}.`,
+        });
+      } catch (err) {
+        console.error("Erreur lors de la mise à jour", err);
+        toast({
+          title: "Erreur",
+          description: "Échec de la mise à jour du statut",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchData]
+  );
 
   // Composant de filtres
-  const renderFilters = useCallback(() => (
-    <Card className="hidden md:block">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="text-lg">Filtres</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 px-4 py-2">
-        <div className="space-y-2">
-          <Label htmlFor="search" className="text-sm font-medium">
-            Recherche
-          </Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="search"
-              type="search"
-              placeholder="Nom, spécialité..."
-              className="pl-9 h-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <Separator className="my-3" />
-
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Spécialités</Label>
-          <ScrollArea className="h-[200px] pr-3">
-            <div className="space-y-2">
-              {Array.from(new Set(doctors.map(d => d.specialization))).map((specialty) => (
-                <div key={specialty} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`spec-${specialty}`}
-                    checked={specialtyFilter.includes(specialty)}
-                    onCheckedChange={() => toggleSpecialty(specialty)}
-                  />
-                  <Label htmlFor={`spec-${specialty}`} className="text-sm">
-                    {specialty}
-                  </Label>
-                </div>
-              ))}
+  const renderFilters = useCallback(
+    () => (
+      <Card className="hidden md:block">
+        <CardHeader className="px-4 py-3">
+          <CardTitle className="text-lg">Filtres</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 px-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="search" className="text-sm font-medium">
+              Recherche
+            </Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="search"
+                type="search"
+                placeholder="Nom, spécialité..."
+                className="pl-9 h-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-          </ScrollArea>
-        </div>
+          </div>
 
-        <Button
-          variant="outline"
-          className="w-full mt-2"
-          onClick={resetFilters}
-        >
-          Réinitialiser
-        </Button>
-      </CardContent>
-    </Card>
-  ), [doctors, search, specialtyFilter, toggleSpecialty, resetFilters])
+          <Separator className="my-3" />
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Spécialités</Label>
+            <ScrollArea className="h-[200px] pr-3">
+              <div className="space-y-2">
+                {Array.from(new Set(doctors.map((d) => d.specialization))).map(
+                  (specialty) => (
+                    <div key={specialty} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`spec-${specialty}`}
+                        checked={specialtyFilter.includes(specialty)}
+                        onCheckedChange={() => toggleSpecialty(specialty)}
+                      />
+                      <Label htmlFor={`spec-${specialty}`} className="text-sm">
+                        {specialty}
+                      </Label>
+                    </div>
+                  )
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full mt-2"
+            onClick={resetFilters}
+          >
+            Réinitialiser
+          </Button>
+        </CardContent>
+      </Card>
+    ),
+    [doctors, search, specialtyFilter, toggleSpecialty, resetFilters]
+  );
 
   // Squelettes de chargement
-  const renderSkeletons = useCallback(() => (
-    viewMode === "grid" ? (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
-          <Skeleton key={idx} className="h-48 rounded-lg" />
-        ))}
-      </div>
-    ) : (
-      <div className="space-y-4">
-        {Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
-          <Skeleton key={idx} className="h-24 w-full rounded-lg" />
-        ))}
-      </div>
-    )
-  ), [viewMode])
+  const renderSkeletons = useCallback(
+    () =>
+      viewMode === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+            <Skeleton key={idx} className="h-48 rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+            <Skeleton key={idx} className="h-24 w-full rounded-lg" />
+          ))}
+        </div>
+      ),
+    [viewMode]
+  );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 p-4 md:p-6">
+    <div className="flex flex-col lg:flex-row gap-4 p-2 sm:p-4">
       {/* Filtres Desktop */}
       <aside className="hidden lg:block w-64 flex-shrink-0">
         {renderFilters()}
@@ -292,7 +312,9 @@ export default function DoctorTable() {
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold sm:text-2xl">Listes des Médecins</h1>
+            <h1 className="text-xl font-bold sm:text-2xl">
+              Listes des Médecins
+            </h1>
             <Button
               variant="outline"
               size="sm"
@@ -393,7 +415,7 @@ export default function DoctorTable() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
             >
               Précédent
@@ -404,7 +426,9 @@ export default function DoctorTable() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
             >
               Suivant
@@ -418,21 +442,16 @@ export default function DoctorTable() {
         <DialogContent className="max-w-sm">
           <DialogHeader className="space-y-1">
             <DialogTitle>Changer de département</DialogTitle>
-            <DialogDescription>
-              Pour {currentDoctor?.name}
-            </DialogDescription>
+            <DialogDescription>Pour {currentDoctor?.name}</DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
-            <Select
-              value={selectedDept || ""}
-              onValueChange={setSelectedDept}
-            >
+            <Select value={selectedDept || ""} onValueChange={setSelectedDept}>
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner un département" />
               </SelectTrigger>
               <SelectContent>
-                {departments.map(dep => (
+                {departments.map((dep) => (
                   <SelectItem key={dep.id} value={dep.id}>
                     {dep.name}
                   </SelectItem>
@@ -452,7 +471,9 @@ export default function DoctorTable() {
             </Button>
             <Button
               onClick={saveDepartment}
-              disabled={loading || selectedDept === currentDoctor?.department?.id}
+              disabled={
+                loading || selectedDept === currentDoctor?.department?.id
+              }
             >
               {loading ? "Enregistrement..." : "Enregistrer"}
             </Button>
@@ -466,5 +487,5 @@ export default function DoctorTable() {
         onDoctorCreated={fetchData}
       />
     </div>
-  )
+  );
 }

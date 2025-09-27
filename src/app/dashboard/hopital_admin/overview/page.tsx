@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -88,7 +88,9 @@ export default function HospitalAdminOverviewPage() {
     topDoctors?: AppointmentData[];
     cancellationRate?: AppointmentData;
   }>({});
-  const [patientDepartementData, setPatientDepartementData] = useState<DepartmentData[]>([]);
+  const [patientDepartementData, setPatientDepartementData] = useState<
+    DepartmentData[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeAppointmentTab, setActiveAppointmentTab] = useState("status");
@@ -98,27 +100,35 @@ export default function HospitalAdminOverviewPage() {
     setIsRefreshing(true);
     try {
       // Fetch main stats
-      const statsResponse = await fetch('/api/hospital_admin/dashboard/analytics');
+      const statsResponse = await fetch(
+        "/api/hospital_admin/dashboard/analytics"
+      );
       if (!statsResponse.ok) throw new Error("Failed to fetch stats");
       const statsData = await statsResponse.json();
 
       // Fetch appointment data
       const appointmentResponses = await Promise.all([
-        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=statusDistribution'),
-        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=timeSeries&range=weekly'),
-        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=topDoctors'),
-        fetch('/api/hospital_admin/dashboard/graphique?type=appointments&subType=cancellationRate'),
+        fetch(
+          "/api/hospital_admin/dashboard/graphique?type=appointments&subType=statusDistribution"
+        ),
+        fetch(
+          "/api/hospital_admin/dashboard/graphique?type=appointments&subType=timeSeries&range=weekly"
+        ),
+        fetch(
+          "/api/hospital_admin/dashboard/graphique?type=appointments&subType=topDoctors"
+        ),
+        fetch(
+          "/api/hospital_admin/dashboard/graphique?type=appointments&subType=cancellationRate"
+        ),
       ]);
 
-      const [
-        statusData,
-        timeSeriesData,
-        topDoctorsData,
-        cancellationRateData,
-      ] = await Promise.all(appointmentResponses.map(res => res.json()));
+      const [statusData, timeSeriesData, topDoctorsData, cancellationRateData] =
+        await Promise.all(appointmentResponses.map((res) => res.json()));
 
       // Fetch patients by department
-      const departmentResponse = await fetch('/api/hospital_admin/dashboard/graphique?type=patientsByDepartment');
+      const departmentResponse = await fetch(
+        "/api/hospital_admin/dashboard/graphique?type=patientsByDepartment"
+      );
       const departmentData = await departmentResponse.json();
 
       setStats({
@@ -136,7 +146,6 @@ export default function HospitalAdminOverviewPage() {
         cancellationRate: cancellationRateData,
       });
       setPatientDepartementData(departmentData || []);
-
     } catch (err) {
       console.error(err);
       setError("Erreur lors de la récupération des données");
@@ -202,7 +211,7 @@ export default function HospitalAdminOverviewPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2 sm:p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {loading ? (
           <div className="space-y-2">
@@ -212,10 +221,12 @@ export default function HospitalAdminOverviewPage() {
         ) : (
           <>
             <div>
-              <h2 className="text-3xl font-bold tracking-tight">Tableau de bord</h2>
+              <h2 className="text-3xl font-bold tracking-tight">
+                Tableau de bord
+              </h2>
               <p className="text-muted-foreground">
-                Bienvenue dans votre espace d&apos;administration. Voici un aperçu
-                de votre plateforme.
+                Bienvenue dans votre espace d&apos;administration. Voici un
+                aperçu de votre plateforme.
               </p>
             </div>
             <Button
@@ -236,31 +247,31 @@ export default function HospitalAdminOverviewPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
-            <Card key={`stat-skeleton-${i}`}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <Skeleton className="h-4 w-[100px]" />
-                <Skeleton className="h-10 w-10 rounded-full" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-[50px]" />
-              </CardContent>
-            </Card>
-          ))
+              <Card key={`stat-skeleton-${i}`}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <Skeleton className="h-4 w-[100px]" />
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-[50px]" />
+                </CardContent>
+              </Card>
+            ))
           : overviewStats.map((stat) => (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <div className={`${stat.color} rounded-full p-2 text-white`}>
-                  <stat.icon className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          ))}
+              <Card key={stat.title}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.title}
+                  </CardTitle>
+                  <div className={`${stat.color} rounded-full p-2 text-white`}>
+                    <stat.icon className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
@@ -286,7 +297,10 @@ export default function HospitalAdminOverviewPage() {
               <div className="space-y-4">
                 <div className="flex space-x-2">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={`tab-skeleton-${i}`} className="h-9 w-[100px]" />
+                    <Skeleton
+                      key={`tab-skeleton-${i}`}
+                      className="h-9 w-[100px]"
+                    />
                   ))}
                 </div>
                 <Skeleton className="h-[400px] w-full" />
@@ -295,28 +309,40 @@ export default function HospitalAdminOverviewPage() {
               <>
                 <div className="flex space-x-2 mb-4">
                   <Button
-                    variant={activeAppointmentTab === "status" ? "default" : "outline"}
+                    variant={
+                      activeAppointmentTab === "status" ? "default" : "outline"
+                    }
                     size="sm"
                     onClick={() => setActiveAppointmentTab("status")}
                   >
                     Par Statut
                   </Button>
                   <Button
-                    variant={activeAppointmentTab === "evolution" ? "default" : "outline"}
+                    variant={
+                      activeAppointmentTab === "evolution"
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => setActiveAppointmentTab("evolution")}
                   >
                     Évolution
                   </Button>
                   <Button
-                    variant={activeAppointmentTab === "doctors" ? "default" : "outline"}
+                    variant={
+                      activeAppointmentTab === "doctors" ? "default" : "outline"
+                    }
                     size="sm"
                     onClick={() => setActiveAppointmentTab("doctors")}
                   >
                     Top Médecins
                   </Button>
                   <Button
-                    variant={activeAppointmentTab === "cancellation" ? "default" : "outline"}
+                    variant={
+                      activeAppointmentTab === "cancellation"
+                        ? "default"
+                        : "outline"
+                    }
                     size="sm"
                     onClick={() => setActiveAppointmentTab("cancellation")}
                   >
@@ -343,38 +369,59 @@ export default function HospitalAdminOverviewPage() {
                                   `${STATUS_TRANSLATIONS[name as keyof typeof STATUS_TRANSLATIONS] || name} ${(percent * 100).toFixed(0)}%`
                                 }
                               >
-                                {appointmentData.statusDistribution.map((_, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
+                                {appointmentData.statusDistribution.map(
+                                  (_, index) => (
+                                    <Cell
+                                      key={`cell-${index}`}
+                                      fill={COLORS[index % COLORS.length]}
+                                    />
+                                  )
+                                )}
                               </Pie>
                               <Tooltip
-                                formatter={(value: number) => [`${value}`, "Rendez-vous"]}
+                                formatter={(value: number) => [
+                                  `${value}`,
+                                  "Rendez-vous",
+                                ]}
                               />
                             </RechartsPieChart>
                           </ResponsiveContainer>
                         </div>
 
                         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 overflow-y-auto">
-                          {appointmentData.statusDistribution.map((entry, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                              <div className="flex-shrink-0">
-                                {statusIcons[entry.name as keyof typeof statusIcons]}
+                          {appointmentData.statusDistribution.map(
+                            (entry, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center space-x-2"
+                              >
+                                <div className="flex-shrink-0">
+                                  {
+                                    statusIcons[
+                                      entry.name as keyof typeof statusIcons
+                                    ]
+                                  }
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {STATUS_TRANSLATIONS[
+                                      entry.name as keyof typeof STATUS_TRANSLATIONS
+                                    ] || entry.name}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {entry.value} rdv
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {STATUS_TRANSLATIONS[entry.name as keyof typeof STATUS_TRANSLATIONS] || entry.name}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {entry.value} rdv
-                                </p>
-                              </div>
-                            </div>
-                          ))}
+                            )
+                          )}
                         </div>
                       </>
                     ) : (
                       <div className="h-full flex items-center justify-center">
-                        <p className="text-muted-foreground">Aucune donnée disponible</p>
+                        <p className="text-muted-foreground">
+                          Aucune donnée disponible
+                        </p>
                       </div>
                     )}
                   </div>
@@ -398,12 +445,18 @@ export default function HospitalAdminOverviewPage() {
                           <YAxis />
                           <Tooltip />
                           <Legend />
-                          <Bar dataKey="appointments" fill="#8884d8" name="Rendez-vous" />
+                          <Bar
+                            dataKey="appointments"
+                            fill="#8884d8"
+                            name="Rendez-vous"
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center">
-                        <p className="text-muted-foreground">Aucune donnée disponible</p>
+                        <p className="text-muted-foreground">
+                          Aucune donnée disponible
+                        </p>
                       </div>
                     )}
                   </div>
@@ -452,7 +505,9 @@ export default function HospitalAdminOverviewPage() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center">
-                        <p className="text-muted-foreground">Aucune donnée disponible</p>
+                        <p className="text-muted-foreground">
+                          Aucune donnée disponible
+                        </p>
                       </div>
                     )}
                   </div>
@@ -463,7 +518,10 @@ export default function HospitalAdminOverviewPage() {
                     {appointmentData.cancellationRate ? (
                       <>
                         <div className="text-4xl font-bold mb-2">
-                          {appointmentData.cancellationRate.cancellationRate?.toFixed(1)}%
+                          {appointmentData.cancellationRate.cancellationRate?.toFixed(
+                            1
+                          )}
+                          %
                         </div>
                         <p className="text-lg text-muted-foreground mb-6">
                           Taux d&apos;annulation
@@ -475,7 +533,10 @@ export default function HospitalAdminOverviewPage() {
                             </CardHeader>
                             <CardContent>
                               <div className="text-2xl font-bold">
-                                {appointmentData.cancellationRate.totalAppointments}
+                                {
+                                  appointmentData.cancellationRate
+                                    .totalAppointments
+                                }
                               </div>
                             </CardContent>
                           </Card>
@@ -485,14 +546,19 @@ export default function HospitalAdminOverviewPage() {
                             </CardHeader>
                             <CardContent>
                               <div className="text-2xl font-bold text-red-500">
-                                {appointmentData.cancellationRate.cancelledAppointments}
+                                {
+                                  appointmentData.cancellationRate
+                                    .cancelledAppointments
+                                }
                               </div>
                             </CardContent>
                           </Card>
                         </div>
                       </>
                     ) : (
-                      <p className="text-muted-foreground">Aucune donnée disponible</p>
+                      <p className="text-muted-foreground">
+                        Aucune donnée disponible
+                      </p>
                     )}
                   </div>
                 )}
@@ -512,7 +578,9 @@ export default function HospitalAdminOverviewPage() {
             ) : (
               <>
                 <CardTitle>Répartition des Patients</CardTitle>
-                <CardDescription>Nombre de patients par département</CardDescription>
+                <CardDescription>
+                  Nombre de patients par département
+                </CardDescription>
               </>
             )}
           </CardHeader>
@@ -520,7 +588,9 @@ export default function HospitalAdminOverviewPage() {
             {loading ? (
               <Skeleton className="h-full w-full" />
             ) : patientDepartementData.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucune donnée disponible</p>
+              <p className="text-muted-foreground text-sm">
+                Aucune donnée disponible
+              </p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
@@ -537,7 +607,10 @@ export default function HospitalAdminOverviewPage() {
                     }
                   >
                     {patientDepartementData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
@@ -551,11 +624,16 @@ export default function HospitalAdminOverviewPage() {
             <CardFooter className="border-t px-6 py-3">
               <div className="w-full space-y-1">
                 {patientDepartementData.map((entry, index) => (
-                  <div key={index} className="flex items-center justify-between">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center">
                       <div
                         className="h-3 w-3 rounded-full mr-2"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        style={{
+                          backgroundColor: COLORS[index % COLORS.length],
+                        }}
                       />
                       <span className="text-sm">{entry.name}</span>
                     </div>
@@ -599,7 +677,10 @@ export default function HospitalAdminOverviewPage() {
           {loading ? (
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={`doctor-skeleton-${i}`} className="flex items-center justify-between rounded-lg border p-4">
+                <div
+                  key={`doctor-skeleton-${i}`}
+                  className="flex items-center justify-between rounded-lg border p-4"
+                >
                   <div className="flex items-center space-x-4">
                     <Skeleton className="h-10 w-10 rounded-full" />
                     <div className="space-y-2">
@@ -615,7 +696,9 @@ export default function HospitalAdminOverviewPage() {
               ))}
             </div>
           ) : doctors.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Aucun médecin trouvé</p>
+            <p className="text-muted-foreground text-sm">
+              Aucun médecin trouvé
+            </p>
           ) : (
             <div className="space-y-4">
               {doctors.map((doctor) => (
@@ -626,9 +709,7 @@ export default function HospitalAdminOverviewPage() {
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={doctor.avatar} alt={doctor.name} />
-                      <AvatarFallback>
-                        {doctor.name.charAt(0)}
-                      </AvatarFallback>
+                      <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium">{doctor.name}</p>
@@ -642,7 +723,9 @@ export default function HospitalAdminOverviewPage() {
                       Patients aujourd&apos;hui: {doctor.patientsToday}
                     </p>
                     <Badge
-                      variant={doctor.availableToday ? "default" : "destructive"}
+                      variant={
+                        doctor.availableToday ? "default" : "destructive"
+                      }
                       className="mt-1"
                     >
                       {doctor.availableToday ? "Disponible" : "Indisponible"}
@@ -676,7 +759,10 @@ export default function HospitalAdminOverviewPage() {
           {loading ? (
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={`action-skeleton-${i}`} className="h-[100px] w-full" />
+                <Skeleton
+                  key={`action-skeleton-${i}`}
+                  className="h-[100px] w-full"
+                />
               ))}
             </div>
           ) : (

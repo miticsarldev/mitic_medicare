@@ -73,3 +73,23 @@ export type Appointment = {
   followUp: string | null;
   avatar: string;
 };
+
+export interface PaymentInitResponse {
+  status: number;
+  message: string;
+  pay_token: string;
+  payment_url: string;
+  notif_token: string;
+}
+
+export interface TokenData {
+  token_type: string;
+  access_token: string;
+  expires_in: number;
+}
+
+export interface TransactionStatusResponse {
+  status: "INITIATED" | "PENDING" | "EXPIRED" | "SUCCESS" | "FAILED";
+  order_id: string;
+  txnid: string;
+}

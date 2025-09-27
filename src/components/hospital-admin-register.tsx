@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Eye, EyeOff, Mail, Phone, Building, MapPin } from "lucide-react";
-import { countries, institutionTypes, specialities } from "@/constant";
+import { countries, institutionTypes } from "@/constant";
 
 const hospitalAdminSchema = z.object({
   lastName: z
@@ -64,8 +64,6 @@ const hospitalAdminSchema = z.object({
       /[\W_]/,
       "Le mot de passe doit contenir au moins un caractère spécial"
     ),
-  speciality: z.string().min(1, "Veuillez sélectionner une spécialité"),
-  licenseNumber: z.string().min(5, "Le numéro de licence est requis"),
   institutionName: z.string().min(2, "Le nom de l'hôpital est requis"),
   institutionType: z.enum(["clinic", "hospital"], {
     errorMap: () => ({ message: "Le type d'établissement est requis." }),
@@ -110,8 +108,6 @@ const HospitalAdminRegisterForm = () => {
       email: "",
       phone: "",
       password: "",
-      speciality: "",
-      licenseNumber: "",
       institutionName: "",
       institutionType: undefined,
       institutionPhone: "",
@@ -251,56 +247,6 @@ const HospitalAdminRegisterForm = () => {
                 {errors.password.message}
               </p>
             )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="speciality">Spécialité *</Label>
-              <Controller
-                name="speciality"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <SelectTrigger id="speciality">
-                      <SelectValue placeholder="Sélectionnez votre spécialité" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {specialities.map((speciality) => (
-                        <SelectItem
-                          key={speciality.value}
-                          value={speciality.value}
-                        >
-                          {speciality.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.speciality && (
-                <p className="text-red-500 text-xs mt-0.5">
-                  {errors.speciality.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="licenseNumber">Licence *</Label>
-              <Input
-                {...register("licenseNumber")}
-                type="text"
-                id="licenseNumber"
-                placeholder="Votre licence"
-              />
-              {errors.licenseNumber && (
-                <p className="text-red-500 text-xs mt-0.5">
-                  {errors.licenseNumber.message}
-                </p>
-              )}
-            </div>
           </div>
         </div>
 

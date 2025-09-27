@@ -49,7 +49,7 @@ export default function PatientDetailsModal({
   };
 
   // Format date helper
-  const formatDate = (date: string | Date | null) => {
+  const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return "N/A";
     return format(new Date(date), "d MMMM yyyy", { locale: fr });
   };

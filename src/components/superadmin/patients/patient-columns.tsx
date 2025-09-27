@@ -93,6 +93,22 @@ export function usePatientColumns({
           );
         },
       },
+
+      {
+        accessorKey: "dateOfBirth",
+        header: ({ column }) => (
+          <div
+            className="flex items-center cursor-pointer"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Date de naissance
+          </div>
+        ),
+        cell: ({ row }) =>
+          row.original.user.dateOfBirth
+            ? format(new Date(row.original.user.dateOfBirth), "dd/MM/yyyy")
+            : "-",
+      },
       {
         accessorKey: "status",
         header: "Statut",

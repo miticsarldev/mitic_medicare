@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronDown,
-  Download,
   Filter,
   Plus,
   Search,
@@ -12,7 +11,7 @@ import {
   User,
   UserCheck,
   UserPlus,
-  Calendar,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   type SortingState,
@@ -36,7 +35,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -59,7 +57,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { bulkExportPatients } from "@/app/actions/patient-actions";
 import type { Patient } from "@/types/patient";
 
 // Import our custom components
@@ -306,98 +303,6 @@ export default function PatientsPage() {
     }
   };
 
-  // Handle bulk actions
-  const handleBulkAction = async (action: string) => {
-    const selectedIds = table
-      .getSelectedRowModel()
-      .flatRows.map((r) => r.original.id as string);
-
-    if (selectedIds.length === 0) {
-      toast({ title: "Info", description: "Pas de patients sélectionnés" });
-      return;
-    }
-
-    if (action === "export") {
-      try {
-        const result = await bulkExportPatients(selectedIds);
-        if (result?.error) throw new Error(result.error);
-
-        if (Array.isArray(result?.data) && result.data.length > 0) {
-          // Stable column order
-          const columns = [
-            "id",
-            "name",
-            "email",
-            "phone",
-            "dateOfBirth",
-            "gender",
-            "address",
-            "status",
-            "emergencyContact",
-            "bloodType",
-            "allergies",
-          ];
-
-          // CSV header
-          const header = columns.join(",");
-
-          // CSV rows
-          const rows = result.data.map((row: Record<string, unknown>) =>
-            columns
-              .map((key) => {
-                let value = row[key];
-
-                // Normalize values
-                if (value === null || value === undefined) value = "";
-                if (value instanceof Date) value = value.toISOString();
-
-                // Ensure string + CSV escaped
-                const s = String(value);
-                const escaped = `"${s.replace(/"/g, '""')}"`;
-                return escaped;
-              })
-              .join(",")
-          );
-
-          // Excel-friendly UTF-8 BOM
-          const csv = "\uFEFF" + [header, ...rows].join("\n");
-          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          const ts = new Date()
-            .toISOString()
-            .slice(0, 19)
-            .replace(/[:T]/g, "-");
-          link.download = `patients_export_${ts}.csv`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-
-          toast({
-            title: "Export terminé",
-            description: `${selectedIds.length} patient(s) exporté(s)`,
-          });
-        } else {
-          toast({
-            title: "Aucune donnée",
-            description:
-              "Les patients sélectionnés n'ont pas de données exportables.",
-          });
-        }
-      } catch (error) {
-        console.error("Error exporting patients:", error);
-        toast({
-          title: "Erreur",
-          description: "Échec de l’export",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
   return (
     <div className="space-y-6 p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -527,12 +432,18 @@ export default function PatientsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
+                        {/* <DropdownMenuItem
                           onClick={() => handleBulkAction("export")}
                         >
                           <Download className="mr-2 h-4 w-4" />
                           Exporter
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleBulkAction("email")}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Envoyer un email
+                        </DropdownMenuItem> */}
                         <DropdownMenuSeparator />
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -732,7 +643,7 @@ export default function PatientsPage() {
                     <CardTitle className="text-sm font-medium">
                       Rendez-vous
                     </CardTitle>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">

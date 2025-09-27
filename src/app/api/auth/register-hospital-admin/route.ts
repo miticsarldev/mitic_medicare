@@ -12,8 +12,6 @@ export async function POST(req: Request) {
       email,
       phone,
       password,
-      speciality,
-      licenseNumber,
       institutionName,
       institutionType,
       institutionPhone,
@@ -31,8 +29,6 @@ export async function POST(req: Request) {
       !email ||
       !phone ||
       !password ||
-      !speciality ||
-      !licenseNumber ||
       !institutionName ||
       !institutionType ||
       !institutionPhone ||
@@ -63,16 +59,6 @@ export async function POST(req: Request) {
     if (existingPhone) {
       return NextResponse.json(
         { error: "Numéro de téléphone déjà utilisé." },
-        { status: 400 }
-      );
-    }
-
-    const existingLicenseNumber = await prisma.doctor.findFirst({
-      where: { licenseNumber },
-    });
-    if (existingLicenseNumber) {
-      return NextResponse.json(
-        { error: "Numéro de licence déjà utilisé." },
         { status: 400 }
       );
     }
@@ -156,10 +142,10 @@ export async function POST(req: Request) {
       await tx.doctor.create({
         data: {
           userId: user.id,
-          specialization: speciality,
-          licenseNumber,
           isIndependent: false,
           hospitalId: hospital.id,
+          specialization: "General",
+          licenseNumber: "N/A",
         },
       });
 

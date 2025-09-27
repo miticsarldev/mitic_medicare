@@ -1,3 +1,5 @@
+import { UserRole } from "@prisma/client";
+
 export interface UserProfile {
   id: string;
   userId: string;
@@ -55,7 +57,7 @@ export interface PendingApprovalUser {
   name: string;
   email: string;
   phone: string;
-  role: string;
+  role: UserRole;
   createdAt: string;
   profile: UserProfile | null;
   doctor: Doctor | null;

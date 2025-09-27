@@ -4,6 +4,9 @@ import React from "react";
 import { UserRole } from "@prisma/client";
 import VerificationEmailDoctor from "../../emails/verification-email-doctor";
 import VerificationEmailHospital from "../../emails/verification-email-hospital";
+import PasswordResetEmail from "../../emails/password-reset-email";
+import PasswordResetSuccessEmail from "../../emails/password-reset-sucess-email";
+import ApprovalEmail from "../../emails/approval-email";
 
 export async function getVerificationEmailTemplate(
   userName: string,
@@ -42,4 +45,40 @@ export async function getVerificationEmailTemplate(
   }
 
   return html;
+}
+
+export async function getPasswordResetCodeEmailTemplate(
+  username: string,
+  code: string,
+  expiresIn: number
+) {
+  return await render(
+    React.createElement(PasswordResetEmail, {
+      resetCode: code,
+      userName: username,
+      expiryMinutes: expiresIn,
+    })
+  );
+}
+
+export async function getPasswordResetSuccessEmailTemplate(username: string) {
+  return await render(
+    React.createElement(PasswordResetSuccessEmail, {
+      userName: username,
+    })
+  );
+}
+
+export async function getApprovalEmailTemplate(
+  name: string,
+  hospitalName: string,
+  userRole: "INDEPENDENT_DOCTOR" | "HOSPITAL_ADMIN"
+) {
+  return await render(
+    React.createElement(ApprovalEmail, {
+      name,
+      hospitalName,
+      userRole,
+    })
+  );
 }

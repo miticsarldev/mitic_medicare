@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BloodType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { createPatient } from "@/app/actions/patient-actions";
 import { Patient } from "@/types/patient";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BloodType } from "@prisma/client";
 
 interface PatientCreateEditModalProps {
   isOpen: boolean;
@@ -50,8 +50,6 @@ type FormState = {
   allergies: string; // CSV in UI
   emergencyContact: string;
   emergencyPhone: string;
-  insuranceProvider: string;
-  insuranceNumber: string;
   isActive: boolean;
 };
 
@@ -80,8 +78,6 @@ export default function PatientCreateEditModal({
     allergies: "",
     emergencyContact: "",
     emergencyPhone: "",
-    insuranceProvider: "",
-    insuranceNumber: "",
     isActive: true,
   });
 
@@ -92,8 +88,7 @@ export default function PatientCreateEditModal({
         name: patient.user.name || "",
         email: patient.user.email || "",
         phone: patient.user.phone || "",
-        password: "",
-        // ✅ DOB comes from user
+        password: "", // Don't populate password for security reasons
         dateOfBirth: patient.user.dateOfBirth
           ? new Date(patient.user.dateOfBirth).toISOString().split("T")[0]
           : "",
@@ -110,9 +105,7 @@ export default function PatientCreateEditModal({
           : (patient.allergies as unknown as string) || "",
         emergencyContact: patient.emergencyContact || "",
         emergencyPhone: patient.emergencyPhone || "",
-        insuranceProvider: patient.insuranceProvider || "",
-        insuranceNumber: patient.insuranceNumber || "",
-        isActive: !!patient.user.isActive,
+        isActive: patient.user.isActive,
       });
     } else if (isOpen) {
       // Reset on open for create
@@ -132,8 +125,6 @@ export default function PatientCreateEditModal({
         allergies: "",
         emergencyContact: "",
         emergencyPhone: "",
-        insuranceProvider: "",
-        insuranceNumber: "",
         isActive: true,
       });
     }
@@ -208,39 +199,31 @@ export default function PatientCreateEditModal({
           onClose();
         }
       } else if (mode === "edit" && patient) {
-        // ✅ Send the flat payload your API expects (no nested user object)
-        const res = await fetch(`/api/superadmin/patients/${patient.id}`, {
+        console.log({ patient: patient.id });
+        // Update existing patient
+        const response = await fetch(`/api/superadmin/patients/${patient.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: formData.name,
             email: formData.email,
             phone: formData.phone,
-            status: formData.isActive ? "active" : "inactive",
-            dateOfBirth: formData.dateOfBirth || null,
+            isActive: formData.isActive,
+            dateOfBirth: formData.dateOfBirth,
             address: formData.address,
             city: formData.city,
             state: formData.state,
             zipCode: formData.zipCode,
             country: formData.country,
-            // API maps "Homme"/"Femme" → enum, so send label here:
-            gender: formData.gender === "MALE" ? "Homme" : "Femme",
-            bloodType: formData.bloodType || null,
-            allergies: formData.allergies
-              ? formData.allergies
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              : [],
+            gender: formData.gender,
+            bloodType: formData.bloodType,
+            allergies: formData.allergies.split(",").map((item) => item.trim()),
             emergencyContact: formData.emergencyContact,
             emergencyPhone: formData.emergencyPhone,
-            insuranceProvider: formData.insuranceProvider,
-            insuranceNumber: formData.insuranceNumber,
-            chronicConditions: [], // add another field in UI if you collect it
           }),
         });
 
-        if (!res.ok) throw new Error("Failed to update patient");
+        if (!response.ok) throw new Error("Failed to update patient");
 
         toast({ title: "Succès", description: "Patient modifié avec succès." });
         onSuccess();
@@ -258,8 +241,6 @@ export default function PatientCreateEditModal({
     }
   };
 
-  const Required = () => <span className="text-destructive">*</span>;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl">
@@ -272,7 +253,11 @@ export default function PatientCreateEditModal({
           <DialogDescription>
             {mode === "create"
               ? "Créez un nouveau compte patient en remplissant le formulaire ci-dessous"
-              : `Modifiez les informations du patient ${patient?.user.name ?? ""}`}
+              : `Modifiez les informations du patient ${patient?.user.name}`}
+            <div className="text-xs text-muted-foreground mt-1">
+              Les champs marqués d&lsquo;un{" "}
+              <span className="text-red-500">*</span> sont obligatoires
+            </div>
           </DialogDescription>
         </DialogHeader>
 
@@ -283,7 +268,7 @@ export default function PatientCreateEditModal({
               <div className="space-y-3">
                 <div className="space-y-1">
                   <Label htmlFor="name">
-                    Nom complet <Required />
+                    Nom complet <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="name"
@@ -294,10 +279,9 @@ export default function PatientCreateEditModal({
                     aria-required="true"
                   />
                 </div>
-
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <Label htmlFor="email">
-                    Email <Required />
+                    Email <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="email"
@@ -309,10 +293,9 @@ export default function PatientCreateEditModal({
                     aria-required="true"
                   />
                 </div>
-
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <Label htmlFor="phone">
-                    Téléphone <Required />
+                    Téléphone <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="phone"
@@ -325,9 +308,9 @@ export default function PatientCreateEditModal({
                 </div>
 
                 {mode === "create" && (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <Label htmlFor="password">
-                      Mot de passe <Required />
+                      Mot de passe <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="password"
@@ -340,9 +323,10 @@ export default function PatientCreateEditModal({
                     />
                   </div>
                 )}
-
-                <div className="space-y-1">
-                  <Label htmlFor="dateOfBirth">Date de naissance</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">
+                    Date de naissance <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="dateOfBirth"
                     name="dateOfBirth"
@@ -352,14 +336,16 @@ export default function PatientCreateEditModal({
                     required
                   />
                 </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="gender">Genre</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">
+                    Genre <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={formData.gender}
                     onValueChange={(value) =>
                       handleSelectChange("gender", value)
                     }
+                    required
                   >
                     <SelectTrigger id="gender">
                       <SelectValue placeholder="Sélectionner un genre" />
@@ -461,7 +447,6 @@ export default function PatientCreateEditModal({
                     onChange={handleInputChange}
                   />
                 </div>
-
                 {mode === "edit" && (
                   <div className="space-y-1">
                     <Label htmlFor="status">Statut</Label>

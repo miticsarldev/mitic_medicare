@@ -69,7 +69,7 @@ export interface SubscriptionStats {
 // Plan statistics
 export interface PlanStat {
   plan: SubscriptionPlan;
-  subscriberType: SubscriberType;
+  //   subscriberType: SubscriberType;
   count: number;
   percentage: number;
   amount: number;
@@ -95,7 +95,6 @@ export interface UserGrowthDataPoint {
 export interface RevenueDataPoint {
   date: string;
   subscriptions: number;
-  services: number;
   total: number;
 }
 

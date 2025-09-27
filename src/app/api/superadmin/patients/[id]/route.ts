@@ -1,4 +1,3 @@
-// app/api/superadmin/patients/[id]/route.ts
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -45,9 +44,6 @@ export async function GET(
       appointmentsCount: patient.appointments.length,
       medicalRecordsCount: patient.medicalRecords.length,
       allergies: patient.allergies ? patient.allergies.split(",") : [],
-      chronicConditions: patient.medicalNotes
-        ? patient.medicalNotes.split(",")
-        : [],
     };
 
     return NextResponse.json(formattedPatient);
