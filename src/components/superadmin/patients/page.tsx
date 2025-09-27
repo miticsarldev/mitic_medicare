@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronDown,
   Filter,
   Plus,
   Search,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   User,
@@ -36,7 +35,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -59,10 +57,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import {
-  bulkDeletePatients,
-  bulkExportPatients,
-} from "@/app/actions/patient-actions";
 import type { Patient } from "@/types/patient";
 
 // Import our custom components
@@ -72,10 +66,6 @@ import PatientCreateEditModal from "./patient-create-edit-modal";
 import PatientDeleteModal from "./patient-delete-modal";
 import { usePatientColumns } from "./patient-columns";
 import { PatientAnalyticsType } from "@/types";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Label } from "@/components/ui/label";
 
 export default function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,34 +89,26 @@ export default function PatientsPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [birthDateFilter, setBirthDateFilter] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({ start: null, end: null });
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
 
-  const filterPatientsByBirthDate = useCallback((patients: Patient[]) => {
-    if (!birthDateFilter.start && !birthDateFilter.end) {
-      return patients;
+  const isInvalidDateRange = useMemo(() => {
+    if (!dateFrom || !dateTo) return false;
+    const from = new Date(dateFrom);
+    const to = new Date(dateTo);
+    if (Number.isNaN(+from) || Number.isNaN(+to)) return false;
+    return to < from;
+  }, [dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (isInvalidDateRange) {
+      toast({
+        title: "Filtre de dates invalide",
+        description: "La date de fin est antérieure à la date de début.",
+        variant: "destructive",
+      });
     }
-
-    return patients.filter((patient) => {
-      if (!patient.user?.dateOfBirth) return false;
-
-      const birthDate = new Date(patient.user.dateOfBirth);
-      const start = birthDateFilter.start ? new Date(birthDateFilter.start) : null;
-      const end = birthDateFilter.end ? new Date(birthDateFilter.end) : null;
-
-      if (start && end) {
-        return birthDate >= start && birthDate <= end;
-      } else if (start) {
-        return birthDate >= start;
-      } else if (end) {
-        return birthDate <= end;
-      }
-
-      return true;
-    });
-  }, [birthDateFilter]);
+  }, [isInvalidDateRange]);
 
   const openPatientDetail = async (patient: Patient) => {
     try {
@@ -189,10 +171,8 @@ export default function PatientsPage() {
     openDeleteDialog,
   });
 
-  const filteredPatients = filterPatientsByBirthDate(patients);
-
   const table = useReactTable({
-    data: filteredPatients,
+    data: patients,
     columns,
     onSortingChange: (updatedSorting) => {
       setSorting(updatedSorting);
@@ -204,7 +184,7 @@ export default function PatientsPage() {
         let apiSortBy = column;
         if (column === "name") apiSortBy = "name";
         else if (column === "registrationDate") apiSortBy = "registrationDate";
-        else if (column === "dateOfBirth") apiSortBy = "dateOfBirth";
+        else if (column === "lastLogin") apiSortBy = "lastLogin";
         else if (column === "appointmentsCount")
           apiSortBy = "appointmentsCount";
 
@@ -239,11 +219,29 @@ export default function PatientsPage() {
   }, [itemsPerPage]);
 
   const fetchPatients = useCallback(async () => {
+    if (isInvalidDateRange) {
+      setIsLoading(false);
+      setPatients([]);
+      setTotalPatients(0);
+      setTotalPages(1);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/superadmin/patients?search=${searchQuery}&status=${selectedStatus}&page=${currentPage}&limit=${itemsPerPage}&sortBy=${sortBy}&sortOrder=${sortOrder}`
-      );
+      const qs = new URLSearchParams({
+        search: searchQuery,
+        status: selectedStatus,
+        page: String(currentPage),
+        limit: String(itemsPerPage),
+        sortBy,
+        sortOrder,
+      });
+
+      if (dateFrom) qs.set("dateFrom", dateFrom);
+      if (dateTo) qs.set("dateTo", dateTo);
+
+      const response = await fetch(`/api/superadmin/patients?${qs.toString()}`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch patients");
@@ -270,6 +268,9 @@ export default function PatientsPage() {
     itemsPerPage,
     sortBy,
     sortOrder,
+    dateFrom,
+    dateTo,
+    isInvalidDateRange,
   ]);
 
   // Fetch patients data
@@ -302,102 +303,6 @@ export default function PatientsPage() {
     }
   };
 
-  // Handle bulk actions
-  const handleBulkAction = async (action: string) => {
-    const selectedRows = Object.keys(rowSelection).map(
-      (index) => patients[Number.parseInt(index)].id
-    );
-
-    if (selectedRows.length === 0) {
-      toast({
-        title: "Info",
-        description: "No patients selected",
-      });
-      return;
-    }
-
-    if (action === "delete") {
-      try {
-        const result = await bulkDeletePatients(selectedRows);
-
-        if (result.error) {
-          throw new Error(result.error);
-        }
-
-        toast({
-          title: "Success",
-          description: `${selectedRows.length} patients deleted successfully`,
-        });
-
-        setRowSelection({});
-        fetchPatients();
-      } catch (error) {
-        console.error("Error bulk deleting patients:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete patients",
-          variant: "destructive",
-        });
-      }
-    } else if (action === "export") {
-      try {
-        const result = await bulkExportPatients(selectedRows);
-
-        if (result.error) {
-          throw new Error(result.error);
-        }
-
-        // Create CSV content
-        if (result?.data) {
-          const headers = Object.keys(result?.data[0]).join(",");
-          const rows = result?.data
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .map((patient: any) =>
-              Object.values(patient)
-                .map((value) =>
-                  typeof value === "string"
-                    ? `"${value.replace(/"/g, '""')}"`
-                    : value
-                )
-                .join(",")
-            )
-            .join("\n");
-          const csvContent = `${headers}\n${rows}`;
-          // Create download link
-          const blob = new Blob([csvContent], {
-            type: "text/csv;charset=utf-8;",
-          });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.setAttribute("href", url);
-          link.setAttribute("download", "patients_export.csv");
-          link.style.visibility = "hidden";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          toast({
-            title: "Success",
-            description: `${selectedRows.length} patients exported successfully`,
-          });
-        }
-      } catch (error) {
-        console.error("Error exporting patients:", error);
-        toast({
-          title: "Error",
-          description: "Failed to export patients",
-          variant: "destructive",
-        });
-      }
-    } else if (action === "email") {
-      // In a real app, this would open an email composer or send emails
-      toast({
-        title: "Info",
-        description: `Email functionality would be implemented here for ${selectedRows.length} patients`,
-      });
-    }
-  };
-
   return (
     <div className="space-y-6 p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -414,7 +319,6 @@ export default function PatientsPage() {
           <Button onClick={openPatientCreate}>
             <Plus className="mr-2 h-4 w-4" /> Ajouter un patient
           </Button>
-
         </div>
       </div>
 
@@ -469,79 +373,6 @@ export default function PatientsPage() {
                       </DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 gap-1">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span className="hidden sm:inline">Date de naissance</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-4">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="start-date">De</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-[180px] justify-start text-left font-normal"
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {birthDateFilter.start ? format(birthDateFilter.start, "PPP") : "Sélectionner"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                              <Calendar
-                                mode="single"
-                                selected={birthDateFilter.start || undefined}
-                                onSelect={(date) => setBirthDateFilter(prev => ({ ...prev, start: date || null }))}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="end-date">À</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-[180px] justify-start text-left font-normal"
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {birthDateFilter.end ? format(birthDateFilter.end, "PPP") : "Sélectionner"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                              <Calendar
-                                mode="single"
-                                selected={birthDateFilter.end || undefined}
-                                onSelect={(date) => setBirthDateFilter(prev => ({ ...prev, end: date || null }))}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setBirthDateFilter({ start: null, end: null });
-                            }}
-                          >
-                            Réinitialiser
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))}
-                          >
-                            Appliquer
-                          </Button>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
                   <Select
                     value={itemsPerPage.toString()}
                     onValueChange={(value) => {
@@ -559,6 +390,34 @@ export default function PatientsPage() {
                       <SelectItem value="50">50 par page</SelectItem>
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-9 w-[150px]"
+                      aria-label="Date de début"
+                    />
+                    <span className="text-muted-foreground">→</span>
+                    <Input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-9 w-[150px]"
+                      aria-label="Date de fin"
+                    />
+                  </div>
+                  {isInvalidDateRange && (
+                    <span className="text-xs text-destructive mt-1">
+                      La date de fin doit être postérieure à la date de début.
+                    </span>
+                  )}
                 </div>
                 {Object.keys(rowSelection).length > 0 && (
                   <div className="flex items-center gap-2">
@@ -586,13 +445,6 @@ export default function PatientsPage() {
                           Envoyer un email
                         </DropdownMenuItem> */}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction("delete")}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Supprimer
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -610,9 +462,9 @@ export default function PatientsPage() {
                             {header.isPlaceholder
                               ? null
                               : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
                           </TableHead>
                         ))}
                       </TableRow>
@@ -672,7 +524,7 @@ export default function PatientsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
+                    disabled={currentPage === 1 || isInvalidDateRange}
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Précédent
@@ -700,7 +552,7 @@ export default function PatientsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
+                    disabled={currentPage === totalPages || isInvalidDateRange}
                   >
                     Suivant
                     <ChevronRight className="h-4 w-4 ml-1" />
@@ -818,8 +670,8 @@ export default function PatientsPage() {
                   </CardHeader>
                   <CardContent className="h-[300px]">
                     {analytics &&
-                      analytics.patientActivity &&
-                      analytics.patientActivity.length > 0 ? (
+                    analytics.patientActivity &&
+                    analytics.patientActivity.length > 0 ? (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -876,8 +728,8 @@ export default function PatientsPage() {
                           <p className="text-sm text-muted-foreground">
                             {analytics.patientActivity.length >= 2
                               ? analytics.patientActivity[
-                                analytics.patientActivity.length - 1
-                              ].count >
+                                  analytics.patientActivity.length - 1
+                                ].count >
                                 analytics.patientActivity[
                                   analytics.patientActivity.length - 2
                                 ].count
@@ -906,8 +758,8 @@ export default function PatientsPage() {
                   </CardHeader>
                   <CardContent className="h-[300px]">
                     {analytics &&
-                      analytics.geographicalDistribution &&
-                      analytics.geographicalDistribution.length > 0 ? (
+                    analytics.geographicalDistribution &&
+                    analytics.geographicalDistribution.length > 0 ? (
                       <div className="space-y-4 overflow-auto max-h-[250px] pr-2">
                         <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4 font-medium text-sm">
                           <div>Région</div>

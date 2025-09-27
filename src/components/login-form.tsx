@@ -42,7 +42,6 @@ const LoginForm = () => {
 
   useEffect(() => {
     if (session) {
-      console.log(session.user);
       if (!session.user.emailVerified) {
         localStorage.setItem(
           "mitic-pending-verification",

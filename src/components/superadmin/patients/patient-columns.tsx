@@ -142,6 +142,20 @@ export function usePatientColumns({
           format(new Date(row.original.user.createdAt), "dd/MM/yyyy"),
       },
       {
+        accessorKey: "lastLogin",
+        header: ({ column }) => (
+          <div
+            className="flex items-center cursor-pointer"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Dernière mise à jour
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </div>
+        ),
+        cell: ({ row }) =>
+          format(new Date(row.original.user.updatedAt), "dd/MM/yyyy HH:mm"),
+      },
+      {
         accessorKey: "appointmentsCount",
         header: ({ column }) => (
           <div

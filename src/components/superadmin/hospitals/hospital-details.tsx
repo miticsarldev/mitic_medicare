@@ -1,16 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-  Building,
-  Check,
-  FileText,
-  Pencil,
-  ShieldCheck,
-  Trash2,
-  Eye,
-  UserPlus,
-} from "lucide-react";
+import { Building, Check, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -220,40 +211,11 @@ export default function HospitalDetails({
                   <p className="text-sm">{hospital.description}</p>
                 </div>
               )}
-
-              <div className="mt-6">
-                <h4 className="text-sm font-semibold mb-2">
-                  Documents de vérification
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-md border p-2 flex items-center">
-                    <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-xs">Licence d&apos;exploitation</span>
-                  </div>
-                  <div className="rounded-md border p-2 flex items-center">
-                    <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-xs">
-                      Certificat d&apos;accréditation
-                    </span>
-                  </div>
-                  <div className="rounded-md border p-2 flex items-center">
-                    <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-xs">Documents légaux</span>
-                  </div>
-                  <div className="rounded-md border p-2 flex items-center">
-                    <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-xs">Assurance professionnelle</span>
-                  </div>
-                </div>
-              </div>
             </TabsContent>
             <TabsContent value="doctors" className="space-y-4 mt-4">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold">Médecins affiliés</h4>
-                  <Button variant="ghost" size="sm">
-                    Voir tout
-                  </Button>
                 </div>
                 <div className="space-y-2">
                   {hospital.doctors && hospital.doctors.length > 0 ? (
@@ -270,16 +232,13 @@ export default function HospitalDetails({
                           </Avatar>
                           <div>
                             <p className="text-sm font-medium">
-                              Dr. {doctor.id.substring(0, 8)}
+                              {doctor.user.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {doctor.specialization}
                             </p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
                       </div>
                     ))
                   ) : (
@@ -288,13 +247,6 @@ export default function HospitalDetails({
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div className="pt-4">
-                <Button variant="outline" size="sm" className="w-full">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Ajouter un médecin
-                </Button>
               </div>
             </TabsContent>
             <TabsContent value="settings" className="space-y-4 mt-4">
@@ -357,7 +309,10 @@ export default function HospitalDetails({
                       Gérer le plan d&apos;abonnement
                     </p>
                   </div>
-                  <Select defaultValue={hospital.subscription?.plan || "FREE"}>
+                  <Select
+                    defaultValue={hospital.subscription?.plan || "FREE"}
+                    disabled
+                  >
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
@@ -384,10 +339,6 @@ export default function HospitalDetails({
                   >
                     <Pencil className="mr-2 h-4 w-4" />
                     Modifier le profil
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Gérer les permissions
                   </Button>
                   <Button
                     variant="outline"

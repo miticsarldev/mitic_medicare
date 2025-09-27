@@ -24,6 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { createPatient } from "@/app/actions/patient-actions";
 import { Patient } from "@/types/patient";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BloodType } from "@prisma/client";
 
 interface PatientCreateEditModalProps {
   isOpen: boolean;
@@ -33,6 +34,25 @@ interface PatientCreateEditModalProps {
   onSuccess: () => void;
 }
 
+type FormState = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  dateOfBirth: string; // yyyy-mm-dd
+  gender: "MALE" | "FEMALE";
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  bloodType: "" | BloodType;
+  allergies: string; // CSV in UI
+  emergencyContact: string;
+  emergencyPhone: string;
+  isActive: boolean;
+};
+
 export default function PatientCreateEditModal({
   isOpen,
   onClose,
@@ -40,14 +60,15 @@ export default function PatientCreateEditModal({
   patient,
   onSuccess,
 }: PatientCreateEditModalProps) {
-  // Form data state
-  const [formData, setFormData] = useState({
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState<FormState>({
     name: "",
     email: "",
     phone: "",
     password: "",
     dateOfBirth: "",
-    gender: "Homme",
+    gender: "MALE", // ✅ enum value, not label
     address: "",
     city: "",
     state: "",
@@ -60,7 +81,7 @@ export default function PatientCreateEditModal({
     isActive: true,
   });
 
-  // Initialize form data when patient changes or modal opens
+  // Initialize form
   useEffect(() => {
     if (mode === "edit" && patient) {
       setFormData({
@@ -71,29 +92,30 @@ export default function PatientCreateEditModal({
         dateOfBirth: patient.user.dateOfBirth
           ? new Date(patient.user.dateOfBirth).toISOString().split("T")[0]
           : "",
-        gender: patient.user.profile?.genre || "Homme",
+        // ✅ keep enum in state
+        gender: (patient.user.profile?.genre as "MALE" | "FEMALE") || "MALE",
         address: patient.user.profile?.address || "",
         city: patient.user.profile?.city || "",
         state: patient.user.profile?.state || "",
         zipCode: patient.user.profile?.zipCode || "",
         country: patient.user.profile?.country || "",
-        bloodType: patient.bloodType || "",
+        bloodType: (patient.bloodType as BloodType) || "",
         allergies: Array.isArray(patient.allergies)
           ? patient.allergies.join(", ")
-          : patient.allergies || "",
+          : (patient.allergies as unknown as string) || "",
         emergencyContact: patient.emergencyContact || "",
         emergencyPhone: patient.emergencyPhone || "",
         isActive: patient.user.isActive,
       });
-    } else {
-      // Reset form for create mode
+    } else if (isOpen) {
+      // Reset on open for create
       setFormData({
         name: "",
         email: "",
         phone: "",
         password: "",
         dateOfBirth: "",
-        gender: "Homme",
+        gender: "MALE",
         address: "",
         city: "",
         state: "",
@@ -108,54 +130,71 @@ export default function PatientCreateEditModal({
     }
   }, [patient, mode, isOpen]);
 
-  // Handle form input change
+  // Inputs
   const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData((s) => ({ ...s, [name]: value }));
   };
 
-  // Handle select change for dropdowns
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+  const handleSelectChange = <K extends keyof FormState>(
+    name: K,
+    value: string
+  ) => {
+    // Cast types properly for special cases
+    if (name === "isActive") {
+      setFormData((s) => ({ ...s, isActive: value === "true" }));
+    } else if (name === "bloodType") {
+      setFormData((s) => ({ ...s, bloodType: value as BloodType | "" }));
+    } else if (name === "gender") {
+      setFormData((s) => ({ ...s, gender: value as "MALE" | "FEMALE" }));
+    } else {
+      setFormData((s) => ({ ...s, [name]: value }) as FormState);
+    }
   };
 
-  // Handle form submission
+  const validateRequired = () => {
+    if (!formData.name || !formData.email || !formData.phone) return false;
+    if (mode === "create" && !formData.password) return false;
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateRequired()) {
+      toast({
+        title: "Champs requis",
+        description:
+          "Nom, email, téléphone (et mot de passe à la création) sont requis.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
+      setIsSubmitting(true);
+
       if (mode === "create") {
-        // Create new patient
-        const formDataObj = new FormData();
-        Object.entries(formData).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            formDataObj.append(key, String(value));
+        // Server action expects FormData (leave gender as enum "MALE"/"FEMALE")
+        const fd = new FormData();
+        Object.entries(formData).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== "") {
+            fd.append(k, String(v));
           }
         });
+        // Flatten CSV lists for create API if it expects strings:
+        // (already strings in state)
+        const result = await createPatient(fd);
 
-        const result = await createPatient(formDataObj);
-
-        if (result.error) {
+        if (result?.error) {
           toast({
-            title: "Error",
+            title: "Erreur",
             description: result.error,
             variant: "destructive",
           });
         } else {
-          toast({
-            title: "Success",
-            description: "Patient created successfully",
-          });
+          toast({ title: "Succès", description: "Patient créé avec succès." });
           onSuccess();
           onClose();
         }
@@ -164,9 +203,7 @@ export default function PatientCreateEditModal({
         // Update existing patient
         const response = await fetch(`/api/superadmin/patients/${patient.id}`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: formData.name,
             email: formData.email,
@@ -186,24 +223,21 @@ export default function PatientCreateEditModal({
           }),
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to update patient");
-        }
+        if (!response.ok) throw new Error("Failed to update patient");
 
-        toast({
-          title: "Success",
-          description: "Patient updated successfully",
-        });
+        toast({ title: "Succès", description: "Patient modifié avec succès." });
         onSuccess();
         onClose();
       }
-    } catch (error) {
-      console.error("Error submitting patient data:", error);
+    } catch (err) {
+      console.error(err);
       toast({
-        title: "Error",
-        description: "Failed to save patient data",
+        title: "Erreur",
+        description: "Impossible d'enregistrer les données du patient.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -221,15 +255,17 @@ export default function PatientCreateEditModal({
               ? "Créez un nouveau compte patient en remplissant le formulaire ci-dessous"
               : `Modifiez les informations du patient ${patient?.user.name}`}
             <div className="text-xs text-muted-foreground mt-1">
-              Les champs marqués d&lsquo;un <span className="text-red-500">*</span> sont obligatoires
+              Les champs marqués d&lsquo;un{" "}
+              <span className="text-red-500">*</span> sont obligatoires
             </div>
           </DialogDescription>
         </DialogHeader>
+
         <ScrollArea className="h-[80vh] pr-4">
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-2 md:grid-cols-2 px-0.5">
-              {/* Left column */}
-              <div className="space-y-2">
+              {/* Left */}
+              <div className="space-y-3">
                 <div className="space-y-1">
                   <Label htmlFor="name">
                     Nom complet <span className="text-red-500">*</span>
@@ -240,6 +276,7 @@ export default function PatientCreateEditModal({
                     value={formData.name}
                     onChange={handleInputChange}
                     required
+                    aria-required="true"
                   />
                 </div>
                 <div className="space-y-2">
@@ -253,6 +290,7 @@ export default function PatientCreateEditModal({
                     value={formData.email}
                     onChange={handleInputChange}
                     required
+                    aria-required="true"
                   />
                 </div>
                 <div className="space-y-2">
@@ -265,8 +303,10 @@ export default function PatientCreateEditModal({
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
+                    aria-required="true"
                   />
                 </div>
+
                 {mode === "create" && (
                   <div className="space-y-2">
                     <Label htmlFor="password">
@@ -278,7 +318,8 @@ export default function PatientCreateEditModal({
                       type="password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      required={mode === "create"}
+                      required
+                      aria-required="true"
                     />
                   </div>
                 )}
@@ -310,25 +351,28 @@ export default function PatientCreateEditModal({
                       <SelectValue placeholder="Sélectionner un genre" />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* store enum values, display FR labels */}
                       <SelectItem value="MALE">Homme</SelectItem>
                       <SelectItem value="FEMALE">Femme</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-1">
                   <Label htmlFor="address">Adresse</Label>
                   <Textarea
                     id="address"
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
+                    rows={5}
                   />
                 </div>
               </div>
 
-              {/* Right column */}
-              <div className="space-y-4">
-                <div className="space-y-2">
+              {/* Right */}
+              <div className="space-y-3">
+                <div className="space-y-1">
                   <Label htmlFor="city">Ville</Label>
                   <Input
                     id="city"
@@ -337,7 +381,8 @@ export default function PatientCreateEditModal({
                     onChange={handleInputChange}
                   />
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-1">
                   <Label htmlFor="state">Région</Label>
                   <Input
                     id="state"
@@ -346,7 +391,8 @@ export default function PatientCreateEditModal({
                     onChange={handleInputChange}
                   />
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-1">
                   <Label htmlFor="zipCode">Code postal</Label>
                   <Input
                     id="zipCode"
@@ -355,7 +401,8 @@ export default function PatientCreateEditModal({
                     onChange={handleInputChange}
                   />
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-1">
                   <Label htmlFor="country">Pays</Label>
                   <Input
                     id="country"
@@ -364,7 +411,8 @@ export default function PatientCreateEditModal({
                     onChange={handleInputChange}
                   />
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-1">
                   <Label htmlFor="bloodType">Groupe sanguin</Label>
                   <Select
                     value={formData.bloodType}
@@ -387,7 +435,8 @@ export default function PatientCreateEditModal({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-1">
                   <Label htmlFor="allergies">
                     Allergies (séparées par des virgules)
                   </Label>
@@ -399,37 +448,42 @@ export default function PatientCreateEditModal({
                   />
                 </div>
                 {mode === "edit" && (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label htmlFor="status">Statut</Label>
                     <Select
-                      value={formData.isActive ? "active" : "inactive"}
+                      value={formData.isActive ? "true" : "false"}
                       onValueChange={(value) =>
-                        handleSelectChange(
-                          "isActive",
-                          value === "active" ? "true" : "false"
-                        )
+                        handleSelectChange("isActive", value)
                       }
                     >
                       <SelectTrigger id="status">
                         <SelectValue placeholder="Sélectionner un statut" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="active">Actif</SelectItem>
-                        <SelectItem value="inactive">Inactif</SelectItem>
+                        <SelectItem value="true">Actif</SelectItem>
+                        <SelectItem value="false">Inactif</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 )}
               </div>
             </div>
+
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={onClose}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
                 Annuler
               </Button>
-              <Button type="submit">
-                {mode === "create"
-                  ? "Créer le patient"
-                  : "Enregistrer les modifications"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Enregistrement..."
+                  : mode === "create"
+                    ? "Créer le patient"
+                    : "Enregistrer les modifications"}
               </Button>
             </DialogFooter>
           </form>

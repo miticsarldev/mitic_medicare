@@ -111,6 +111,11 @@ export default function DoctorsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [dateField, setDateField] = useState<"joinedAt" | "lastActive">(
+    "joinedAt"
+  );
+  const [dateFrom, setDateFrom] = useState<string>(""); // "YYYY-MM-DD"
+  const [dateTo, setDateTo] = useState<string>("");
 
   const fetchDoctors = useCallback(async () => {
     setIsLoading(true);
@@ -122,6 +127,9 @@ export default function DoctorsPage() {
       queryParams.append("limit", itemsPerPage.toString());
       queryParams.append("sortBy", sortBy);
       queryParams.append("sortOrder", sortOrder);
+      queryParams.append("dateField", dateField);
+      if (dateFrom) queryParams.append("dateFrom", dateFrom);
+      if (dateTo) queryParams.append("dateTo", dateTo);
 
       selectedStatuses.forEach((status) => {
         queryParams.append("status", status);
@@ -166,6 +174,9 @@ export default function DoctorsPage() {
     selectedStatuses,
     selectedLocations,
     selectedSpecialties,
+    dateField,
+    dateFrom,
+    dateTo,
   ]);
 
   // Fetch doctors data
@@ -236,22 +247,15 @@ export default function DoctorsPage() {
     } catch (error) {
       console.error("Error fetching specialties:", error);
       // Fallback to default specialties
-      setSpecialties([
-        "Médecin Généraliste",
-        "Cardiologue",
-        "Dermatologue",
-        "Ophtalmologue",
-        "Gynécologue",
-        "Pédiatre",
-        "Psychiatre",
-        "Neurologue",
-      ]);
+      setSpecialties([]);
     }
   };
 
   const fetchHospitals = async () => {
     try {
-      const response = await fetch("/api/superadmin/doctors?limit=100");
+      const response = await fetch(
+        "/api/superadmin/doctors/hospitals?limit=100"
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch hospitals");
@@ -260,7 +264,7 @@ export default function DoctorsPage() {
       const data = await response.json();
       setHospitals(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data.hospitals.map((hospital: any) => ({
+        (data.hospitals ?? []).map((hospital: any) => ({
           id: hospital.id,
           name: hospital.name,
           city: hospital.city,
@@ -322,48 +326,78 @@ export default function DoctorsPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  // Handle status change
-  const handleStatusChange = useCallback(
-    async (doctorId: string, status: string) => {
-      const result = await updateDoctorStatus(doctorId, status);
-
-      if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Doctor status updated successfully",
-        });
-        fetchDoctors();
-      }
+  const patchDoctorLocally = useCallback(
+    (doctorId: string, patch: Partial<Doctor>) => {
+      // Update list
+      setDoctors((prev) =>
+        prev.map((d) =>
+          d.id === doctorId
+            ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              { ...d, ...patch, user: { ...d.user, ...(patch as any).user } }
+            : d
+        )
+      );
+      // Update open details
+      setSelectedDoctor((prev) =>
+        prev && prev.id === doctorId
+          ? {
+              ...prev,
+              ...patch,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              user: { ...prev.user, ...(patch as any).user },
+            }
+          : prev
+      );
     },
-    [fetchDoctors]
+    []
   );
 
-  // Handle verification change
-  const handleVerificationChange = useCallback(
-    async (doctorId: string, verified: boolean) => {
-      const result = await updateDoctorVerification(doctorId, verified);
-
-      if (result.error) {
+  // Handle status change
+  const handleStatusChange = useCallback(
+    async (doctorId: string, status: "active" | "inactive") => {
+      const res = await updateDoctorStatus(doctorId, status);
+      if (res?.error) {
         toast({
           title: "Error",
-          description: result.error,
+          description: res.error,
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Success",
-          description: "Doctor verification updated successfully",
-        });
-        fetchDoctors();
+        return;
       }
+
+      // Optimistic local patch
+      patchDoctorLocally(doctorId, {
+        user: { isActive: status === "active" },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
+      toast({ title: "Success", description: "Statut mis à jour" });
+      // keep this if you want the table to refetch from server too
+      fetchDoctors();
     },
-    [fetchDoctors]
+    [patchDoctorLocally, fetchDoctors]
+  );
+
+  const handleVerificationChange = useCallback(
+    async (doctorId: string, verified: boolean) => {
+      const res = await updateDoctorVerification(doctorId, verified);
+      if (res?.error) {
+        toast({
+          title: "Error",
+          description: res.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Optimistic local patch
+      patchDoctorLocally(doctorId, { isVerified: verified });
+
+      toast({ title: "Success", description: "Vérification mise à jour" });
+      // optional: refresh list from server
+      fetchDoctors();
+    },
+    [patchDoctorLocally, fetchDoctors]
   );
 
   // Get table columns using our custom hook
@@ -571,6 +605,9 @@ export default function DoctorsPage() {
     setSelectedSpecialties([]);
     setSelectedLocations([]);
     setSelectedStatuses([]);
+    setDateField("joinedAt"); // +++
+    setDateFrom(""); // +++
+    setDateTo("");
   };
 
   // Function to handle refresh
@@ -710,7 +747,6 @@ export default function DoctorsPage() {
                         <TableRow
                           key={row.id}
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => openDoctorDetail(row.original)}
                         >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell key={cell.id}>
@@ -1334,6 +1370,49 @@ export default function DoctorsPage() {
                   >
                     Inactif
                   </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold">Dates</h4>
+
+              <div className="space-y-2">
+                <label className="text-sm">Champ de date</label>
+                <Select
+                  value={dateField}
+                  onValueChange={(v) =>
+                    setDateField(v as "joinedAt" | "lastActive")
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sélectionner le champ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="joinedAt">Date d’inscription</SelectItem>
+                    <SelectItem value="lastActive">
+                      Dernière activité
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-sm">Du</label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm">Au</label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
                 </div>
               </div>
             </div>

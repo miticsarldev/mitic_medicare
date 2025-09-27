@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   LifeBuoy,
   Settings,
-  Bell,
   Calendar,
   ClipboardList,
   FolderHeart,
@@ -61,6 +60,10 @@ export const superAdminNavItems = [
         title: "Liste des abonnements",
         url: "/dashboard/superadmin/subscriptions/all",
       },
+      {
+        title: "Gestion des plans",
+        url: "/dashboard/superadmin/subscriptions/plans",
+      },
     ],
   },
   {
@@ -75,35 +78,14 @@ export const superAdminNavItems = [
     ],
   },
   {
-    title: "Gestion du Contenu",
-    icon: FileText,
-    url: "/dashboard/superadmin/content",
+    title: "Paramètres & Sécurité",
+    icon: Settings,
+    url: "/dashboard/superadmin/settings",
     items: [
-      { title: "Articles & Blog", url: "/dashboard/superadmin/content/blogs" },
-      { title: "FAQ", url: "/dashboard/superadmin/content/faq" },
+      { title: "Mon Profil", url: "/dashboard/superadmin/settings/profile" },
       {
-        title: "Avis & Témoignages",
-        url: "/dashboard/superadmin/content/reviews",
-      },
-    ],
-  },
-  {
-    title: "Notifications & Assistance",
-    icon: Bell,
-    url: "/dashboard/superadmin/notifications",
-    items: [
-      {
-        title: "Centre de notifications",
-        url: "/dashboard/superadmin/notifications/center",
-      },
-      {
-        title: "Tickets de support",
-        url: "/dashboard/superadmin/notifications/tickets",
-        icon: LifeBuoy,
-      },
-      {
-        title: "Emails & Alertes",
-        url: "/dashboard/superadmin/notifications/emails",
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/superadmin/settings/security",
       },
     ],
   },
@@ -171,17 +153,21 @@ export const doctorNavItems = [
         url: "/dashboard/independant_doctor/settings/profile",
       },
       {
-        title: "Abonnements",
+        title: "Abonnement",
         url: "/dashboard/independant_doctor/settings/pricing",
       },
       {
         title: "Sécurité & Confidentialité",
         url: "/dashboard/independant_doctor/settings/security",
       },
+      {
+        title: "Avis & Feedback",
+        url: "/dashboard/independant_doctor/settings/reviews",
+      },
     ],
   },
   {
-    title: "Documentation & Assistance",
+    title: "Assistance & aide",
     icon: FileText,
     url: "/dashboard/independant_doctor/support",
     items: [
@@ -437,10 +423,6 @@ export const hospitalDoctorNavItems = [
         title: "Mes Rendez-vous",
         url: "/dashboard/hopital_doctor/appointments/upcoming",
       },
-      // {
-      //   title: "Historique des Rendez-vous",
-      //   url: "/dashboard/hopital_doctor/appointments/history",
-      // },
     ],
   },
   {

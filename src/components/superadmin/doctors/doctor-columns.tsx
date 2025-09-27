@@ -30,7 +30,7 @@ interface UseDoctorColumnsProps {
   openDoctorDetail: (doctor: Doctor) => void;
   openDoctorEdit: (doctor: Doctor) => void;
   openDeleteDialog: (doctor: Doctor) => void;
-  handleStatusChange: (doctorId: string, status: string) => void;
+  handleStatusChange: (doctorId: string, status: "active" | "inactive") => void;
   handleVerificationChange: (doctorId: string, verified: boolean) => void;
 }
 
