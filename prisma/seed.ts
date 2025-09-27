@@ -10,6 +10,7 @@ import {
   ReviewStatus,
   ReviewTargetType,
   HospitalStatus,
+  BillingInterval,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
@@ -36,6 +37,12 @@ function randomItem<T>(array: T[]): T {
 // Helper function to generate a random boolean with a given probability
 function randomBoolean(probability = 0.5): boolean {
   return Math.random() < probability;
+}
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
 }
 
 // Helper function to generate a random phone number in Mali format
@@ -339,6 +346,50 @@ type PatientWithUser = {
   userId: string;
 };
 
+async function upsertPlan(
+  code: SubscriptionPlan,
+  price: number,
+  currency: string,
+  interval: BillingInterval,
+  name: string,
+  description: string,
+  limits: Partial<{
+    maxAppointments: number;
+    maxPatients: number;
+    maxDoctorsPerHospital: number;
+    storageGb: number;
+  }>
+) {
+  const priceDec = price.toFixed(2);
+  await prisma.planConfig.upsert({
+    where: { code },
+    create: {
+      code,
+      name,
+      description,
+      price: priceDec,
+      currency,
+      interval,
+      isActive: true,
+      limits: { create: { ...limits } },
+    },
+    update: {
+      name,
+      description,
+      price: priceDec,
+      currency,
+      interval,
+      isActive: true,
+      limits: {
+        upsert: {
+          create: { ...limits },
+          update: { ...limits },
+        },
+      },
+    },
+  });
+}
+
 async function main() {
   console.log("Starting database seeding...");
   const usedEmails = new Set<string>();
@@ -482,53 +533,80 @@ async function main() {
     });
 
     // Create subscription for hospital
-    const subscriptionStartDate = randomDate(
-      new Date(2024, 0, 1),
-      new Date(2024, 11, 31)
-    );
-    const subscriptionEndDate = randomDate(
-      new Date(2025, 0, 1),
-      new Date(2025, 11, 31)
-    );
+    const initialStartDate = new Date(2024, 0, 1);
+    let currentEndDate = initialStartDate;
+
+    const initialPlan = SubscriptionPlan.STANDARD;
+    let currentPlan: SubscriptionPlan = initialPlan;
 
     const subscription = await prisma.subscription.create({
       data: {
         subscriberType: SubscriberType.HOSPITAL,
         hospitalId: createdHospital.id,
-        plan: randomItem([SubscriptionPlan.STANDARD, SubscriptionPlan.PREMIUM]),
+        plan: currentPlan,
         status: SubscriptionStatus.ACTIVE,
-        startDate: subscriptionStartDate,
-        endDate: subscriptionEndDate,
-        amount: new Prisma.Decimal(randomInt(100000, 500000)),
+        startDate: initialStartDate,
+        endDate: initialStartDate,
+        amount: new Prisma.Decimal(0), // mis à jour après
         currency: "XOF",
         autoRenew: true,
       },
     });
 
-    // Créer des paiements d'abonnement pour l'hôpital
-    const numPayments = randomInt(1, 3);
+    const numPayments = randomInt(2, 6); // 2 à 6 mois
     for (let i = 0; i < numPayments; i++) {
+      const paymentDate = addMonths(initialStartDate, i);
+      currentEndDate = addMonths(currentEndDate, 1);
+
+      // Simule un upgrade/downgrade du plan
+      if (Math.random() < 0.3) {
+        currentPlan = randomItem([
+          SubscriptionPlan.STANDARD,
+          SubscriptionPlan.PREMIUM,
+        ]);
+      }
+
+      const amount =
+        currentPlan === SubscriptionPlan.PREMIUM
+          ? new Prisma.Decimal(randomInt(400_000, 600_000))
+          : new Prisma.Decimal(randomInt(200_000, 300_000));
+
       await prisma.subscriptionPayment.create({
         data: {
           subscriptionId: subscription.id,
-          amount: new Prisma.Decimal(randomInt(100000, 500000)),
+          amount,
           currency: "XOF",
           paymentMethod: randomItem(paymentMethods),
           transactionId: `TRANS-${randomInt(10000, 99999)}`,
-          status: randomItem([
-            "PENDING",
-            "COMPLETED",
-            "FAILED",
-            "COMPLETED",
-            "COMPLETED",
-          ]), // Plus de poids pour COMPLETED
+          status: "COMPLETED",
           paymentDate: randomDate(
-            new Date(subscriptionStartDate.getTime() - 7 * 24 * 60 * 60 * 1000),
-            new Date(subscriptionStartDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+            new Date(paymentDate.getTime() - 3 * 24 * 60 * 60 * 1000),
+            new Date(paymentDate.getTime() + 3 * 24 * 60 * 60 * 1000)
           ),
         },
       });
+
+      // Mettre à jour l’abonnement avec les nouvelles infos
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          endDate: currentEndDate,
+          plan: currentPlan,
+          amount: amount,
+        },
+      });
     }
+
+    // Marquer comme EXPIRED si la date est dépassée
+    const now = new Date();
+    const status =
+      currentEndDate < now
+        ? SubscriptionStatus.EXPIRED
+        : SubscriptionStatus.ACTIVE;
+    await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { status },
+    });
 
     // Create departments for each hospital
     const hospitalDepartments: {
@@ -757,54 +835,83 @@ async function main() {
       });
     }
 
-    // Create subscription for independent doctors
-    const subscriptionStartDate = randomDate(
-      new Date(2024, 0, 1),
-      new Date(2024, 11, 31)
-    );
-    const subscriptionEndDate = randomDate(
-      new Date(2025, 0, 1),
-      new Date(2025, 11, 31)
-    );
+    const initialStartDate = new Date(2024, 0, 1);
+    let currentEndDate = initialStartDate;
+    let currentPlan: SubscriptionPlan = SubscriptionPlan.FREE;
 
+    // Créer une seule entrée d’abonnement
     const subscription = await prisma.subscription.create({
       data: {
         subscriberType: SubscriberType.DOCTOR,
         doctorId: doctor.id,
-        plan: randomItem([SubscriptionPlan.FREE, SubscriptionPlan.PREMIUM]),
+        plan: currentPlan,
         status: SubscriptionStatus.ACTIVE,
-        startDate: subscriptionStartDate,
-        endDate: subscriptionEndDate,
-        amount: new Prisma.Decimal(randomInt(25000, 100000)),
+        startDate: initialStartDate,
+        endDate: initialStartDate,
+        amount: new Prisma.Decimal(0),
         currency: "XOF",
         autoRenew: true,
       },
     });
 
-    // Créer des paiements d'abonnement pour le médecin indépendant
-    const numPayments = randomInt(1, 3);
-    for (let j = 0; j < numPayments; j++) {
-      await prisma.subscriptionPayment.create({
+    const numPayments = randomInt(2, 6); // 2 à 6 mois d’abonnement
+
+    for (let i = 0; i < numPayments; i++) {
+      const paymentDate = addMonths(initialStartDate, i);
+      currentEndDate = addMonths(currentEndDate, 1);
+
+      // Simuler un éventuel changement de plan (ex. upgrade depuis FREE)
+      if (Math.random() < 0.4) {
+        currentPlan = randomItem([
+          SubscriptionPlan.FREE,
+          SubscriptionPlan.PREMIUM,
+        ]);
+      }
+
+      const isFree = currentPlan === SubscriptionPlan.FREE;
+      const amount = isFree
+        ? new Prisma.Decimal(0)
+        : new Prisma.Decimal(randomInt(25_000, 100_000));
+
+      if (!isFree) {
+        await prisma.subscriptionPayment.create({
+          data: {
+            subscriptionId: subscription.id,
+            amount,
+            currency: "XOF",
+            paymentMethod: randomItem(paymentMethods),
+            transactionId: `TRANS-${randomInt(10000, 99999)}`,
+            status: "COMPLETED",
+            paymentDate: randomDate(
+              new Date(paymentDate.getTime() - 3 * 24 * 60 * 60 * 1000),
+              new Date(paymentDate.getTime() + 3 * 24 * 60 * 60 * 1000)
+            ),
+          },
+        });
+      }
+
+      // Mise à jour de la subscription avec nouvelles infos
+      await prisma.subscription.update({
+        where: { id: subscription.id },
         data: {
-          subscriptionId: subscription.id,
-          amount: new Prisma.Decimal(randomInt(25000, 100000)),
-          currency: "XOF",
-          paymentMethod: randomItem(paymentMethods),
-          transactionId: `TRANS-${randomInt(10000, 99999)}`,
-          status: randomItem([
-            "PENDING",
-            "COMPLETED",
-            "FAILED",
-            "COMPLETED",
-            "COMPLETED",
-          ]), // Plus de poids pour COMPLETED
-          paymentDate: randomDate(
-            new Date(subscriptionStartDate.getTime() - 7 * 24 * 60 * 60 * 1000),
-            new Date(subscriptionStartDate.getTime() + 7 * 24 * 60 * 60 * 1000)
-          ),
+          endDate: currentEndDate,
+          plan: currentPlan,
+          amount,
         },
       });
     }
+
+    // Déterminer le statut final
+    const now = new Date();
+    const status =
+      currentEndDate < now
+        ? SubscriptionStatus.EXPIRED
+        : SubscriptionStatus.ACTIVE;
+
+    await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { status },
+    });
   }
 
   console.log(`Created ${createdDoctors.length} doctors`);
@@ -1255,6 +1362,35 @@ async function main() {
   }
 
   console.log("Created reviews");
+
+  await upsertPlan("FREE", 0, "USD", "MONTH", "Free", "Offre gratuite", {
+    maxAppointments: 20,
+    maxPatients: 50,
+    storageGb: 1,
+  });
+  await upsertPlan(
+    "STANDARD",
+    50000,
+    "XOF",
+    "MONTH",
+    "Standard",
+    "Pour les pros individuels",
+    { maxAppointments: 300, maxPatients: 1000, storageGb: 10 }
+  );
+  await upsertPlan(
+    "PREMIUM",
+    150000,
+    "XOF",
+    "MONTH",
+    "Premium",
+    "Pour les structures exigeantes",
+    {
+      maxAppointments: 2000,
+      maxPatients: 5000,
+      storageGb: 50,
+      maxDoctorsPerHospital: 50,
+    }
+  );
 
   console.log("Database seeding completed successfully!");
 }

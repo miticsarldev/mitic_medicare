@@ -7,8 +7,6 @@ import {
   Filter,
   Plus,
   Search,
-  Trash2,
-  Mail,
   ChevronLeft,
   ChevronRight,
   Building,
@@ -608,20 +606,7 @@ export default function SubscriptionsPage() {
                           <Download className="mr-2 h-4 w-4" />
                           Exporter
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction("email")}
-                        >
-                          <Mail className="mr-2 h-4 w-4" />
-                          Envoyer un email
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction("delete")}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Supprimer
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

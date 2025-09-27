@@ -100,7 +100,7 @@ export function VerificationDashboard({
 
     try {
       if (actionType === "approve") {
-        await approveUser(selectedUser.id);
+        await approveUser(selectedUser);
         toast({
           title: "Utilisateur approuvé",
           description: `${selectedUser.name} a été approuvé avec succès.`,

@@ -1,13 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-  Calendar,
-  Check,
-  Pencil,
-  ShieldCheck,
-  Trash2,
-} from "lucide-react";
+import { Calendar, Check, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +19,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Doctor } from "@/types/doctor";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import Link from "next/link";
 
 interface DoctorDetailsProps {
   isOpen: boolean;
@@ -33,7 +26,7 @@ interface DoctorDetailsProps {
   doctor: Doctor | null;
   onEdit: (doctor: Doctor) => void;
   onDelete: (doctor: Doctor) => void;
-  onStatusChange: (doctorId: string, status: string) => void;
+  onStatusChange: (doctorId: string, status: "active" | "inactive") => void;
   onVerificationChange: (doctorId: string, verified: boolean) => void;
 }
 
@@ -48,13 +41,16 @@ export default function DoctorDetails({
 
   const toggleDoctorStatus = async (isActive: boolean) => {
     try {
-      const response = await fetch(`/api/superadmin/doctors/${doctor.user.id}/activate`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isActive }),
-      });
+      const response = await fetch(
+        `/api/superadmin/doctors/${doctor.user.id}/activate`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isActive }),
+        }
+      );
 
       if (!response.ok) throw new Error("Échec de la mise à jour");
 
@@ -67,13 +63,16 @@ export default function DoctorDetails({
 
   const toggleDoctorVerification = async (isVerified: boolean) => {
     try {
-      const response = await fetch(`/api/superadmin/doctors/${doctor.user.id}/verify`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isVerified }),
-      });
+      const response = await fetch(
+        `/api/superadmin/doctors/${doctor.user.id}/verify`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isVerified }),
+        }
+      );
 
       if (!response.ok) throw new Error("Échec de la mise à jour");
       // Rafraîchir les données après la mise à jour
@@ -159,7 +158,7 @@ export default function DoctorDetails({
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">
-                      Patients
+                      Rendez-vous
                     </Label>
                     <p className="text-sm font-medium">
                       {doctor._count?.appointments || 0}
@@ -214,22 +213,38 @@ export default function DoctorDetails({
                       Abonnement
                     </Label>
                     <div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          doctor.subscription?.plan === "FREE"
-                            ? "border-purple-500 text-purple-500"
-                            : doctor.subscription?.plan === "PREMIUM"
-                              ? "border-blue-500 text-blue-500"
-                              : doctor.subscription?.plan === "FREE"
-                                ? "border-amber-500 text-amber-500"
-                                : doctor.subscription?.plan === "STANDARD"
-                                  ? "border-red-500 text-red-500"
-                                  : "border-gray-500 text-gray-500"
+                      {(() => {
+                        const plan =
+                          doctor.subscription?.plan ??
+                          doctor.hospital?.subscription?.plan ??
+                          null;
+
+                        if (!plan) {
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="border-gray-500 text-gray-500"
+                            >
+                              Aucun
+                            </Badge>
+                          );
                         }
-                      >
-                        {doctor.subscription?.plan || "Medecin d'Hopital"}
-                      </Badge>
+
+                        const color =
+                          plan === "FREE"
+                            ? "border-purple-500 text-purple-500"
+                            : plan === "STANDARD"
+                              ? "border-blue-500 text-blue-500"
+                              : plan === "PREMIUM"
+                                ? "border-amber-500 text-amber-500"
+                                : "border-gray-500 text-gray-500";
+
+                        return (
+                          <Badge variant="outline" className={color}>
+                            {plan}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </div>
                   {doctor.hospital && (
@@ -278,8 +293,6 @@ export default function DoctorDetails({
                     <p className="text-sm">{doctor.experience}</p>
                   </div>
                 )}
-
-
               </TabsContent>
               <TabsContent value="activity" className="space-y-4 mt-4">
                 <div className="space-y-4">
@@ -287,11 +300,6 @@ export default function DoctorDetails({
                     <h4 className="text-sm font-semibold">
                       Rendez-vous récents
                     </h4>
-                    <Button variant="ghost" size="sm">
-                      <Link href={`/dashboard/superadmin/appointment/all`}>
-                      Voir tout
-                      </Link>
-                    </Button>
                   </div>
                   <div className="space-y-2">
                     {doctor.appointments && doctor.appointments.length > 0 ? (
@@ -342,30 +350,14 @@ export default function DoctorDetails({
                     )}
                   </div>
                 </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">Statistiques</h4>
-                  <div className="space-y-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs">Rendez-vous ce mois</span>
-                        <span className="text-xs font-medium">
-                          {doctor._count?.appointments || 0}
-                        </span>
-                      </div>
-                      
-                    </div>
-                    
-                  </div>
-                </div>
               </TabsContent>
               <TabsContent value="settings" className="space-y-4 mt-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-semibold">Statut du compte</h4>
+                      <h4 className="text-sm font-semibold">
+                        Statut du compte
+                      </h4>
                       <p className="text-xs text-muted-foreground">
                         Gérer l&apos;état du compte
                       </p>
@@ -400,7 +392,9 @@ export default function DoctorDetails({
                     <Button
                       variant={doctor.isVerified ? "outline" : "default"}
                       size="sm"
-                      onClick={() => toggleDoctorVerification(!doctor.isVerified)}
+                      onClick={() =>
+                        toggleDoctorVerification(!doctor.isVerified)
+                      }
                     >
                       {doctor.isVerified
                         ? "Retirer la vérification"
@@ -421,10 +415,6 @@ export default function DoctorDetails({
                     >
                       <Pencil className="mr-2 h-4 w-4" />
                       Modifier le profil
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      Gérer les permissions
                     </Button>
                     <Button
                       variant="outline"

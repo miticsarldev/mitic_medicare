@@ -26,21 +26,30 @@ export async function GET(request: NextRequest) {
     const page = Number.parseInt(searchParams.get("page") || "1");
     const limit = Number.parseInt(searchParams.get("limit") || "10");
     const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
+    const sortOrder = (searchParams.get("sortOrder") ||
+      "desc") as Prisma.SortOrder;
 
     const status = searchParams.getAll("status");
     const specialty = searchParams.getAll("specialty");
     const location = searchParams.getAll("location");
 
+    // nouveaux paramètres date
+    const dateField = (searchParams.get("dateField") || "joinedAt") as
+      | "joinedAt"
+      | "lastActive";
+    const dateFrom = searchParams.get("dateFrom"); // "YYYY-MM-DD"
+    const dateTo = searchParams.get("dateTo"); // "YYYY-MM-DD"
+
     const skip = (page - 1) * limit;
 
     const where: Prisma.DoctorWhereInput = {};
+    const userWhere: Prisma.UserWhereInput = {}; // on compose ici
 
     if (search) {
       where.OR = [
-        { user: { name: { contains: search, mode: "insensitive" } } },
-        { user: { email: { contains: search, mode: "insensitive" } } },
-        { user: { id: { contains: search, mode: "insensitive" } } },
+        { user: { is: { name: { contains: search, mode: "insensitive" } } } },
+        { user: { is: { email: { contains: search, mode: "insensitive" } } } },
+        { user: { is: { id: { contains: search, mode: "insensitive" } } } },
         { specialization: { contains: search, mode: "insensitive" } },
       ];
     }
@@ -49,82 +58,78 @@ export async function GET(request: NextRequest) {
       where.specialization = { in: specialty };
     }
 
+    // localisation (user.profile.city)
     if (location.length > 0) {
-      where.user = { profile: { city: { in: location } } };
+      userWhere.profile = { city: { in: location } };
     }
 
+    // statut (user.isActive) — on garde la logique d’OR
     if (status.length > 0) {
-      where.user = {
-        is: {
-          OR: status.map((s) => ({
-            isActive: s === "active",
-          })),
-        },
-      };
+      userWhere.OR = status.map((s) => ({ isActive: s === "active" }));
     }
 
-    let orderBy: Prisma.DoctorOrderByWithRelationInput = {};
+    // filtre par date (sur user.createdAt ou user.updatedAt)
+    if (dateFrom || dateTo) {
+      const range: Prisma.DateTimeFilter = {};
+      if (dateFrom) range.gte = new Date(`${dateFrom}T00:00:00.000Z`);
+      if (dateTo) range.lte = new Date(`${dateTo}T23:59:59.999Z`);
 
+      if (dateField === "joinedAt") {
+        userWhere.createdAt = range;
+      } else {
+        userWhere.updatedAt = range;
+      }
+    }
+
+    // n’applique userWhere que s’il y a des choses dedans
+    if (Object.keys(userWhere).length > 0) {
+      where.user = { is: userWhere };
+    }
+
+    // tri
+    let orderBy: Prisma.DoctorOrderByWithRelationInput = {};
     switch (sortBy) {
       case "name":
-        orderBy = { user: { name: sortOrder as Prisma.SortOrder } };
+        orderBy = { user: { name: sortOrder } };
         break;
       case "specialty":
-        orderBy = { specialization: sortOrder as Prisma.SortOrder };
+        orderBy = { specialization: sortOrder };
         break;
       case "location":
-        orderBy = {
-          user: { profile: { city: sortOrder as Prisma.SortOrder } },
-        };
+        orderBy = { user: { profile: { city: sortOrder } } };
         break;
       case "joinedAt":
-        orderBy = { user: { createdAt: sortOrder as Prisma.SortOrder } };
+        orderBy = { user: { createdAt: sortOrder } };
         break;
       case "lastActive":
-        orderBy = { user: { updatedAt: sortOrder as Prisma.SortOrder } };
+        orderBy = { user: { updatedAt: sortOrder } };
         break;
       default:
         orderBy = { user: { createdAt: "desc" } };
     }
 
-    // Fetch doctors
+    // requête
     const doctors = await prisma.doctor.findMany({
       where,
       include: {
-        user: {
-          include: {
-            profile: true,
-          },
-        },
-        hospital: {
-          include: {
-            subscription: true,
-          },
-        },
+        user: { include: { profile: true } },
+        hospital: { include: { subscription: true } },
         department: true,
         subscription: true,
         reviews: true,
-        _count: {
-          select: {
-            appointments: true,
-            reviews: true,
-          },
-        },
+        _count: { select: { appointments: true, reviews: true } },
       },
       skip,
       take: limit,
       orderBy,
     });
 
-    // Compute the average rating for each doctor (if there are reviews)
+    // moyenne de rating
     const doctorsWithRating = doctors.map((doctor) => {
       let avgRating: number | null = null;
       if (doctor.reviews && doctor.reviews.length > 0) {
-        const totalRating = doctor.reviews.reduce(
-          (sum, review) => sum + review.rating,
-          0
-        );
-        avgRating = totalRating / doctor.reviews.length;
+        const total = doctor.reviews.reduce((sum, r) => sum + r.rating, 0);
+        avgRating = total / doctor.reviews.length;
       }
       return { ...doctor, avgRating };
     });

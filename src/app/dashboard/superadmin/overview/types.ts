@@ -79,8 +79,6 @@ export interface PlanStat {
 export interface OverviewStat {
   title: string;
   value: string;
-  change: string;
-  trend: "up" | "down" | "neutral";
   icon: string;
   color: string;
 }
@@ -142,4 +140,10 @@ export interface StatisticsData {
   subscriptionTypeData: DistributionDataPoint[];
   platformUsageData: DistributionDataPoint[];
   regionData: DistributionDataPoint[];
+}
+
+export interface RevenueDataPoint {
+  date: string;
+  subscriptions: number;
+  total: number;
 }

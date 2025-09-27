@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format, subDays, subMonths, subYears } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Clock, RefreshCw, Users } from "lucide-react";
+import { Calendar, Clock, FileDown, RefreshCw, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +45,7 @@ import {
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import type { AppointmentsData } from "./types";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Colors for charts
 // const COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
@@ -56,78 +57,240 @@ const STATUS_COLORS = {
 
 interface AppointmentsAnalyticsProps {
   initialData: AppointmentsData;
+  initialRange?: { from?: Date; to?: Date };
 }
 
 export function AppointmentsAnalytics({
   initialData,
+  initialRange,
 }: AppointmentsAnalyticsProps) {
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   //   const [data, setData] = useState<AppointmentsData>(initialData);
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
-    from: subMonths(new Date(), 1),
-    to: new Date(),
-  });
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("1m");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
+    from: initialRange?.from ?? subMonths(new Date("2024-06-01"), 1),
+    to: initialRange?.to ?? new Date(),
+  });
+
+  const pushRangeToUrl = (from?: Date, to?: Date) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (from) params.set("from", from.toISOString());
+    else params.delete("from");
+    if (to) params.set("to", to.toISOString());
+    else params.delete("to");
+
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   // Handle period change
   const handlePeriodChange = (period: string) => {
     setSelectedPeriod(period);
-
-    let from;
+    let from: Date | undefined;
     const to = new Date();
-
     switch (period) {
       case "7d":
-        from = subDays(new Date(), 7);
+        from = subDays(to, 7);
         break;
       case "1m":
-        from = subMonths(new Date(), 1);
+        from = subMonths(to, 1);
         break;
       case "3m":
-        from = subMonths(new Date(), 3);
+        from = subMonths(to, 3);
         break;
       case "6m":
-        from = subMonths(new Date(), 6);
+        from = subMonths(to, 6);
         break;
       case "1y":
-        from = subYears(new Date(), 1);
+        from = subYears(to, 1);
         break;
       case "all":
         from = undefined;
         break;
       default:
-        from = subMonths(new Date(), 1);
+        from = subMonths(to, 1);
     }
-
     setDateRange({ from, to });
+    pushRangeToUrl(from, to);
   };
 
-  // Simulate data refresh
   const refreshData = () => {
     setIsRefreshing(true);
+    pushRangeToUrl(dateRange.from, dateRange.to);
     setTimeout(() => {
       setIsRefreshing(false);
-      toast({
-        title: "Données actualisées",
-        description: "Les statistiques ont été mises à jour.",
-      });
-    }, 1500);
+      toast({ title: "Données actualisées" });
+    }, 600);
   };
 
   const handleSelect = (range: { from?: Date; to?: Date } | undefined) => {
-    setDateRange({
-      from: range?.from || undefined,
-      to: range?.to || undefined,
-    });
+    const next = { from: range?.from, to: range?.to };
+    setDateRange(next);
+    pushRangeToUrl(next.from, next.to);
   };
 
   // Format time from hour number
   const formatHour = (hour: number) => {
     return `${hour}:00`;
+  };
+
+  // CSV helpers
+  const csvEscape = (val: unknown) => {
+    if (val === null || val === undefined) return "";
+    const str = String(val);
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  };
+  const csvRow = (cols: unknown[]) => cols.map(csvEscape).join(",");
+
+  // Build and download CSV
+  const exportAnalytics = () => {
+    try {
+      const from = dateRange.from;
+      const to = dateRange.to;
+
+      // Filter trend by date range if provided (expects YYYY-MM-DD or ISO in data)
+      const trend = (initialData?.stats.appointmentsTrend ?? []).filter((d) => {
+        if (!from && !to) return true;
+        const dDate = new Date(d.date);
+        if (Number.isNaN(dDate.getTime())) return true; // keep if unparseable
+        if (from && dDate < new Date(from.setHours(0, 0, 0, 0))) return false;
+        if (to && dDate > new Date(new Date(to).setHours(23, 59, 59, 999)))
+          return false;
+        return true;
+      });
+
+      const lines: string[] = [];
+
+      // Section: Meta
+      lines.push(csvRow(["Export", "Appointments Analytics"]));
+      lines.push(
+        csvRow(["Generated At", format(new Date(), "yyyy-MM-dd HH:mm")])
+      );
+      lines.push(
+        csvRow([
+          "Range",
+          from ? format(from, "yyyy-MM-dd") : "all",
+          to ? format(to, "yyyy-MM-dd") : "now",
+        ])
+      );
+      lines.push(""); // spacer
+
+      // Section: KPIs
+      lines.push("KPIs");
+      lines.push(
+        csvRow([
+          "Total",
+          "Completed",
+          "Pending",
+          "Cancelled",
+          "Completion Rate (%)",
+          "Cancellation Rate (%)",
+          "Average Duration (min)",
+        ])
+      );
+      lines.push(
+        csvRow([
+          initialData?.stats.totalAppointments,
+          initialData?.stats.completedAppointments,
+          initialData?.stats.pendingAppointments,
+          initialData?.stats.cancelledAppointments,
+          initialData?.stats.completionRate,
+          initialData?.stats.cancellationRate,
+          initialData?.stats.averageDuration,
+        ])
+      );
+      lines.push("");
+
+      // Section: Trend
+      lines.push("Appointments Trend");
+      lines.push(csvRow(["Date", "Total", "Completed"]));
+      trend.forEach((t) => {
+        lines.push(csvRow([t.date, t.total, t.completed]));
+      });
+      lines.push("");
+
+      // Section: By Status
+      lines.push("Appointments By Status");
+      lines.push(csvRow(["Status", "Count", "Percentage (%)"]));
+      (initialData?.stats.appointmentsByStatus ?? []).forEach((s) => {
+        lines.push(csvRow([s.status, s.count, s.percentage]));
+      });
+      lines.push("");
+
+      // Section: By Day
+      lines.push("Appointments By Day");
+      lines.push(csvRow(["Day", "Count"]));
+      (initialData?.stats.appointmentsByDay ?? []).forEach((d) => {
+        lines.push(csvRow([d.day, d.count]));
+      });
+      lines.push("");
+
+      // Section: By Hour
+      lines.push("Appointments By Hour");
+      lines.push(csvRow(["Hour", "Count"]));
+      (initialData?.stats.appointmentsByHour ?? []).forEach((h) => {
+        lines.push(csvRow([`${h.hour}:00`, h.count]));
+      });
+      lines.push("");
+
+      // Section: Top Doctors
+      lines.push("Top Doctors");
+      lines.push(
+        csvRow([
+          "Name",
+          "Specialization",
+          "Appointments",
+          "Completion Rate (%)",
+        ])
+      );
+      (initialData?.stats.topDoctors ?? []).forEach((d) => {
+        lines.push(
+          csvRow([
+            d.name,
+            d.specialization,
+            d.appointmentCount,
+            d.completionRate,
+          ])
+        );
+      });
+      lines.push("");
+
+      // Section: Top Hospitals
+      lines.push("Top Hospitals");
+      lines.push(csvRow(["Name", "Appointments", "Completion Rate (%)"]));
+      (initialData?.stats.topHospitals ?? []).forEach((h) => {
+        lines.push(csvRow([h.name, h.appointmentCount, h.completionRate]));
+      });
+
+      const csvContent = lines.join("\n");
+      const blob = new Blob([csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+
+      const fname = `appointments_analytics_${from ? format(from, "yyyyMMdd") : "all"}_${to ? format(to, "yyyyMMdd") : format(new Date(), "yyyyMMdd")}.csv`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fname;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export terminé",
+        description: `Le fichier ${fname} a été généré.`,
+      });
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "Erreur",
+        description: "Impossible d’exporter les données.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -155,18 +318,11 @@ export function AppointmentsAnalytics({
                 className="w-[240px] justify-start text-left font-normal"
               >
                 <Calendar className="mr-2 h-4 w-4" />
-                {dateRange.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "dd/MM/yyyy")} -{" "}
-                      {format(dateRange.to, "dd/MM/yyyy")}
-                    </>
-                  ) : (
-                    format(dateRange.from, "dd/MM/yyyy")
-                  )
-                ) : (
-                  <span>Sélectionner une période</span>
-                )}
+                {dateRange.from
+                  ? dateRange.to
+                    ? `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`
+                    : format(dateRange.from, "dd/MM/yyyy")
+                  : "Sélectionner une période"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -174,10 +330,7 @@ export function AppointmentsAnalytics({
                 initialFocus
                 mode="range"
                 defaultMonth={dateRange.from}
-                selected={{
-                  from: dateRange.from,
-                  to: dateRange.to,
-                }}
+                selected={{ from: dateRange.from, to: dateRange.to }}
                 onSelect={handleSelect}
                 numberOfMonths={2}
                 locale={fr}
@@ -194,9 +347,9 @@ export function AppointmentsAnalytics({
             />
             Actualiser
           </Button>
-          {/* <Button variant="outline">
+          <Button variant="outline" onClick={exportAnalytics}>
             <FileDown className="mr-2 h-4 w-4" /> Exporter
-          </Button> */}
+          </Button>
         </div>
       </div>
 
@@ -322,7 +475,12 @@ export function AppointmentsAnalytics({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(iso) =>
+                    format(new Date(iso), "dd MMM", { locale: fr })
+                  }
+                />
                 <YAxis />
                 <Tooltip />
                 <Legend />

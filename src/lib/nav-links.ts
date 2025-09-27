@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   LifeBuoy,
   Settings,
-  Bell,
   Calendar,
   ClipboardList,
   FolderHeart,
@@ -62,8 +61,8 @@ export const superAdminNavItems = [
         url: "/dashboard/superadmin/subscriptions/all",
       },
       {
-        title: "Abonnement en attente",
-        url: "/dashboard/superadmin/subscriptions/pending",
+        title: "Gestion des plans",
+        url: "/dashboard/superadmin/subscriptions/plans",
       },
     ],
   },
@@ -79,36 +78,15 @@ export const superAdminNavItems = [
     ],
   },
   {
-    title: "Gestion du Contenu",
-    icon: FileText,
-    url: "/dashboard/superadmin/content",
+    title: "Paramètres & Sécurité",
+    icon: Settings,
+    url: "/dashboard/superadmin/settings",
     items: [
-      
-      { title: "FAQ", url: "/dashboard/superadmin/content/faq" },
+      { title: "Mon Profil", url: "/dashboard/superadmin/settings/profile" },
       {
-        title: "Avis & Témoignages",
-        url: "/dashboard/superadmin/content/reviews",
+        title: "Sécurité & Confidentialité",
+        url: "/dashboard/superadmin/settings/security",
       },
-    ],
-  },
-  {
-    title: "Notifications & Assistance",
-    icon: Bell,
-    url: "/dashboard/superadmin/notifications",
-    items: [
-      {
-        title: "Centre de notifications",
-        url: "/dashboard/superadmin/notifications/center",
-      },
-      // {
-      //   title: "Tickets de support",
-      //   url: "/dashboard/superadmin/notifications/tickets",
-      //   icon: LifeBuoy,
-      // },
-      // {
-      //   title: "Emails & Alertes",
-      //   url: "/dashboard/superadmin/notifications/emails",
-      // },
     ],
   },
 ];
@@ -186,7 +164,6 @@ export const doctorNavItems = [
         title: "Avis & Feedback",
         url: "/dashboard/independant_doctor/settings/reviews",
       },
-
     ],
   },
   {
@@ -446,10 +423,6 @@ export const hospitalDoctorNavItems = [
         title: "Mes Rendez-vous",
         url: "/dashboard/hopital_doctor/appointments/upcoming",
       },
-      // {
-      //   title: "Historique des Rendez-vous",
-      //   url: "/dashboard/hopital_doctor/appointments/history",
-      // },
     ],
   },
   {

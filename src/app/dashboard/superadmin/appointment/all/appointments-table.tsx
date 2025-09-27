@@ -226,7 +226,10 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
         setPagination(result.pagination);
       } else {
         // Otherwise, use getAppointmentsData
-        const result = await getAppointmentsData(newPage, pagination.pageSize);
+        const result = await getAppointmentsData({
+          page: newPage,
+          pageSize: pagination.pageSize,
+        });
         setAppointments(result.appointments);
         setPagination(result.pagination);
       }
@@ -274,7 +277,10 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
         setPagination(result.pagination);
       } else {
         // Otherwise, use getAppointmentsData
-        const result = await getAppointmentsData(1, newPageSize);
+        const result = await getAppointmentsData({
+          page: 1,
+          pageSize: newPageSize,
+        });
         setAppointments(result.appointments);
         setPagination(result.pagination);
       }

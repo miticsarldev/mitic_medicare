@@ -117,13 +117,12 @@ export default function SubscriptionSection() {
   }, []);
 
   const totalPaid = useMemo(() => {
-  return (
-    data?.payments.reduce((sum, p) => {
-      return p.status === "COMPLETED" ? sum + Number(p.amount) : sum;
-    }, 0) || 0
-  );
-}, [data]);
-
+    return (
+      data?.payments.reduce((sum, p) => {
+        return p.status === "COMPLETED" ? sum + Number(p.amount) : sum;
+      }, 0) || 0
+    );
+  }, [data]);
 
   if (loading) {
     return (
@@ -244,17 +243,17 @@ export default function SubscriptionSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data.maxPatients === "Illimité" ? "Illimité" : data.maxPatients} patients
+              {data.maxPatients === "Illimité" ? "Illimité" : data.maxPatients}{" "}
+              patients
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {data.currentPatients} patients suivis / {data.maxPatients}
             </p>
-
           </CardContent>
         </Card>
 
         {/* Statut */}
-       <Card>
+        <Card>
           <CardHeader className="pb-2">
             <CardDescription>Statut</CardDescription>
             <CardTitle>
@@ -381,21 +380,21 @@ export default function SubscriptionSection() {
 
       {/* Avertissement si limite atteinte */}
       {!data.canAddMorePatients && (
-  <div className="flex items-start gap-4 p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-    <div>
-      <h4 className="font-medium text-yellow-800">
-        Limite de patients atteinte
-      </h4>
-      <p className="text-sm text-yellow-700">
-        Vous avez atteint la limite de patients autorisés pour votre plan{" "}
-        {data.plan}.
-        {data.plan !== "PREMIUM" &&
-          " Veuillez mettre à niveau votre abonnement pour suivre plus de patients."}
-      </p>
-    </div>
-  </div>
-)}
+        <div className="flex items-start gap-4 p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+          <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-yellow-800">
+              Limite de patients atteinte
+            </h4>
+            <p className="text-sm text-yellow-700">
+              Vous avez atteint la limite de patients autorisés pour votre plan{" "}
+              {data.plan}.
+              {data.plan !== "PREMIUM" &&
+                " Veuillez mettre à niveau votre abonnement pour suivre plus de patients."}
+            </p>
+          </div>
+        </div>
+      )}
 
       <RenewSubscriptionModal
         open={renewModalOpen}

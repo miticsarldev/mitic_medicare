@@ -352,48 +352,86 @@ export async function bulkDeletePatients(patientIds: string[]) {
   }
 }
 
+const BLOOD_LABEL: Record<string, string> = {
+  A_POSITIVE: "A+",
+  A_NEGATIVE: "A-",
+  B_POSITIVE: "B+",
+  B_NEGATIVE: "B-",
+  AB_POSITIVE: "AB+",
+  AB_NEGATIVE: "AB-",
+  O_POSITIVE: "O+",
+  O_NEGATIVE: "O-",
+};
+
 export async function bulkExportPatients(patientIds: string[]) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
 
-    // Get patient data for export
+    if (!Array.isArray(patientIds) || patientIds.length === 0) {
+      return { error: "No ids provided" };
+    }
+
+    // IMPORTANT: filter by Patient.id (NOT user.id)
     const patients = await prisma.patient.findMany({
-      where: {
-        user: {
-          id: {
-            in: patientIds,
-          },
-        },
-      },
+      where: { id: { in: patientIds } },
       include: {
         user: {
-          include: {
-            profile: true,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            isActive: true,
+            dateOfBirth: true,
+            profile: {
+              select: {
+                address: true,
+                city: true,
+                state: true,
+                country: true,
+                zipCode: true,
+                genre: true,
+              },
+            },
           },
         },
       },
     });
 
-    // Format data for export
-    const exportData = patients.map((patient) => ({
-      id: patient.user.id,
-      name: patient.user.name,
-      email: patient.user.email,
-      phone: patient.user.phone,
-      dateOfBirth: patient?.user?.dateOfBirth?.toISOString().split("T")[0],
-      gender: patient.user.profile?.genre === "MALE" ? "Homme" : "Femme",
-      address: patient.user.profile?.address || "",
-      status: patient.user.isActive ? "active" : "inactive",
-      insuranceProvider: patient.insuranceProvider || "",
-      insuranceNumber: patient.insuranceNumber || "",
-      emergencyContact: patient.emergencyContact || "",
-      bloodType: patient.bloodType || "",
-      allergies: patient.allergies || "",
+    const exportData = patients.map((p) => ({
+      // choose what you want as the primary id in CSV
+      patientId: p.id,
+      userId: p.user?.id ?? "",
+      name: p.user?.name ?? "",
+      email: p.user?.email ?? "",
+      phone: p.user?.phone ?? "",
+      dateOfBirth: p.user?.dateOfBirth
+        ? new Date(p.user.dateOfBirth).toISOString().split("T")[0]
+        : "",
+      gender:
+        p.user?.profile?.genre === "MALE"
+          ? "Homme"
+          : p.user?.profile?.genre === "FEMALE"
+            ? "Femme"
+            : "",
+      address: p.user?.profile?.address ?? "",
+      city: p.user?.profile?.city ?? "",
+      state: p.user?.profile?.state ?? "",
+      zipCode: p.user?.profile?.zipCode ?? "",
+      country: p.user?.profile?.country ?? "",
+      status: p.user?.isActive ? "active" : "inactive",
+      emergencyContact: p.emergencyContact ?? "",
+      emergencyPhone: p.emergencyPhone ?? "",
+      bloodType: p.bloodType ? (BLOOD_LABEL[p.bloodType] ?? p.bloodType) : "",
+      allergies: p.allergies ?? "",
+      insuranceProvider: p.insuranceProvider ?? "",
+      insuranceNumber: p.insuranceNumber ?? "",
+      medicalNotes: p.medicalNotes ?? "",
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
     }));
 
     return { success: true, data: exportData };
@@ -478,7 +516,7 @@ export const getPatientById = async (id: string): Promise<Patient> => {
 
     user: {
       ...data.user,
-      dateOfBirth: data.user.dateOfBirth ?? undefined,
+      dateOfBirth: data.user.dateOfBirth ?? null,
       profile: data.user.profile
         ? {
             address: data.user.profile.address ?? undefined,
