@@ -64,6 +64,10 @@ export const superAdminNavItems = [
         title: "Gestion des plans",
         url: "/dashboard/superadmin/subscriptions/plans",
       },
+      {
+        title: "Statistiques des revenus",
+        url: "/dashboard/superadmin/subscriptions/revenue",
+      },
     ],
   },
   {
