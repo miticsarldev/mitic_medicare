@@ -18,9 +18,10 @@ import {
   Download,
   Filter,
   RefreshCw,
-  TrendingUp,
   Wallet,
   Users,
+  CreditCard,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,14 +70,14 @@ export default function RevenueClient({ initial }: { initial: RevenueStats }) {
     }
   };
 
-  // Helper: currency-format
+  // Currency format
   const fmt = (n: number, c: string) =>
     new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: c.toUpperCase(),
     }).format(n);
 
-  // Build a merged series per currency into separate data keys
+  // Build chart data (series is already NET per currency per day)
   const currencies = Array.from(
     new Set(stats.paymentsSeries.map((p) => p.currency))
   );
@@ -91,14 +92,14 @@ export default function RevenueClient({ initial }: { initial: RevenueStats }) {
     String(a.date).localeCompare(String(b.date))
   );
 
-  // Totals helpers
-  const totalPaymentsLabel = stats.totalPayments
+  // Labels
+  const netCollectedLabel = stats.netCollected
     .map((t) => fmt(t.amount, t.currency))
     .join("  ·  ");
-  const mrrLabel = stats.mrrRunRate
+  const completedLabel = stats.totalCompleted
     .map((t) => fmt(t.amount, t.currency))
     .join("  ·  ");
-  const arrLabel = stats.arrRunRate
+  const avgTicketLabel = stats.averageTicket
     .map((t) => fmt(t.amount, t.currency))
     .join("  ·  ");
 
@@ -118,13 +119,22 @@ export default function RevenueClient({ initial }: { initial: RevenueStats }) {
     URL.revokeObjectURL(url);
   };
 
+  // Success rate
+  const successRate =
+    stats.paymentCounters.total > 0
+      ? Math.round(
+          (stats.paymentCounters.completed / stats.paymentCounters.total) * 100
+        )
+      : 0;
+
   return (
     <div className="space-y-6 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Revenus & MRR</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Revenus</h2>
           <p className="text-muted-foreground">
-            Paiements encaissés, MRR/ARR (run-rate) et dynamiques d’abonnements.
+            Encaissements nets, qualité des paiements et dynamique des
+            abonnements.
           </p>
         </div>
         <div className="flex gap-2">
@@ -238,35 +248,37 @@ export default function RevenueClient({ initial }: { initial: RevenueStats }) {
       <div className="grid gap-4 md:grid-cols-4">
         <KpiCard
           icon={<Wallet className="h-4 w-4" />}
-          label="Paiements encaissés"
-          value={totalPaymentsLabel}
-          hint="Somme des paiements dans la période"
+          label="Net encaissé"
+          value={netCollectedLabel || "—"}
+          hint="Paiements complétés – remboursés"
+        />
+        <KpiCard
+          icon={<CreditCard className="h-4 w-4" />}
+          label="Paiements (complétés / échoués / remboursés)"
+          value={`${stats.paymentCounters.completed} / ${stats.paymentCounters.failed} / ${stats.paymentCounters.refunded}`}
+          hint={`Total: ${stats.paymentCounters.total} — Taux de succès: ${successRate}%`}
         />
         <KpiCard
           icon={<TrendingUp className="h-4 w-4" />}
-          label="MRR (run-rate)"
-          value={mrrLabel}
-          hint="Abonnés actifs × prix mensuel"
+          label="Montant complété"
+          value={completedLabel || "—"}
+          hint="Somme des paiements réussis"
         />
         <KpiCard
           icon={<TrendingUp className="h-4 w-4" />}
-          label="ARR (run-rate)"
-          value={arrLabel}
-          hint="MRR × 12"
-        />
-        <KpiCard
-          icon={<Users className="h-4 w-4" />}
-          label="Actifs / Nouveaux / Churn"
-          value={`${stats.activeSubs} / ${stats.newSubs} / ${stats.churnedSubs}`}
-          hint="Dans la période sélectionnée"
+          label="Ticket moyen"
+          value={avgTicketLabel || "—"}
+          hint="Montant moyen par paiement réussi"
         />
       </div>
 
       {/* Chart */}
       <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Revenus (encaissés) par jour</CardTitle>
-          <CardDescription>Somme quotidienne par devise</CardDescription>
+          <CardTitle>Encaissement net par jour</CardTitle>
+          <CardDescription>
+            Somme quotidienne (complétés – remboursés) par devise
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-72">
@@ -302,25 +314,23 @@ export default function RevenueClient({ initial }: { initial: RevenueStats }) {
         </CardContent>
       </Card>
 
-      {/* Breakdown */}
+      {/* Payment methods */}
       <Card>
         <CardHeader>
-          <CardTitle>Répartition par plan</CardTitle>
-          <CardDescription>
-            Nombre d’abonnés (tel que présent dans la période)
-          </CardDescription>
+          <CardTitle>Méthodes de paiement</CardTitle>
+          <CardDescription>Volume et montants (réussis)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {stats.byPlan.map((p) => (
-              <div key={p.plan} className="rounded-xl border p-3">
-                <div className="text-xs text-muted-foreground">{p.plan}</div>
-                <div className="text-2xl font-semibold mt-1">
-                  {p.subscribers}
+            {stats.methodBreakdown.map((m) => (
+              <div key={m.method} className="rounded-xl border p-3">
+                <div className="text-xs text-muted-foreground">{m.method}</div>
+                <div className="text-lg font-semibold mt-1">
+                  {m.completedCount} réussis / {m.count} totaux
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {p.payments?.length ? (
-                    p.payments.map((q) => (
+                  {m.amountByCurrency.length ? (
+                    m.amountByCurrency.map((q) => (
                       <Badge key={q.currency} variant="secondary">
                         {q.currency} {q.amount.toFixed(0)}
                       </Badge>
@@ -331,6 +341,106 @@ export default function RevenueClient({ initial }: { initial: RevenueStats }) {
                 </div>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top payers */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top clients</CardTitle>
+          <CardDescription>
+            Classement des payeurs (paiements réussis)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {stats.topPayers.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              Aucun paiement réussi sur la période.
+            </div>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-muted-foreground">
+                  <tr className="[&>th]:py-2 [&>th]:px-2 text-left">
+                    <th>Client</th>
+                    <th>Type</th>
+                    <th>Nb paiements</th>
+                    <th>Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.topPayers.map((t) => (
+                    <tr
+                      key={t.id}
+                      className="[&>td]:py-2 [&>td]:px-2 border-b last:border-0"
+                    >
+                      <td className="font-medium">{t.name}</td>
+                      <td className="capitalize">
+                        {t.subscriberType.toLowerCase()}
+                      </td>
+                      <td>{t.paymentsCount}</td>
+                      <td className="flex flex-wrap gap-1">
+                        {t.amountByCurrency.map((a) => (
+                          <Badge key={a.currency} variant="outline">
+                            {fmt(a.amount, a.currency)}
+                          </Badge>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Breakdown by plan */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Répartition par plan</CardTitle>
+          <CardDescription>
+            Nombre d’abonnés présents dans la période
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {stats.byPlan.map((p) => (
+              <div key={p.plan} className="rounded-xl border p-3">
+                <div className="text-xs text-muted-foreground">{p.plan}</div>
+                <div className="text-2xl font-semibold mt-1">
+                  {p.subscribers}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Subs dynamics */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Abonnements</CardTitle>
+          <CardDescription>Actifs, nouveaux et churn</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <KpiCard
+              icon={<Users className="h-4 w-4" />}
+              label="Actifs"
+              value={stats.activeSubs}
+            />
+            <KpiCard
+              icon={<Users className="h-4 w-4" />}
+              label="Nouveaux"
+              value={stats.newSubs}
+            />
+            <KpiCard
+              icon={<Users className="h-4 w-4" />}
+              label="Churn"
+              value={stats.churnedSubs}
+            />
           </div>
         </CardContent>
       </Card>

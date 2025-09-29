@@ -44,6 +44,7 @@ import type {
   PaymentMethod,
 } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type PlanWithStats = {
   code: PlanConfig["code"];
@@ -351,11 +352,42 @@ function SubList({
   items: (DocSub | (HospSub & { _type: "DOCTOR" | "HOSPITAL" }))[];
   planMap: Record<string, PlanConfig & { limits: PlanLimits | null }>;
 }) {
+  const [page, setPage] = React.useState(1); // 1-based
+  const [pageSize, setPageSize] = React.useState(25);
+
+  // reset to page 1 whenever the filtered items change
+  React.useEffect(() => {
+    setPage(1);
+  }, [items.length]);
+
+  const total = items.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return items.slice(start, start + pageSize);
+  }, [items, page, pageSize]);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Résultats ({items.length})</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Résultats ({total})</CardTitle>
+          <PaginationControls
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={(p) => {
+              const clamped = Math.min(Math.max(1, p), pageCount);
+              setPage(clamped);
+            }}
+            onPageSizeChange={(n) => {
+              setPageSize(n);
+              setPage(1);
+            }}
+          />
+        </div>
       </CardHeader>
+
       <CardContent className="space-y-2">
         <div className="grid grid-cols-9 gap-2 text-sm text-muted-foreground px-2">
           <div className="col-span-2">Client</div>
@@ -367,8 +399,9 @@ function SubList({
           <div>Statut</div>
           <div>Paiements</div>
         </div>
+
         <div className="divide-y">
-          {items.map((s) => {
+          {current.map((s) => {
             const cfg = planMap[s.plan];
             const name =
               s._type === "DOCTOR"
@@ -432,12 +465,31 @@ function SubList({
                 </div>
                 <div className="flex items-center gap-2 justify-end">
                   <Badge variant="secondary">{s?.payments?.length}</Badge>
-                  <PaymentsDialogTrigger subscription={s} />
+                  <PaymentsDialogTrigger subscription={s as any} />
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* Footer controls mirror the header for long lists */}
+        {total > 0 && (
+          <div className="pt-3 border-t">
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={(p) => {
+                const clamped = Math.min(Math.max(1, p), pageCount);
+                setPage(clamped);
+              }}
+              onPageSizeChange={(n) => {
+                setPageSize(n);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

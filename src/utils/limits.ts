@@ -1,3 +1,4 @@
+// lib/limits.ts
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -12,9 +13,9 @@ export type LimitKey =
 export type LimitSummary = {
   scope: "DOCTOR" | "HOSPITAL";
   scopeId: string;
-  plan: string;
+  plan: SubscriptionPlan | "FREE";
   status: "ACTIVE" | "TRIAL" | "INACTIVE" | "EXPIRED";
-  limits: Record<LimitKey, number | null>; // null = unlimited
+  limits: Record<LimitKey, number | null>;
   usage: Record<LimitKey, number>;
   exceeded: Record<LimitKey, boolean>;
   anyExceeded: boolean;
@@ -24,12 +25,11 @@ function isUnlimited(v: number | null | undefined) {
   return v === null || v === undefined;
 }
 
-// Resolve the “tenant” from session
+// Resolve tenant from session
 export async function resolveTenantFromSession() {
   const session = await getServerSession(authOptions);
   if (!session?.user) throw new Error("Unauthorized");
 
-  // SUPER_ADMIN can impersonate via query/headers if needed; otherwise:
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: { doctor: { include: { hospital: true } }, hospital: true },
@@ -42,13 +42,10 @@ export async function resolveTenantFromSession() {
   if (user.role === UserRole.HOSPITAL_ADMIN && user.hospital) {
     return { scope: "HOSPITAL" as const, scopeId: user.hospital.id };
   }
-
-  // Also allow hospital doctors to be scoped to their hospital
   if (user.role === UserRole.HOSPITAL_DOCTOR && user.doctor?.hospitalId) {
     return { scope: "HOSPITAL" as const, scopeId: user.doctor.hospitalId };
   }
 
-  // Fallback: forbid
   throw new Error("No subscription scope for this user");
 }
 
@@ -58,7 +55,6 @@ export async function getActiveSubscription(
 ) {
   const where =
     scope === "DOCTOR" ? { doctorId: scopeId } : { hospitalId: scopeId };
-
   const sub = await prisma.subscription.findFirst({
     where: {
       ...where,
@@ -66,28 +62,25 @@ export async function getActiveSubscription(
     },
     orderBy: { updatedAt: "desc" },
   });
-
   return sub ?? null;
 }
 
-// Pull limits from your PlanConfig/PlanLimits
+// Map PlanLimits -> banner keys
 export async function getPlanLimits(plan: string) {
   const cfg = await prisma.planConfig.findUnique({
-    where: { code: plan as SubscriptionPlan }, // replace 'code' with your actual unique field for PlanConfig
+    where: { code: plan as SubscriptionPlan },
     include: { limits: true },
   });
 
-  // default unlimited if not configured
   const dict: Record<LimitKey, number | null> = {
     appointmentsPerMonth: cfg?.limits?.maxAppointments ?? null,
     patientsPerMonth: cfg?.limits?.maxPatients ?? null,
     doctorsPerHospital: cfg?.limits?.maxDoctorsPerHospital ?? null,
   };
-
   return dict;
 }
 
-// Compute usage dynamically (no counters table needed)
+// Compute usage for current month
 export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
   const monthStart = startOfMonth(new Date());
   const monthEnd = endOfMonth(new Date());
@@ -99,38 +92,35 @@ export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
   };
 
   if (scope === "DOCTOR") {
-    // Appointments created/scheduled this month for this doctor
     usage.appointmentsPerMonth = await prisma.appointment.count({
       where: {
         doctorId: scopeId,
         scheduledAt: { gte: monthStart, lte: monthEnd },
       },
     });
-
-    // Distinct patients this month for this doctor
-    const patientAgg = await prisma.appointment.groupBy({
-      by: ["patientId"],
+    const patientAgg = await prisma.appointment.findMany({
       where: {
         doctorId: scopeId,
         scheduledAt: { gte: monthStart, lte: monthEnd },
       },
+      select: { patientId: true },
+      distinct: ["patientId"],
     });
     usage.patientsPerMonth = patientAgg.length;
   } else {
-    // Hospital-level
     usage.appointmentsPerMonth = await prisma.appointment.count({
       where: {
         OR: [{ hospitalId: scopeId }, { doctor: { hospitalId: scopeId } }],
         scheduledAt: { gte: monthStart, lte: monthEnd },
       },
     });
-
-    const patientAgg = await prisma.appointment.groupBy({
-      by: ["patientId"],
+    const patientAgg = await prisma.appointment.findMany({
       where: {
         OR: [{ hospitalId: scopeId }, { doctor: { hospitalId: scopeId } }],
         scheduledAt: { gte: monthStart, lte: monthEnd },
       },
+      select: { patientId: true },
+      distinct: ["patientId"],
     });
     usage.patientsPerMonth = patientAgg.length;
 
@@ -145,13 +135,14 @@ export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
 export async function getLimitSummaryForCurrentUser(): Promise<LimitSummary> {
   const { scope, scopeId } = await resolveTenantFromSession();
   const sub = await getActiveSubscription(scope, scopeId);
-  const plan = sub?.plan ?? "FREE";
+
+  const plan = (sub?.plan ?? "FREE") as SubscriptionPlan | "FREE";
   const status = (sub?.status ?? "INACTIVE") as LimitSummary["status"];
 
   const limits = await getPlanLimits(plan);
   const usage = await getUsage(scope, scopeId);
 
-  const exceeded: LimitSummary["exceeded"] = {
+  const exceeded = {
     appointmentsPerMonth: isUnlimited(limits.appointmentsPerMonth)
       ? false
       : usage.appointmentsPerMonth >= (limits.appointmentsPerMonth ?? Infinity),
@@ -175,13 +166,12 @@ export async function getLimitSummaryForCurrentUser(): Promise<LimitSummary> {
   };
 }
 
-// Guard to call inside server actions / API handlers before creating something
-class PlanLimitExceededError extends Error {
-  code: string;
+// Optional: throw when blocked
+export class PlanLimitExceededError extends Error {
+  code = "PLAN_LIMIT_EXCEEDED";
   limitKey: LimitKey;
   constructor(message: string, limitKey: LimitKey) {
     super(message);
-    this.code = "PLAN_LIMIT_EXCEEDED";
     this.limitKey = limitKey;
     Object.setPrototypeOf(this, PlanLimitExceededError.prototype);
   }
@@ -193,10 +183,11 @@ export async function assertWithinLimit(
 ) {
   const summary = await getLimitSummaryForCurrentUser();
   if (summary.exceeded[key]) {
-    const msg =
+    throw new PlanLimitExceededError(
       opts?.message ??
-      "Votre limite de forfait est atteinte. Veuillez mettre à niveau votre plan pour continuer.";
-    throw new PlanLimitExceededError(msg, key);
+        "Votre limite de forfait est atteinte. Veuillez mettre à niveau votre plan pour continuer.",
+      key
+    );
   }
   return summary;
 }

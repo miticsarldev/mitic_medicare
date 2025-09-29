@@ -1,3 +1,4 @@
+// components/billing/limit-banner.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,14 +6,27 @@ import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+// === keep this client-side type in sync with the API payload ===
+type LimitKey =
+  | "appointmentsPerMonth"
+  | "patientsPerMonth"
+  | "doctorsPerHospital";
+
 type LimitSummary = {
-  plan: string;
-  status: string;
-  anyExceeded: boolean;
-  exceeded: Record<string, boolean>;
-  limits: Record<string, number | null>;
-  usage: Record<string, number>;
   scope: "DOCTOR" | "HOSPITAL";
+  scopeId: string;
+  plan: string;
+  status: "ACTIVE" | "TRIAL" | "INACTIVE" | "EXPIRED";
+  limits: Record<LimitKey, number | null>; // null = unlimited
+  usage: Record<LimitKey, number>;
+  exceeded: Record<LimitKey, boolean>;
+  anyExceeded: boolean;
+};
+
+const LABELS: Record<LimitKey, string> = {
+  appointmentsPerMonth: "rendez-vous mensuels",
+  patientsPerMonth: "patients mensuels",
+  doctorsPerHospital: "médecins (hôpital)",
 };
 
 export default function LimitBanner() {
@@ -21,9 +35,9 @@ export default function LimitBanner() {
   useEffect(() => {
     let mounted = true;
     fetch("/api/limits/summary", { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (mounted) setSummary(d?.error ? null : d);
+        if (mounted) setSummary(d?.anyExceeded ? d : null);
       })
       .catch(() => {});
     return () => {
@@ -31,20 +45,15 @@ export default function LimitBanner() {
     };
   }, []);
 
-  if (!summary || !summary.anyExceeded) return null;
+  if (!summary) return null;
 
-  // Build a short message
-  const exceededKeys = Object.entries(summary.exceeded)
+  const exceededKeys = (
+    Object.entries(summary.exceeded) as [LimitKey, boolean][]
+  )
     .filter(([, v]) => v)
     .map(([k]) => k);
 
-  const label = (k: string) =>
-    ({
-      appointmentsPerMonth: "rendez-vous mensuels",
-      patientsPerMonth: "patients mensuels",
-      doctorsPerHospital: "médecins",
-      departmentsPerHospital: "départements",
-    })[k] ?? k;
+  if (exceededKeys.length === 0) return null;
 
   return (
     <div
@@ -52,15 +61,20 @@ export default function LimitBanner() {
         "border border-amber-300 bg-amber-50 text-amber-900 rounded-md p-3",
         "flex items-start gap-3"
       )}
+      role="alert"
     >
       <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
       <div className="flex-1">
-        <div className="font-semibold">Limite de plan atteinte</div>
+        <div className="font-semibold">
+          Limite de plan atteinte — {summary.plan} (
+          {summary.status.toLowerCase()})
+        </div>
         <div className="text-sm">
-          Vous avez atteint les limites suivantes&nbsp;:{" "}
-          {exceededKeys.map((k) => (
+          Vous avez atteint&nbsp;:{" "}
+          {exceededKeys.map((k, i) => (
             <span key={k} className="font-medium">
-              {label(k)} ({summary.usage[k]}/{summary.limits[k] ?? "∞"}){" "}
+              {i > 0 ? ", " : " "}
+              {LABELS[k]} ({summary.usage[k]}/{summary.limits[k] ?? "∞"})
             </span>
           ))}
           . Passez à un plan supérieur pour continuer.

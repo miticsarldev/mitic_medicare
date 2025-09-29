@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -28,13 +28,11 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { savePlanConfig } from "@/app/actions/plan-config-actions";
-import { cn } from "@/lib/utils";
 import {
-  DollarSign,
   Users,
   Building2,
-  Settings2,
   Infinity as InfinityIcon,
+  Pencil,
 } from "lucide-react";
 import type {
   PlanConfig,
@@ -43,148 +41,124 @@ import type {
   SubscriptionPlan,
   PlanPrice,
 } from "@prisma/client";
-
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// ---------- types returned by server
+/* ---------- types from server ---------- */
 type PlanWithStats = {
   code: SubscriptionPlan;
-  cfg: PlanConfig & { limits: PlanLimits | null; prices: PlanPrice[] }; // prices required
+  cfg: PlanConfig & { limits: PlanLimits | null; prices: PlanPrice[] };
   subscribers: number;
   doctors: number;
   hospitals: number;
-  mrr: number;
 };
 
 export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
   const [open, setOpen] = React.useState<PlanWithStats["cfg"] | null>(null);
 
+  const getPrice = (cfg: PlanWithStats["cfg"], t: "DOCTOR" | "HOSPITAL") =>
+    Number(
+      cfg.prices.find(
+        (p) => p.subscriberType === t && p.interval === "MONTH" && p.isActive
+      )?.amount ?? 0
+    );
+
+  const fmt = (n: number, currency = "XOF") =>
+    new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(n);
+
   return (
-    <div className="space-y-8 p-4 md:p-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Plans</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Plans & Tarifs</h2>
           <p className="text-muted-foreground">
-            Définissez <b>prix</b> & <b>limites</b> pour chaque offre. Utilisez
-            “Appliquer le prix aux abonnés” pour aligner les abonnements
-            existants.
+            Gérez les <b>tarifs</b> Docteur/Hôpital et les <b>limites</b>.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {plans.map(({ code, cfg, subscribers, doctors, hospitals }) => {
-          const dPrice =
-            Number(
-              cfg.prices.find(
-                (p) =>
-                  p.subscriberType === "DOCTOR" &&
-                  p.interval === "MONTH" &&
-                  p.isActive
-              )?.amount ?? 0
-            ) || 0;
+      {/* Mobile: card list */}
+      <div className="grid gap-4 md:hidden">
+        {plans.map(({ code, cfg, doctors, hospitals, subscribers }) => {
+          const dPrice = getPrice(cfg, "DOCTOR");
+          const hPrice = getPrice(cfg, "HOSPITAL");
+          const lim = cfg.limits;
 
-          const hPrice =
-            Number(
-              cfg.prices.find(
-                (p) =>
-                  p.subscriberType === "HOSPITAL" &&
-                  p.interval === "MONTH" &&
-                  p.isActive
-              )?.amount ?? 0
-            ) || 0;
-
-          const currency = "XOF";
-          const fmt = (n: number) =>
-            new Intl.NumberFormat("fr-FR", {
-              style: "currency",
-              currency,
-            }).format(n);
+          const chip = (v?: number | null) =>
+            v == null ? (
+              <span className="inline-flex items-center gap-1 text-xs">
+                <InfinityIcon className="h-3 w-3" /> Illimité
+              </span>
+            ) : (
+              <span className="text-xs">{v}</span>
+            );
 
           return (
-            <Card
-              key={code}
-              className={cn(
-                "border-2 transition hover:shadow-md",
-                cfg.isActive ? "border-primary/30" : "border-muted"
-              )}
-            >
-              <CardHeader className="pb-3">
+            <Card key={code} className="border">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">{cfg.name}</CardTitle>
+                  <div className="flex flex-col">
+                    <CardTitle className="text-base">{cfg.name}</CardTitle>
+                    <CardDescription className="text-[11px]">
+                      {code} · {cfg.description || "—"}
+                    </CardDescription>
+                  </div>
                   <Badge variant={cfg.isActive ? "default" : "secondary"}>
                     {cfg.isActive ? "Actif" : "Inactif"}
                   </Badge>
                 </div>
-                <CardDescription>{cfg.description || "—"}</CardDescription>
               </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <div className="text-muted-foreground text-xs">
+                      Prix Docteur / mois
+                    </div>
+                    <div className="font-medium">
+                      {fmt(dPrice, cfg.currency)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">
+                      Prix Hôpital / mois
+                    </div>
+                    <div className="font-medium">
+                      {fmt(hPrice, cfg.currency)}
+                    </div>
+                  </div>
+                </div>
 
-              <CardContent className="space-y-5">
-                {/* Prices per type */}
-                <div className="grid grid-cols-2 gap-3">
-                  <Stat
-                    icon={<DollarSign className="h-4 w-4" />}
-                    label="Prix Docteur / mois"
-                    value={fmt(dPrice)}
-                  />
-                  <Stat
-                    icon={<DollarSign className="h-4 w-4" />}
-                    label="Prix Hôpital / mois"
-                    value={fmt(hPrice)}
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <Mini label="RDV" value={chip(lim?.maxAppointments)} />
+                  <Mini label="Patients" value={chip(lim?.maxPatients)} />
+                  <Mini
+                    label="Médecins/Hôpital"
+                    value={chip(lim?.maxDoctorsPerHospital)}
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <Stat
-                    icon={<Users className="h-4 w-4" />}
-                    label="Abonnés"
-                    value={String(subscribers)}
-                  />
-                  <Stat
-                    icon={<Users className="h-4 w-4" />}
-                    label="Médecins"
-                    value={String(doctors)}
-                  />
-                  <Stat
-                    icon={<Building2 className="h-4 w-4" />}
-                    label="Hôpitaux"
-                    value={String(hospitals)}
-                  />
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Users className="h-3 w-3" /> {doctors}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Building2 className="h-3 w-3" /> {hospitals}
+                  </span>
+                  <Badge variant="outline">{subscribers}</Badge>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <Stat
-                    label="RDV max"
-                    value={
-                      cfg.limits?.maxAppointments ?? (
-                        <>
-                          <InfinityIcon className="h-4 w-4 inline" /> Illimité
-                        </>
-                      )
-                    }
-                  />
-                  <Stat
-                    label="Patients max"
-                    value={
-                      cfg.limits?.maxPatients ?? (
-                        <>
-                          <InfinityIcon className="h-4 w-4 inline" /> Illimité
-                        </>
-                      )
-                    }
-                  />
-                  <Stat
-                    icon={<Settings2 className="h-4 w-4" />}
-                    label="Maj"
-                    value={new Date(cfg.updatedAt).toLocaleDateString("fr-FR")}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setOpen(cfg)}>
-                    Configurer
+                <div className="pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1"
+                    onClick={() => setOpen(cfg)}
+                  >
+                    <Pencil className="h-4 w-4" /> Éditer
                   </Button>
                 </div>
               </CardContent>
@@ -193,32 +167,150 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
         })}
       </div>
 
+      {/* Desktop: table */}
+      <Card className="hidden md:block">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Liste des plans</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-muted-foreground">
+              <tr className="[&>th]:py-2 [&>th]:px-2 text-left">
+                <th className="w-[28%]">Plan</th>
+                <th>Statut</th>
+                <th>Prix Docteur / mois</th>
+                <th>Prix Hôpital / mois</th>
+                <th>Limites</th>
+                <th>Abonnés</th>
+                <th>Maj</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {plans.map(({ code, cfg, subscribers, doctors, hospitals }) => {
+                const dPrice = getPrice(cfg, "DOCTOR");
+                const hPrice = getPrice(cfg, "HOSPITAL");
+                const lim = cfg.limits;
+                const chip = (v?: number | null) =>
+                  v == null ? (
+                    <span className="inline-flex items-center gap-1 text-xs">
+                      <InfinityIcon className="h-3 w-3" /> Illimité
+                    </span>
+                  ) : (
+                    <span className="text-xs">{v}</span>
+                  );
+
+                return (
+                  <tr
+                    key={code}
+                    className="[&>td]:py-2 [&>td]:px-2 border-b last:border-0 align-middle"
+                  >
+                    <td className="font-medium">
+                      <div className="flex flex-col">
+                        <span>{cfg.name}</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {code} · {cfg.description || "—"}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <Badge variant={cfg.isActive ? "default" : "secondary"}>
+                        {cfg.isActive ? "Actif" : "Inactif"}
+                      </Badge>
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {fmt(dPrice, cfg.currency)}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {fmt(hPrice, cfg.currency)}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <div className="flex flex-wrap gap-2">
+                        <Mini label="RDV" value={chip(lim?.maxAppointments)} />
+                        <Mini label="Patients" value={chip(lim?.maxPatients)} />
+                        <Mini
+                          label="Médecins/Hôpital"
+                          value={chip(lim?.maxDoctorsPerHospital)}
+                        />
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          {doctors}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Building2 className="h-3 w-3" />
+                          {hospitals}
+                        </span>
+                        <Badge variant="outline">{subscribers}</Badge>
+                      </div>
+                    </td>
+                    <td>
+                      {new Date(cfg.updatedAt).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1"
+                        onClick={() => setOpen(cfg)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Éditer
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
       <EditPlanDialog openPlan={open} onClose={() => setOpen(null)} />
     </div>
   );
 }
 
-function Stat({
-  icon,
-  label,
-  value,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-}) {
+function Mini({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-xl border p-3">
-      <div className="flex items-center justify-center text-center gap-2 text-xs text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-1 text-xs font-semibold text-center">{value}</div>
+    <div className="rounded-md border px-2 py-1 text-[11px] leading-none">
+      <span className="text-muted-foreground">{label}:</span>{" "}
+      <span className="font-medium">{value}</span>
     </div>
   );
 }
 
 /* -------------------- EDIT DIALOG -------------------- */
+
+const PlanSchema = z.object({
+  code: z.enum(["FREE", "STANDARD", "PREMIUM"]),
+  name: z.string().min(2),
+  description: z.string().optional(),
+  currency: z.string().min(1).default("XOF"),
+  interval: z.enum(["MONTH", "YEAR"]).default("MONTH"),
+  isActive: z.boolean(),
+  priceDoctorMonth: z.coerce.number().min(0),
+  priceHospitalMonth: z.coerce.number().min(0),
+  limits: z.object({
+    maxAppointments: z
+      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+      .optional(),
+    maxPatients: z
+      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+      .optional(),
+    maxDoctorsPerHospital: z
+      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+      .optional(),
+    storageGb: z
+      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+      .optional(),
+  }),
+});
+type PlanForm = z.infer<typeof PlanSchema>;
+
 function EditPlanDialog({
   openPlan,
   onClose,
@@ -229,89 +321,56 @@ function EditPlanDialog({
   onClose: () => void;
 }) {
   const { toast } = useToast();
-  const dialogOpen = !!openPlan;
 
-  // derive prices safely (0 if no plan)
-  const priceDoctorMonth = Number(
+  const doctorPrice = Number(
     openPlan?.prices.find(
       (p) =>
         p.subscriberType === "DOCTOR" && p.interval === "MONTH" && p.isActive
     )?.amount ?? 0
   );
-  const priceHospitalMonth = Number(
+  const hospitalPrice = Number(
     openPlan?.prices.find(
       (p) =>
         p.subscriberType === "HOSPITAL" && p.interval === "MONTH" && p.isActive
     )?.amount ?? 0
   );
 
-  // default values whether openPlan exists or not (hooks must be unconditional)
-  const defaultValues = React.useMemo(
-    () => ({
-      code: openPlan?.code ?? "FREE",
-      name: openPlan?.name ?? "",
-      description: openPlan?.description ?? "",
-      currency: openPlan?.currency ?? "XOF",
-      interval: (openPlan?.interval ?? "MONTH") as BillingInterval,
-      isActive: openPlan?.isActive ?? true,
-      priceDoctorMonth,
-      priceHospitalMonth,
-      limits: {
-        maxAppointments: openPlan?.limits?.maxAppointments ?? undefined,
-        maxPatients: openPlan?.limits?.maxPatients ?? undefined,
-        maxDoctorsPerHospital:
-          openPlan?.limits?.maxDoctorsPerHospital ?? undefined,
-        storageGb: openPlan?.limits?.storageGb ?? undefined,
-      },
-    }),
-    [openPlan, priceDoctorMonth, priceHospitalMonth]
-  );
-
-  const PlanSchema = z.object({
-    code: z.enum(["FREE", "STANDARD", "PREMIUM"]),
-    name: z.string().min(2),
-    description: z.string().optional(),
-    currency: z.string().min(1).default("XOF"),
-    interval: z.enum(["MONTH", "YEAR"]).default("MONTH"),
-    isActive: z.boolean(),
-    priceDoctorMonth: z.coerce.number().min(0),
-    priceHospitalMonth: z.coerce.number().min(0),
-    limits: z.object({
-      maxAppointments: z
-        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-        .optional(),
-      maxPatients: z
-        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-        .optional(),
-      maxDoctorsPerHospital: z
-        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-        .optional(),
-      storageGb: z
-        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-        .optional(),
-    }),
-  });
-  type PlanForm = z.infer<typeof PlanSchema>;
+  const defaults: PlanForm = {
+    code: (openPlan?.code ?? "FREE") as PlanForm["code"],
+    name: openPlan?.name ?? "",
+    description: openPlan?.description ?? "",
+    currency: openPlan?.currency ?? "XOF",
+    interval: (openPlan?.interval ?? "MONTH") as BillingInterval,
+    isActive: openPlan?.isActive ?? true,
+    priceDoctorMonth: doctorPrice,
+    priceHospitalMonth: hospitalPrice,
+    limits: {
+      maxAppointments: openPlan?.limits?.maxAppointments ?? undefined,
+      maxPatients: openPlan?.limits?.maxPatients ?? undefined,
+      maxDoctorsPerHospital:
+        openPlan?.limits?.maxDoctorsPerHospital ?? undefined,
+      storageGb: openPlan?.limits?.storageGb ?? undefined,
+    },
+  };
 
   const {
     register,
+    control,
     handleSubmit,
-    setValue,
     reset,
     formState: { isSubmitting, errors },
   } = useForm<PlanForm>({
     resolver: zodResolver(PlanSchema),
-    defaultValues, // initial
+    defaultValues: defaults,
   });
 
-  // reset when a different plan is opened/closed
+  // ensure inputs refresh when switching plan
   React.useEffect(() => {
-    reset(defaultValues);
-  }, [defaultValues, reset]);
+    reset(defaults);
+  }, [openPlan?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (data: PlanForm) => {
-    // If dialog isn't open (no plan), do nothing
-    if (!dialogOpen) return;
+    if (!openPlan) return;
     await savePlanConfig({
       code: data.code,
       name: data.name,
@@ -332,39 +391,27 @@ function EditPlanDialog({
   };
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[720px]">
+    <Dialog open={!!openPlan} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-[760px]">
         <DialogHeader>
-          <DialogTitle>Configurer le plan — {openPlan?.code ?? ""}</DialogTitle>
+          <DialogTitle>
+            Modifier le plan — {openPlan?.name}{" "}
+            <span className="text-xs text-muted-foreground">
+              ({openPlan?.code})
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="grid grid-cols-2 gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
-          {/* Register hidden fields so setValue works */}
-          <input
-            type="hidden"
-            {...register("code")}
-            value={defaultValues.code}
-            readOnly
-          />
-          <input
-            type="hidden"
-            {...register("interval")}
-            value={defaultValues.interval}
-            readOnly
-          />
-          <input
-            type="hidden"
-            {...register("isActive")}
-            value={String(defaultValues.isActive)}
-            readOnly
-          />
+          {/* keep code in the form model */}
+          <input type="hidden" {...register("code")} />
 
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <Label>Nom</Label>
-            <Input {...register("name")} disabled={!dialogOpen} />
+            <Input {...register("name")} />
             {errors.name && (
               <p className="text-xs text-destructive mt-1">
                 {errors.name.message}
@@ -372,109 +419,98 @@ function EditPlanDialog({
             )}
           </div>
 
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <Label>Description</Label>
-            <Input {...register("description")} disabled={!dialogOpen} />
+            <Input {...register("description")} />
           </div>
 
+          {/* Pricing */}
           <div>
-            <Label>Prix DOCTOR / mois (XOF)</Label>
-            <Input
-              type="number"
-              step="1"
-              {...register("priceDoctorMonth")}
-              disabled={!dialogOpen}
-            />
+            <Label>Prix DOCTOR / mois</Label>
+            <Input type="number" step="1" {...register("priceDoctorMonth")} />
           </div>
           <div>
-            <Label>Prix HOSPITAL / mois (XOF)</Label>
-            <Input
-              type="number"
-              step="1"
-              {...register("priceHospitalMonth")}
-              disabled={!dialogOpen}
-            />
+            <Label>Prix HOSPITAL / mois</Label>
+            <Input type="number" step="1" {...register("priceHospitalMonth")} />
           </div>
 
+          {/* Currency */}
           <div>
             <Label>Devise</Label>
-            <Input {...register("currency")} disabled={!dialogOpen} />
+            <Input {...register("currency")} />
           </div>
 
+          {/* Interval (RHF-controlled Select) */}
           <div>
-            <Label>Intervalle</Label>
-            <Select
-              value={defaultValues.interval}
-              onValueChange={(v) =>
-                setValue("interval", v as BillingInterval, {
-                  shouldDirty: true,
-                })
-              }
-              disabled={!dialogOpen}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MONTH">Mensuel</SelectItem>
-                <SelectItem value="YEAR">Annuel</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Intervalle (affichage)</Label>
+            <Controller
+              control={control}
+              name="interval"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MONTH">Mensuel</SelectItem>
+                    <SelectItem value="YEAR">Annuel</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
+          {/* Active (RHF-controlled checkbox) */}
           <div className="flex items-center gap-2 pt-6">
-            <input
-              type="checkbox"
-              checked={defaultValues.isActive}
-              onChange={(e) =>
-                setValue("isActive", e.target.checked, { shouldDirty: true })
-              }
-              disabled={!dialogOpen}
+            <Controller
+              control={control}
+              name="isActive"
+              render={({ field }) => (
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                />
+              )}
             />
             <Label>Actif</Label>
           </div>
 
-          <div className="col-span-2 pt-2">
+          {/* Limits */}
+
+          <div className="md:col-span-2 pt-2">
             <div className="text-sm font-medium mb-2">Limites</div>
-            <div className="grid grid-cols-3 gap-3">
-              <NumberField
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <LimitField
+                control={control}
+                name="limits.maxAppointments"
                 label="RDV max"
-                value={defaultValues.limits.maxAppointments ?? undefined}
-                onChange={(v) =>
-                  setValue("limits.maxAppointments", v ?? undefined, {
-                    shouldDirty: true,
-                  })
-                }
               />
-              <NumberField
+              <LimitField
+                control={control}
+                name="limits.maxPatients"
                 label="Patients max"
-                value={defaultValues.limits.maxPatients ?? undefined}
-                onChange={(v) =>
-                  setValue("limits.maxPatients", v ?? undefined, {
-                    shouldDirty: true,
-                  })
-                }
               />
-              <NumberField
+              <LimitField
+                control={control}
+                name="limits.maxDoctorsPerHospital"
                 label="Médecins/Hôpital"
-                value={defaultValues.limits.maxDoctorsPerHospital ?? undefined}
-                onChange={(v) =>
-                  setValue("limits.maxDoctorsPerHospital", v ?? undefined, {
-                    shouldDirty: true,
-                  })
-                }
               />
+              {/* Optional, if you want to expose it */}
+              {/* <LimitField control={control} name="limits.storageGb" label="Stockage (Go)" /> */}
             </div>
+
             <p className="text-xs text-muted-foreground mt-2">
               Laissez vide pour “Illimité”.
             </p>
           </div>
 
-          <DialogFooter className="col-span-2">
+          <DialogFooter className="md:col-span-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={isSubmitting || !dialogOpen}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
@@ -484,28 +520,36 @@ function EditPlanDialog({
   );
 }
 
-/* -------------------- SHARED -------------------- */
+import type { Control, FieldPath } from "react-hook-form";
 
-function NumberField({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function LimitField<T extends { limits: any }>({
+  control,
+  name,
   label,
-  value,
-  onChange,
 }: {
+  control: Control<T>;
+  name: FieldPath<T>;
   label: string;
-  value?: number;
-  onChange: (v: number | undefined) => void;
 }) {
   return (
     <div>
       <Label>{label}</Label>
-      <Input
-        type="number"
-        value={value ?? ""}
-        onChange={(e) => {
-          const raw = e.target.value;
-          onChange(raw === "" ? undefined : Number(raw));
-        }}
-        placeholder="Illimité"
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <Input
+            type="number"
+            placeholder="Illimité"
+            value={field.value ?? ""} // keep empty string for null/undefined
+            onChange={(e) => {
+              const raw = e.target.value;
+              // convert "" -> undefined (means unlimited), otherwise Number
+              field.onChange(raw === "" ? undefined : Number(raw));
+            }}
+          />
+        )}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { getServerSession, Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { Prisma, SubscriberType, SubscriptionPlan } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 // --------- utils
 function assertSuper(session: Session | null) {
@@ -262,6 +263,8 @@ export async function savePlanConfig(input: {
       },
     });
   }
+
+  revalidatePath("/dashboard/superadmin/subscriptions/plans");
 
   return { ok: true };
 }
