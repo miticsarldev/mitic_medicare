@@ -3,8 +3,7 @@
 import { getServerSession, Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { BillingInterval, SubscriptionPlan } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { Prisma, SubscriberType, SubscriptionPlan } from "@prisma/client";
 
 // --------- utils
 function assertSuper(session: Session | null) {
@@ -15,9 +14,17 @@ function assertSuper(session: Session | null) {
 
 const ALL_PLANS: SubscriptionPlan[] = ["FREE", "STANDARD", "PREMIUM"];
 
-/** Make sure we always have 3 plan rows (FREE, STANDARD, PREMIUM).
- *  This never overwrites existing data; it only creates missing rows with safe defaults.
- */
+// sensible XOF demo defaults
+const DEFAULT_PRICES: Record<
+  SubscriptionPlan,
+  { DOCTOR: number; HOSPITAL: number }
+> = {
+  FREE: { DOCTOR: 0, HOSPITAL: 0 },
+  STANDARD: { DOCTOR: 50_000, HOSPITAL: 250_000 },
+  PREMIUM: { DOCTOR: 100_000, HOSPITAL: 500_000 },
+};
+
+/** Ensure there is a PlanConfig row for each code (does not overwrite existing). */
 async function ensurePlanConfigs() {
   const existing = await prisma.planConfig.findMany({ select: { code: true } });
   const have = new Set(existing.map((e) => e.code));
@@ -41,33 +48,32 @@ async function ensurePlanConfigs() {
               : code === "STANDARD"
                 ? "Pour grandir sereinement"
                 : "Pour les équipes exigeantes",
-          price:
-            code === "FREE" ? "0.00" : code === "STANDARD" ? "29.00" : "99.00",
-          currency: "USD",
+          // legacy fields kept (not authoritative anymore)
+          price: new Prisma.Decimal(0),
+          currency: "XOF",
           interval: "MONTH",
           isActive: true,
           limits: {
             create:
               code === "FREE"
                 ? {
-                    maxAppointments: 200,
-                    maxPatients: 1000,
+                    maxAppointments: 20,
+                    maxPatients: 50,
                     maxDoctorsPerHospital: 3,
-                    storageGb: 5,
+                    storageGb: 1,
                   }
                 : code === "STANDARD"
                   ? {
-                      maxAppointments: 2000,
-                      maxPatients: 10000,
-                      maxDoctorsPerHospital: 20,
-                      storageGb: 100,
+                      maxAppointments: 300,
+                      maxPatients: 1000,
+                      maxDoctorsPerHospital: 10,
+                      storageGb: 10,
                     }
                   : {
-                      // PREMIUM — many “unlimited” (null)
-                      maxAppointments: null,
-                      maxPatients: null,
-                      maxDoctorsPerHospital: null,
-                      storageGb: 500,
+                      maxAppointments: 2000,
+                      maxPatients: 5000,
+                      maxDoctorsPerHospital: 50,
+                      storageGb: 50,
                     },
           },
         },
@@ -76,21 +82,50 @@ async function ensurePlanConfigs() {
   );
 }
 
-// --------- queries & mutations
+/** Ensure per-type monthly PlanPrice exists for each plan (DOCTOR/HOSPITAL). */
+async function ensurePlanPrices() {
+  const configs = await prisma.planConfig.findMany({
+    select: { id: true, code: true },
+  });
+
+  await prisma.$transaction(
+    configs.flatMap((cfg) => {
+      const d = DEFAULT_PRICES[cfg.code as SubscriptionPlan];
+      return (["DOCTOR", "HOSPITAL"] as const).map((subType) =>
+        prisma.planPrice.upsert({
+          where: {
+            planConfigId_subscriberType_interval_currency: {
+              planConfigId: cfg.id,
+              subscriberType: subType,
+              interval: "MONTH",
+              currency: "XOF",
+            },
+          },
+          create: {
+            planConfigId: cfg.id,
+            subscriberType: subType,
+            interval: "MONTH",
+            currency: "XOF",
+            amount: new Prisma.Decimal(d[subType]),
+            isActive: true,
+          },
+          update: {}, // don't overwrite if already present
+        })
+      );
+    })
+  );
+}
+
 export async function getAllPlansWithStats() {
   const session = await getServerSession(authOptions);
   assertSuper(session);
 
   await ensurePlanConfigs();
+  await ensurePlanPrices();
 
   const configs = await prisma.planConfig.findMany({
-    include: { limits: true },
+    include: { limits: true, prices: true },
     orderBy: { code: "asc" },
-  });
-
-  const subs = await prisma.subscription.groupBy({
-    by: ["plan"],
-    _count: { _all: true },
   });
 
   const [docCounts, hospCounts] = await Promise.all([
@@ -114,18 +149,33 @@ export async function getAllPlansWithStats() {
   );
 
   const usage = configs.map((cfg) => {
-    // Prisma.Decimal -> number
-    const priceNum = Number(cfg.price);
-    const subscribers = subs.find((r) => r.plan === cfg.code)?._count._all ?? 0;
-    const monthlyUnit = cfg.interval === "MONTH" ? priceNum : priceNum / 12;
-    const mrr = Number((subscribers * monthlyUnit).toFixed(2));
+    const doctors = docMap[cfg.code] ?? 0;
+    const hospitals = hospMap[cfg.code] ?? 0;
+    const subscribers = doctors + hospitals;
+
+    const docPrice = Number(
+      cfg.prices.find(
+        (p) =>
+          p.subscriberType === "DOCTOR" && p.interval === "MONTH" && p.isActive
+      )?.amount ?? 0
+    );
+    const hospPrice = Number(
+      cfg.prices.find(
+        (p) =>
+          p.subscriberType === "HOSPITAL" &&
+          p.interval === "MONTH" &&
+          p.isActive
+      )?.amount ?? 0
+    );
+
+    const mrr = doctors * docPrice + hospitals * hospPrice;
 
     return {
       code: cfg.code,
-      cfg,
+      cfg, // includes limits + prices
       subscribers,
-      doctors: docMap[cfg.code] ?? 0,
-      hospitals: hospMap[cfg.code] ?? 0,
+      doctors,
+      hospitals,
       mrr,
     };
   });
@@ -137,67 +187,81 @@ export async function savePlanConfig(input: {
   code: SubscriptionPlan;
   name: string;
   description?: string;
-  price: number;
-  currency: string;
-  interval: BillingInterval;
   isActive: boolean;
   limits: {
-    maxAppointments?: number | null;
-    maxPatients?: number | null;
-    maxDoctorsPerHospital?: number | null;
-    storageGb?: number | null;
+    maxAppointments: number | null;
+    maxPatients: number | null;
+    maxDoctorsPerHospital: number | null;
+    storageGb: number | null;
   };
+  priceDoctorMonth: number;
+  priceHospitalMonth: number;
+  currency?: string; // default XOF
 }) {
   const session = await getServerSession(authOptions);
   assertSuper(session);
 
-  const priceStr = Number(input.price ?? 0).toFixed(2);
-
-  await prisma.planConfig.upsert({
+  const plan = await prisma.planConfig.upsert({
     where: { code: input.code },
+    update: {
+      name: input.name,
+      description: input.description,
+      isActive: input.isActive,
+      limits: {
+        upsert: {
+          create: input.limits,
+          update: input.limits,
+        },
+      },
+    },
     create: {
       code: input.code,
       name: input.name,
       description: input.description,
-      price: priceStr, // Prisma accepts string for Decimal
-      currency: input.currency,
-      interval: input.interval,
+      price: new Prisma.Decimal(0), // legacy; not used
+      currency: input.currency ?? "XOF",
+      interval: "MONTH",
       isActive: input.isActive,
-      limits: {
-        create: {
-          maxAppointments: input.limits.maxAppointments ?? null,
-          maxPatients: input.limits.maxPatients ?? null,
-          maxDoctorsPerHospital: input.limits.maxDoctorsPerHospital ?? null,
-          storageGb: input.limits.storageGb ?? null,
-        },
-      },
-    },
-    update: {
-      name: input.name,
-      description: input.description,
-      price: priceStr,
-      currency: input.currency,
-      interval: input.interval,
-      isActive: input.isActive,
-      limits: {
-        upsert: {
-          create: {
-            maxAppointments: input.limits.maxAppointments ?? null,
-            maxPatients: input.limits.maxPatients ?? null,
-            maxDoctorsPerHospital: input.limits.maxDoctorsPerHospital ?? null,
-            storageGb: input.limits.storageGb ?? null,
-          },
-          update: {
-            maxAppointments: input.limits.maxAppointments ?? null,
-            maxPatients: input.limits.maxPatients ?? null,
-            maxDoctorsPerHospital: input.limits.maxDoctorsPerHospital ?? null,
-            storageGb: input.limits.storageGb ?? null,
-          },
-        },
-      },
+      limits: { create: input.limits },
     },
   });
 
-  revalidatePath("/dashboard/superadmin/plans");
-  return { success: true };
+  const currency = input.currency ?? "XOF";
+  const entries = [
+    {
+      subscriberType: "DOCTOR" as SubscriberType,
+      amount: input.priceDoctorMonth,
+    },
+    {
+      subscriberType: "HOSPITAL" as SubscriberType,
+      amount: input.priceHospitalMonth,
+    },
+  ];
+
+  for (const e of entries) {
+    await prisma.planPrice.upsert({
+      where: {
+        planConfigId_subscriberType_interval_currency: {
+          planConfigId: plan.id,
+          subscriberType: e.subscriberType,
+          interval: "MONTH",
+          currency,
+        },
+      },
+      create: {
+        planConfigId: plan.id,
+        subscriberType: e.subscriberType,
+        interval: "MONTH",
+        currency,
+        amount: new Prisma.Decimal(e.amount.toFixed(2)),
+        isActive: true,
+      },
+      update: {
+        amount: new Prisma.Decimal(e.amount.toFixed(2)),
+        isActive: true,
+      },
+    });
+  }
+
+  return { ok: true };
 }

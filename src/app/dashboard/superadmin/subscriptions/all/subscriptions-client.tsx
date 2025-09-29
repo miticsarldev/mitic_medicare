@@ -18,11 +18,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays } from "date-fns";
 import {
   Building2,
@@ -41,12 +39,11 @@ import type {
   PlanLimits,
   SubscriptionPlan,
   SubscriptionStatus,
+  PaymentStatus,
+  SubscriptionPayment,
+  PaymentMethod,
 } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import {
-  applyPlanPriceToSub,
-  updateSubscription,
-} from "@/app/actions/subscriptions-actions";
 
 type PlanWithStats = {
   code: PlanConfig["code"];
@@ -56,10 +53,16 @@ type PlanWithStats = {
   hospitals: number;
 };
 
-type DocSub = Subscription & { doctor: Doctor & { user: User } } & {
+type DocSub = Subscription & {
+  doctor: Doctor & { user: User };
+  payments: SubscriptionPayment[];
+} & {
   _type: "DOCTOR";
 };
-type HospSub = Subscription & { hospital: Hospital | null } & {
+type HospSub = Subscription & {
+  hospital: Hospital | null;
+  payments: SubscriptionPayment[];
+} & {
   _type: "HOSPITAL";
 };
 
@@ -135,8 +138,6 @@ export default function SubscriptionsClient({
   ).length;
 
   // ---------- edit modal
-  const [editing, setEditing] = React.useState<(DocSub | HospSub) | null>(null);
-
   return (
     <div className="space-y-4 p-4">
       {/* Header + KPIs */}
@@ -285,14 +286,13 @@ export default function SubscriptionsClient({
         </TabsList>
 
         <TabsContent value="all">
-          <SubList items={filtered} planMap={planMap} onEdit={setEditing} />
+          <SubList items={filtered} planMap={planMap} />
         </TabsContent>
 
         <TabsContent value="doctors">
           <SubList
             items={filtered.filter((s) => s._type === "DOCTOR")}
             planMap={planMap}
-            onEdit={setEditing}
           />
         </TabsContent>
 
@@ -300,16 +300,9 @@ export default function SubscriptionsClient({
           <SubList
             items={filtered.filter((s) => s._type === "HOSPITAL")}
             planMap={planMap}
-            onEdit={setEditing}
           />
         </TabsContent>
       </Tabs>
-
-      <EditDialog
-        sub={editing}
-        planMap={planMap}
-        onClose={() => setEditing(null)}
-      />
     </div>
   );
 }
@@ -354,11 +347,9 @@ function statusBadge(s: SubscriptionStatus) {
 function SubList({
   items,
   planMap,
-  onEdit,
 }: {
   items: (DocSub | (HospSub & { _type: "DOCTOR" | "HOSPITAL" }))[];
   planMap: Record<string, PlanConfig & { limits: PlanLimits | null }>;
-  onEdit: (s: any) => void;
 }) {
   return (
     <Card>
@@ -366,7 +357,7 @@ function SubList({
         <CardTitle>Résultats ({items.length})</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        <div className="grid grid-cols-8 gap-2 text-sm text-muted-foreground px-2">
+        <div className="grid grid-cols-9 gap-2 text-sm text-muted-foreground px-2">
           <div className="col-span-2">Client</div>
           <div>Type</div>
           <div>Plan</div>
@@ -374,6 +365,7 @@ function SubList({
           <div>Début</div>
           <div>Fin</div>
           <div>Statut</div>
+          <div>Paiements</div>
         </div>
         <div className="divide-y">
           {items.map((s) => {
@@ -395,7 +387,7 @@ function SubList({
             return (
               <div
                 key={s.id}
-                className="grid grid-cols-8 gap-2 items-center px-2 py-3 hover:bg-muted/40 rounded-lg transition"
+                className="grid grid-cols-9 gap-2 items-center px-2 py-3 hover:bg-muted/40 rounded-lg transition"
               >
                 <div className="col-span-2 flex items-center gap-2 truncate">
                   {icon}
@@ -437,9 +429,10 @@ function SubList({
                 </div>
                 <div className="flex items-center gap-2">
                   {statusBadge(s.status)}
-                  <Button size="sm" variant="outline" onClick={() => onEdit(s)}>
-                    Éditer
-                  </Button>
+                </div>
+                <div className="flex items-center gap-2 justify-end">
+                  <Badge variant="secondary">{s?.payments?.length}</Badge>
+                  <PaymentsDialogTrigger subscription={s} />
                 </div>
               </div>
             );
@@ -450,162 +443,170 @@ function SubList({
   );
 }
 
-function EditDialog({
-  sub,
-  planMap,
-  onClose,
+function PaymentsDialogTrigger({
+  subscription,
 }: {
-  sub: (DocSub | (HospSub & { _type?: "DOCTOR" | "HOSPITAL" })) | null;
-  planMap: Record<string, PlanConfig & { limits: PlanLimits | null }>;
-  onClose: () => void;
+  subscription: DocSub | HospSub;
 }) {
-  const { toast } = useToast();
-  const [form, setForm] = React.useState<any>(null);
-  const [busy, setBusy] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        Voir
+      </Button>
+      {open && (
+        <PaymentsDialog
+          open={open}
+          onOpenChange={setOpen}
+          subscription={subscription}
+        />
+      )}
+    </>
+  );
+}
 
-  React.useEffect(() => {
-    if (!sub) return setForm(null);
-    setForm({
-      id: sub.id,
-      plan: sub.plan,
-      status: sub.status,
-      startDate: new Date(sub.startDate).toISOString().slice(0, 10),
-      endDate: new Date(sub.endDate).toISOString().slice(0, 10),
-      amount: sub.amount ? Number(sub.amount) : undefined,
-      currency: sub.currency ?? planMap[sub.plan]?.currency ?? "XOF",
-    });
-  }, [sub]); // eslint-disable-line
-
-  if (!sub || !form) return null;
-
-  const applyPlanPrice = async () => {
-    setBusy(true);
-    try {
-      await applyPlanPriceToSub(form.id);
-      toast({
-        title: "Prix appliqué",
-        description: "Montant aligné sur le plan.",
-      });
-      onClose();
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: String(e.message || e),
-        variant: "destructive",
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      await updateSubscription({
-        id: form.id,
-        plan: form.plan,
-        status: form.status,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        amount: form.amount === "" ? null : Number(form.amount),
-        currency: form.currency,
-        autoRenew: !!form.autoRenew,
-      });
-      toast({ title: "Abonnement mis à jour" });
-      onClose();
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: String(e.message || e),
-        variant: "destructive",
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
+function ReceiptActions({ payment }: { payment: SubscriptionPayment }) {
+  const receiptUrl = `/api/payments/${payment.id}/receipt`; // 👈 see route below
 
   return (
-    <Dialog open={!!sub} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[680px]">
+    <div className="flex gap-2 justify-end">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => window.open(receiptUrl, "_blank")}
+      >
+        Voir reçu
+      </Button>
+      <Button
+        size="sm"
+        onClick={async () => {
+          // naive email trigger; implement server route below
+          const res = await fetch(`${receiptUrl}/send`, { method: "POST" });
+          if (res.ok) alert("Reçu envoyé");
+          else alert("En cours d'implémentation");
+        }}
+      >
+        Envoyer
+      </Button>
+    </div>
+  );
+}
+
+// simple currency formatter
+function formatCurrency(n: number, currency = "XOF") {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(
+    n
+  );
+}
+
+function paymentStatusBadge(s: PaymentStatus) {
+  const base =
+    "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
+  switch (s) {
+    case "COMPLETED":
+      return <span className={`${base} bg-emerald-600 text-white`}>Payé</span>;
+    case "PENDING":
+      return (
+        <span className={`${base} bg-amber-500 text-white`}>En attente</span>
+      );
+    case "REFUNDED":
+      return (
+        <span className={`${base} bg-blue-600 text-white`}>Remboursé</span>
+      );
+    case "FAILED":
+    case "CANCELED":
+      return <span className={`${base} bg-red-600 text-white`}>Échec</span>;
+  }
+}
+
+function humanMethod(m: PaymentMethod) {
+  switch (m) {
+    case "CREDIT_CARD":
+      return "Carte";
+    case "BANK_TRANSFER":
+      return "Virement";
+    case "MOBILE_MONEY":
+      return "Mobile money";
+    case "CASH":
+      return "Espèces";
+  }
+}
+
+export function PaymentsDialog({
+  open,
+  onOpenChange,
+  subscription,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  subscription: DocSub | HospSub;
+}) {
+  const s = subscription;
+  const name =
+    s._type === "DOCTOR" ? s.doctor.user.name : (s.hospital?.name ?? "");
+  const payments = s.payments ?? [];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[950px]">
         <DialogHeader>
-          <DialogTitle>Modifier abonnement</DialogTitle>
+          <DialogTitle>
+            Paiements — {name} ({s._type}) — {s.plan}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <Label>Plan</Label>
-            <Select
-              value={form.plan}
-              onValueChange={(v) => setForm({ ...form, plan: v })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(planMap).map((code) => (
-                  <SelectItem key={code} value={code}>
-                    {code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {payments.length === 0 ? (
+          <div className="text-sm text-muted-foreground py-8 text-center">
+            Aucun paiement enregistré pour cet abonnement.
           </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="[&>th]:py-2 [&>th]:px-2 text-left">
+                  <th>Date</th>
+                  <th>Statut</th>
+                  <th>Méthode</th>
+                  <th>Plan</th>
+                  <th>Qté (mois)</th>
+                  <th>Total</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => {
+                  const unit = Number(p.amount); // assume monthly
+                  const qty = 1;
+                  const total = unit * qty;
+                  const curr = p.currency?.toUpperCase() || "XOF";
 
-          <div>
-            <Label>Statut</Label>
-            <Select
-              value={form.status}
-              onValueChange={(v) => setForm({ ...form, status: v })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ACTIVE">Actif</SelectItem>
-                <SelectItem value="TRIAL">Essai</SelectItem>
-                <SelectItem value="INACTIVE">Inactif</SelectItem>
-                <SelectItem value="EXPIRED">Expiré</SelectItem>
-              </SelectContent>
-            </Select>
+                  return (
+                    <tr
+                      key={p.id}
+                      className="[&>td]:py-2 [&>td]:px-2 border-b last:border-0"
+                    >
+                      <td>{format(new Date(p.paymentDate), "dd/MM/yyyy")}</td>
+                      <td>{paymentStatusBadge(p.status)}</td>
+                      <td className="capitalize">
+                        {humanMethod(p.paymentMethod)}
+                      </td>
+                      <td>
+                        <Badge variant="outline">{s.plan}</Badge>
+                      </td>
+                      <td>{qty}</td>
+                      <td className="font-medium">
+                        {formatCurrency(total, curr)}
+                      </td>
+                      <td className="text-right">
+                        <ReceiptActions payment={p} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          <div>
-            <Label>Devise</Label>
-            <Input
-              value={form.currency}
-              onChange={(e) => setForm({ ...form, currency: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label>Début</Label>
-            <Input
-              type="date"
-              value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Fin</Label>
-            <Input
-              type="date"
-              value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button variant="secondary" onClick={applyPlanPrice} disabled={busy}>
-            Aligner sur prix du plan
-          </Button>
-          <Button onClick={save} disabled={busy}>
-            Enregistrer
-          </Button>
-        </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

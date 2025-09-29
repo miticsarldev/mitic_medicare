@@ -33,7 +33,6 @@ import {
   DollarSign,
   Users,
   Building2,
-  TrendingUp,
   Settings2,
   Infinity as InfinityIcon,
 } from "lucide-react";
@@ -42,19 +41,21 @@ import type {
   PlanLimits,
   BillingInterval,
   SubscriptionPlan,
+  PlanPrice,
 } from "@prisma/client";
 
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// ---------- types
+// ---------- types returned by server
 type PlanWithStats = {
   code: SubscriptionPlan;
-  cfg: PlanConfig & { limits: PlanLimits | null };
+  cfg: PlanConfig & { limits: PlanLimits | null; prices: PlanPrice[] }; // prices required
   subscribers: number;
   doctors: number;
   hospitals: number;
+  mrr: number;
 };
 
 export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
@@ -75,22 +76,32 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
 
       <div className="grid gap-6 md:grid-cols-3">
         {plans.map(({ code, cfg, subscribers, doctors, hospitals }) => {
-          const priceDisplay = new Intl.NumberFormat("fr-FR", {
-            style: "currency",
-            currency: cfg.currency,
-          }).format(Number(cfg.price));
+          const dPrice =
+            Number(
+              cfg.prices.find(
+                (p) =>
+                  p.subscriberType === "DOCTOR" &&
+                  p.interval === "MONTH" &&
+                  p.isActive
+              )?.amount ?? 0
+            ) || 0;
 
-          const intervalFR = cfg.interval === "MONTH" ? "Mensuel" : "Annuel";
-          const limits = cfg.limits;
+          const hPrice =
+            Number(
+              cfg.prices.find(
+                (p) =>
+                  p.subscriberType === "HOSPITAL" &&
+                  p.interval === "MONTH" &&
+                  p.isActive
+              )?.amount ?? 0
+            ) || 0;
 
-          const statChip = (v?: number | null) =>
-            v === null || v === undefined ? (
-              <span className="inline-flex items-center gap-1">
-                <InfinityIcon className="h-4 w-4" /> Illimité
-              </span>
-            ) : (
-              v
-            );
+          const currency = "XOF";
+          const fmt = (n: number) =>
+            new Intl.NumberFormat("fr-FR", {
+              style: "currency",
+              currency,
+            }).format(n);
 
           return (
             <Card
@@ -111,21 +122,17 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
               </CardHeader>
 
               <CardContent className="space-y-5">
-                <div className="grid grid-cols-3 gap-3">
+                {/* Prices per type */}
+                <div className="grid grid-cols-2 gap-3">
                   <Stat
                     icon={<DollarSign className="h-4 w-4" />}
-                    label="Prix"
-                    value={priceDisplay}
+                    label="Prix Docteur / mois"
+                    value={fmt(dPrice)}
                   />
                   <Stat
-                    icon={<TrendingUp className="h-4 w-4" />}
-                    label="Intervalle"
-                    value={intervalFR}
-                  />
-                  <Stat
-                    icon={<Settings2 className="h-4 w-4" />}
-                    label="Maj"
-                    value={new Date(cfg.updatedAt).toLocaleDateString("fr-FR")}
+                    icon={<DollarSign className="h-4 w-4" />}
+                    label="Prix Hôpital / mois"
+                    value={fmt(hPrice)}
                   />
                 </div>
 
@@ -150,11 +157,28 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
                 <div className="grid grid-cols-3 gap-3">
                   <Stat
                     label="RDV max"
-                    value={statChip(limits?.maxAppointments)}
+                    value={
+                      cfg.limits?.maxAppointments ?? (
+                        <>
+                          <InfinityIcon className="h-4 w-4 inline" /> Illimité
+                        </>
+                      )
+                    }
                   />
                   <Stat
                     label="Patients max"
-                    value={statChip(limits?.maxPatients)}
+                    value={
+                      cfg.limits?.maxPatients ?? (
+                        <>
+                          <InfinityIcon className="h-4 w-4 inline" /> Illimité
+                        </>
+                      )
+                    }
+                  />
+                  <Stat
+                    icon={<Settings2 className="h-4 w-4" />}
+                    label="Maj"
+                    value={new Date(cfg.updatedAt).toLocaleDateString("fr-FR")}
                   />
                 </div>
 
@@ -185,71 +209,89 @@ function Stat({
 }) {
   return (
     <div className="rounded-xl border p-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-center text-center gap-2 text-xs text-muted-foreground">
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-xs font-semibold">{value}</div>
+      <div className="mt-1 text-xs font-semibold text-center">{value}</div>
     </div>
   );
 }
 
-// ---------- Edit Dialog (RHF + Zod)
-const PlanSchema = z.object({
-  code: z.enum(["FREE", "STANDARD", "PREMIUM"]),
-  name: z.string().min(2),
-  description: z.string().optional(),
-  price: z.coerce.number().min(0),
-  currency: z.string().min(1),
-  interval: z.enum(["MONTH", "YEAR"]),
-  isActive: z.boolean(),
-  limits: z.object({
-    maxAppointments: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
-    maxPatients: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
-    maxDoctorsPerHospital: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
-    storageGb: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
-  }),
-});
-
-type PlanForm = z.infer<typeof PlanSchema>;
-
+/* -------------------- EDIT DIALOG -------------------- */
 function EditPlanDialog({
   openPlan,
   onClose,
 }: {
-  openPlan: (PlanConfig & { limits: PlanLimits | null }) | null;
+  openPlan:
+    | (PlanConfig & { limits: PlanLimits | null; prices: PlanPrice[] })
+    | null;
   onClose: () => void;
 }) {
   const { toast } = useToast();
+  const dialogOpen = !!openPlan;
 
-  const formRef = React.useRef<HTMLFormElement>(null);
+  // derive prices safely (0 if no plan)
+  const priceDoctorMonth = Number(
+    openPlan?.prices.find(
+      (p) =>
+        p.subscriberType === "DOCTOR" && p.interval === "MONTH" && p.isActive
+    )?.amount ?? 0
+  );
+  const priceHospitalMonth = Number(
+    openPlan?.prices.find(
+      (p) =>
+        p.subscriberType === "HOSPITAL" && p.interval === "MONTH" && p.isActive
+    )?.amount ?? 0
+  );
 
-  const defaultValues: PlanForm | undefined = openPlan
-    ? {
-        code: openPlan.code,
-        name: openPlan.name,
-        description: openPlan.description ?? "",
-        price: Number(openPlan.price),
-        currency: openPlan.currency,
-        interval: openPlan.interval,
-        isActive: openPlan.isActive,
-        limits: {
-          maxAppointments: openPlan.limits?.maxAppointments ?? undefined,
-          maxPatients: openPlan.limits?.maxPatients ?? undefined,
-          maxDoctorsPerHospital:
-            openPlan.limits?.maxDoctorsPerHospital ?? undefined,
-          storageGb: openPlan.limits?.storageGb ?? undefined,
-        },
-      }
-    : undefined;
+  // default values whether openPlan exists or not (hooks must be unconditional)
+  const defaultValues = React.useMemo(
+    () => ({
+      code: openPlan?.code ?? "FREE",
+      name: openPlan?.name ?? "",
+      description: openPlan?.description ?? "",
+      currency: openPlan?.currency ?? "XOF",
+      interval: (openPlan?.interval ?? "MONTH") as BillingInterval,
+      isActive: openPlan?.isActive ?? true,
+      priceDoctorMonth,
+      priceHospitalMonth,
+      limits: {
+        maxAppointments: openPlan?.limits?.maxAppointments ?? undefined,
+        maxPatients: openPlan?.limits?.maxPatients ?? undefined,
+        maxDoctorsPerHospital:
+          openPlan?.limits?.maxDoctorsPerHospital ?? undefined,
+        storageGb: openPlan?.limits?.storageGb ?? undefined,
+      },
+    }),
+    [openPlan, priceDoctorMonth, priceHospitalMonth]
+  );
+
+  const PlanSchema = z.object({
+    code: z.enum(["FREE", "STANDARD", "PREMIUM"]),
+    name: z.string().min(2),
+    description: z.string().optional(),
+    currency: z.string().min(1).default("XOF"),
+    interval: z.enum(["MONTH", "YEAR"]).default("MONTH"),
+    isActive: z.boolean(),
+    priceDoctorMonth: z.coerce.number().min(0),
+    priceHospitalMonth: z.coerce.number().min(0),
+    limits: z.object({
+      maxAppointments: z
+        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+        .optional(),
+      maxPatients: z
+        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+        .optional(),
+      maxDoctorsPerHospital: z
+        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+        .optional(),
+      storageGb: z
+        .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
+        .optional(),
+    }),
+  });
+  type PlanForm = z.infer<typeof PlanSchema>;
 
   const {
     register,
@@ -259,25 +301,21 @@ function EditPlanDialog({
     formState: { isSubmitting, errors },
   } = useForm<PlanForm>({
     resolver: zodResolver(PlanSchema),
-    values: defaultValues,
+    defaultValues, // initial
   });
 
+  // reset when a different plan is opened/closed
   React.useEffect(() => {
-    if (openPlan) {
-      reset(defaultValues);
-    }
-  }, [openPlan]); // eslint-disable-line
-
-  if (!openPlan) return null;
+    reset(defaultValues);
+  }, [defaultValues, reset]);
 
   const onSubmit = async (data: PlanForm) => {
+    // If dialog isn't open (no plan), do nothing
+    if (!dialogOpen) return;
     await savePlanConfig({
       code: data.code,
       name: data.name,
       description: data.description,
-      price: data.price,
-      currency: data.currency,
-      interval: data.interval,
       isActive: data.isActive,
       limits: {
         maxAppointments: data.limits.maxAppointments ?? null,
@@ -285,26 +323,48 @@ function EditPlanDialog({
         maxDoctorsPerHospital: data.limits.maxDoctorsPerHospital ?? null,
         storageGb: data.limits.storageGb ?? null,
       },
+      priceDoctorMonth: data.priceDoctorMonth,
+      priceHospitalMonth: data.priceHospitalMonth,
+      currency: data.currency,
     });
     toast({ title: "Plan enregistré" });
     onClose();
   };
 
   return (
-    <Dialog open={!!openPlan} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[680px]">
+    <Dialog open={dialogOpen} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-[720px]">
         <DialogHeader>
-          <DialogTitle>Configurer le plan — {openPlan.code}</DialogTitle>
+          <DialogTitle>Configurer le plan — {openPlan?.code ?? ""}</DialogTitle>
         </DialogHeader>
 
         <form
-          ref={formRef}
           onSubmit={handleSubmit(onSubmit)}
           className="grid grid-cols-2 gap-4"
         >
+          {/* Register hidden fields so setValue works */}
+          <input
+            type="hidden"
+            {...register("code")}
+            value={defaultValues.code}
+            readOnly
+          />
+          <input
+            type="hidden"
+            {...register("interval")}
+            value={defaultValues.interval}
+            readOnly
+          />
+          <input
+            type="hidden"
+            {...register("isActive")}
+            value={String(defaultValues.isActive)}
+            readOnly
+          />
+
           <div className="col-span-2">
             <Label>Nom</Label>
-            <Input {...register("name")} />
+            <Input {...register("name")} disabled={!dialogOpen} />
             {errors.name && (
               <p className="text-xs text-destructive mt-1">
                 {errors.name.message}
@@ -314,29 +374,43 @@ function EditPlanDialog({
 
           <div className="col-span-2">
             <Label>Description</Label>
-            <Input {...register("description")} />
+            <Input {...register("description")} disabled={!dialogOpen} />
           </div>
 
           <div>
-            <Label>Prix</Label>
-            <Input type="number" step="0.01" {...register("price")} />
-            {errors.price && (
-              <p className="text-xs text-destructive mt-1">
-                {errors.price.message}
-              </p>
-            )}
+            <Label>Prix DOCTOR / mois (XOF)</Label>
+            <Input
+              type="number"
+              step="1"
+              {...register("priceDoctorMonth")}
+              disabled={!dialogOpen}
+            />
+          </div>
+          <div>
+            <Label>Prix HOSPITAL / mois (XOF)</Label>
+            <Input
+              type="number"
+              step="1"
+              {...register("priceHospitalMonth")}
+              disabled={!dialogOpen}
+            />
           </div>
 
           <div>
             <Label>Devise</Label>
-            <Input {...register("currency")} />
+            <Input {...register("currency")} disabled={!dialogOpen} />
           </div>
 
           <div>
             <Label>Intervalle</Label>
             <Select
-              value={openPlan.interval}
-              onValueChange={(v) => setValue("interval", v as BillingInterval)}
+              value={defaultValues.interval}
+              onValueChange={(v) =>
+                setValue("interval", v as BillingInterval, {
+                  shouldDirty: true,
+                })
+              }
+              disabled={!dialogOpen}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Choisir" />
@@ -351,8 +425,11 @@ function EditPlanDialog({
           <div className="flex items-center gap-2 pt-6">
             <input
               type="checkbox"
-              checked={openPlan.isActive}
-              onChange={(e) => setValue("isActive", e.target.checked)}
+              checked={defaultValues.isActive}
+              onChange={(e) =>
+                setValue("isActive", e.target.checked, { shouldDirty: true })
+              }
+              disabled={!dialogOpen}
             />
             <Label>Actif</Label>
           </div>
@@ -362,21 +439,29 @@ function EditPlanDialog({
             <div className="grid grid-cols-3 gap-3">
               <NumberField
                 label="RDV max"
-                value={openPlan.limits?.maxAppointments ?? undefined}
+                value={defaultValues.limits.maxAppointments ?? undefined}
                 onChange={(v) =>
-                  setValue("limits.maxAppointments", v ?? undefined)
+                  setValue("limits.maxAppointments", v ?? undefined, {
+                    shouldDirty: true,
+                  })
                 }
               />
               <NumberField
                 label="Patients max"
-                value={openPlan.limits?.maxPatients ?? undefined}
-                onChange={(v) => setValue("limits.maxPatients", v ?? undefined)}
+                value={defaultValues.limits.maxPatients ?? undefined}
+                onChange={(v) =>
+                  setValue("limits.maxPatients", v ?? undefined, {
+                    shouldDirty: true,
+                  })
+                }
               />
               <NumberField
                 label="Médecins/Hôpital"
-                value={openPlan.limits?.maxDoctorsPerHospital ?? undefined}
+                value={defaultValues.limits.maxDoctorsPerHospital ?? undefined}
                 onChange={(v) =>
-                  setValue("limits.maxDoctorsPerHospital", v ?? undefined)
+                  setValue("limits.maxDoctorsPerHospital", v ?? undefined, {
+                    shouldDirty: true,
+                  })
                 }
               />
             </div>
@@ -389,7 +474,7 @@ function EditPlanDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !dialogOpen}>
               {isSubmitting ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
@@ -398,6 +483,8 @@ function EditPlanDialog({
     </Dialog>
   );
 }
+
+/* -------------------- SHARED -------------------- */
 
 function NumberField({
   label,

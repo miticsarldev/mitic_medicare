@@ -133,23 +133,38 @@ export async function updateSubscription(input: {
   return { success: true };
 }
 
-export async function applyPlanPriceToSub(id: string) {
-  const session = await getServerSession(authOptions);
-  assertSuper(session);
+export async function applyPlanPriceToSub(subscriptionId: string) {
+  const sub = await prisma.subscription.findUnique({
+    where: { id: subscriptionId },
+    select: { id: true, plan: true, subscriberType: true },
+  });
+  if (!sub) throw new Error("Subscription not found");
 
-  const s = await prisma.subscription.findUnique({ where: { id: id } });
-  if (!s) throw new Error("Subscription not found");
+  const pc = await prisma.planConfig.findUnique({
+    where: { code: sub.plan },
+    include: { prices: true },
+  });
+  if (!pc) throw new Error(`PlanConfig not found for ${sub.plan}`);
 
-  const cfg = await prisma.planConfig.findUnique({ where: { code: s.plan } });
-  if (!cfg) throw new Error("Plan config missing");
+  const price = pc.prices.find(
+    (p) =>
+      p.subscriberType === sub.subscriberType &&
+      p.interval === "MONTH" &&
+      p.isActive
+  );
+
+  const amount = price?.amount ?? pc.price ?? 0;
+  const currency = price?.currency ?? pc.currency ?? "XOF";
 
   await prisma.subscription.update({
-    where: { id },
-    data: { amount: cfg.price, currency: cfg.currency },
+    where: { id: sub.id },
+    data: {
+      amount,
+      currency,
+    },
   });
 
-  revalidatePath("/dashboard/superadmin/subscriptions");
-  return { success: true };
+  return { amount: Number(amount), currency };
 }
 
 export async function applyPlanPriceBulk(plan: SubscriptionPlan) {

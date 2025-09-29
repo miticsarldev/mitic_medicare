@@ -444,6 +444,21 @@ enum SubscriberType {
     HOSPITAL
 }
 
+enum PaymentStatus {
+    PENDING
+    COMPLETED
+    FAILED
+    REFUNDED
+    CANCELED
+}
+
+enum PaymentMethod {
+    CREDIT_CARD
+    BANK_TRANSFER
+    MOBILE_MONEY
+    CASH
+}
+
 model Subscription {
     id             String             @id @default(cuid())
     subscriberType SubscriberType
@@ -469,16 +484,16 @@ model Subscription {
 }
 
 model SubscriptionPayment {
-    id             String       @id @default(cuid())
+    id             String        @id @default(cuid())
     subscriptionId String
-    subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-    amount         Decimal      @db.Decimal(10, 2)
-    currency       String       @default("XOF")
-    paymentMethod  String // "CREDIT_CARD", "BANK_TRANSFER", "MOBILE_MONEY"
+    subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+    amount         Decimal       @db.Decimal(10, 2)
+    currency       String        @default("XOF")
+    paymentMethod  PaymentMethod @default(MOBILE_MONEY) // "CREDIT_CARD", "BANK_TRANSFER", "MOBILE_MONEY"
     transactionId  String?
-    status         String // "PENDING", "COMPLETED", "FAILED"
-    paymentDate    DateTime     @default(now())
-    createdAt      DateTime     @default(now())
+    status         PaymentStatus @default(PENDING) // "PENDING", "COMPLETED", "FAILED"
+    paymentDate    DateTime      @default(now())
+    createdAt      DateTime      @default(now())
 
     @@index([subscriptionId])
     @@index([status])
@@ -497,8 +512,8 @@ model PlanConfig {
     code        SubscriptionPlan @unique // FREE | STANDARD | PREMIUM
     name        String
     description String?          @db.Text
-    price       Decimal          @db.Decimal(10, 2) // canonical price for the plan
-    currency    String           @default("USD")
+    price       Decimal          @default(0) @db.Decimal(10, 2) // canonical price for the plan
+    currency    String           @default("XOF")
     interval    BillingInterval  @default(MONTH) // billing cadence for the price
     isActive    Boolean          @default(true)
     updatedAt   DateTime         @updatedAt
@@ -506,6 +521,22 @@ model PlanConfig {
 
     // 1-1 limits
     limits PlanLimits?
+    prices PlanPrice[]
+}
+
+model PlanPrice {
+    id             String          @id @default(cuid())
+    planConfigId   String
+    plan           PlanConfig      @relation(fields: [planConfigId], references: [id], onDelete: Cascade)
+    subscriberType SubscriberType
+    interval       BillingInterval @default(MONTH)
+    currency       String          @default("XOF")
+    amount         Decimal         @db.Decimal(10, 2)
+    isActive       Boolean         @default(true)
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+
+    @@unique([planConfigId, subscriberType, interval, currency])
 }
 
 model PlanLimits {
