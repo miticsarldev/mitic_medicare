@@ -193,7 +193,6 @@ export async function savePlanConfig(input: {
     maxAppointments: number | null;
     maxPatients: number | null;
     maxDoctorsPerHospital: number | null;
-    storageGb: number | null;
   };
   priceDoctorMonth: number;
   priceHospitalMonth: number;

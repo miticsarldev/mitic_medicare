@@ -1,18 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import * as React from "react";
-import { useEffect, useState } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import {
   Camera,
-  Check,
   ChevronsUpDown,
   Loader2,
   MapPin,
-  Phone,
   Save,
   User,
 } from "lucide-react";
@@ -30,7 +27,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -53,22 +49,13 @@ import {
 } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { UserRole } from "@prisma/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { UserRole } from "@prisma/client";
 import {
   getUserAdminProfile,
   updateUserAdmin,
 } from "@/app/actions/superadmin-user-actions";
-
-// If you already have a countries constant, import it.
-// Otherwise, quick inline fallback list:
-const countries = [
-  { label: "Mali", value: "ML" },
-  { label: "Côte d’Ivoire", value: "CI" },
-  { label: "Sénégal", value: "SN" },
-  { label: "France", value: "FR" },
-  { label: "USA", value: "US" },
-];
+import { countries } from "@/constant";
 
 const roles: UserRole[] = [
   "SUPER_ADMIN",
@@ -79,11 +66,9 @@ const roles: UserRole[] = [
 ];
 
 const FormSchema = z.object({
-  // user
-  id: z.string(),
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères."),
   email: z.string().email("Email invalide."),
-  phone: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(), // DB requires phone, but we won't overwrite if omitted
   role: z.enum([
     "SUPER_ADMIN",
     "HOSPITAL_ADMIN",
@@ -91,10 +76,7 @@ const FormSchema = z.object({
     "HOSPITAL_DOCTOR",
     "PATIENT",
   ]),
-  isApproved: z.boolean(),
-  isActive: z.boolean(),
-  dateOfBirth: z.string().optional().nullable(),
-  // profile
+  dateOfBirth: z.string().optional().nullable(), // yyyy-mm-dd
   bio: z.string().max(500).optional().nullable(),
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
@@ -102,27 +84,25 @@ const FormSchema = z.object({
   zipCode: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
   genre: z.enum(["MALE", "FEMALE"]).optional().nullable(),
-  avatarUrl: z.string().url().optional().nullable(),
+  avatarUrl: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().url().optional().nullable()
+  ),
 });
-
 type FormValues = z.infer<typeof FormSchema>;
 
 export default function SuperAdminProfileClient() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [countryOpen, setCountryOpen] = useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
+  const [countryOpen, setCountryOpen] = React.useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      id: "",
       name: "",
       email: "",
-      phone: "",
       role: "SUPER_ADMIN",
-      isApproved: false,
-      isActive: true,
       dateOfBirth: "",
       bio: "",
       address: "",
@@ -135,16 +115,16 @@ export default function SuperAdminProfileClient() {
     },
   });
 
-  useEffect(() => {
+  const watchAll = form.watch();
+
+  React.useEffect(() => {
     (async () => {
       try {
         const data = await getUserAdminProfile();
         form.reset({
-          id: data.user.id,
           name: data.user.name ?? "",
           email: data.user.email ?? "",
           role: data.user.role,
-          isApproved: data.user.isApproved,
           dateOfBirth: data.user.dateOfBirth
             ? new Date(data.user.dateOfBirth).toISOString().slice(0, 10)
             : "",
@@ -158,7 +138,6 @@ export default function SuperAdminProfileClient() {
           avatarUrl: data.profile.avatarUrl ?? "",
         });
         setAvatarPreview(data.profile.avatarUrl || null);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (e: any) {
         toast({
           title: "Erreur",
@@ -169,18 +148,17 @@ export default function SuperAdminProfileClient() {
         setLoading(false);
       }
     })();
-  }, []); // eslint-disable-line
-
-  const values = form.getValues();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const save = async (vals: FormValues) => {
+    console.log("Saving", vals);
     try {
       await updateUserAdmin({
         ...vals,
         dateOfBirth: vals.dateOfBirth || null,
       });
       toast({ title: "Profil mis à jour" });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast({
         title: "Erreur",
@@ -192,139 +170,195 @@ export default function SuperAdminProfileClient() {
 
   if (loading) return <LoadingSkeleton />;
 
+  const initials = (watchAll.name || "?")
+    .split(" ")
+    .filter(Boolean)
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Mon profil (Super Admin)</h1>
-          <p className="text-muted-foreground">
-            Gérez votre identité, vos coordonnées et votre visibilité.
-          </p>
-        </div>
-      </div>
+      <form
+        onSubmit={form.handleSubmit(save, (errors) => {
+          console.error("Invalid form", errors);
+          // Optional: surface a toast
+          toast({
+            title: "Champs invalides",
+            description: "Vérifiez les informations surlignées.",
+            variant: "destructive",
+          });
+        })}
+      >
+        {/* Header / identity card */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="relative">
+                <Avatar className="h-24 w-24 md:h-28 md:w-28 border-4 border-background">
+                  <AvatarImage
+                    src={
+                      avatarPreview || "/placeholder.svg?height=112&width=112"
+                    }
+                    alt="Avatar"
+                  />
+                  <AvatarFallback className="text-2xl">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <label className="absolute -bottom-1 -right-1 rounded-full bg-primary text-primary-foreground p-2 shadow cursor-pointer">
+                  <Camera className="h-4 w-4" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      // TODO: upload -> url
+                      // const url = await upload(file)
+                      // form.setValue("avatarUrl", url, { shouldDirty: true })
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setAvatarPreview(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+              </div>
 
-      <div className="grid gap-6 md:grid-cols-12">
-        {/* LEFT: Avatar + quick info */}
-        <Card className="md:col-span-4 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Identité</CardTitle>
-            <CardDescription>Photo & coordonnées</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center">
-            <div className="relative mb-4 group">
-              <Avatar className="h-32 w-32 border-4 border-background">
-                <AvatarImage
-                  src={avatarPreview || "/placeholder.svg?height=128&width=128"}
-                  alt="Avatar"
-                />
-                <AvatarFallback className="text-4xl">
-                  {values.name
-                    ? values.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                    : "?"}
-                </AvatarFallback>
-              </Avatar>
-              {/* Hook to your uploader; set avatarUrl after upload */}
-              <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                <Camera className="h-6 w-6" />
-                <span className="sr-only">Changer la photo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    // TODO: upload file -> get URL
-                    // const url = await upload(file)
-                    // form.setValue("avatarUrl", url)
-                    // preview:
-                    const reader = new FileReader();
-                    reader.onloadend = () =>
-                      setAvatarPreview(reader.result as string);
-                    reader.readAsDataURL(file);
-                  }}
-                />
-              </label>
-            </div>
+              <div className="flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold">
+                  {watchAll.name || "Nom complet"}
+                </h1>
+                <p className="text-muted-foreground text-sm md:text-base">
+                  {watchAll.email}
+                </p>
 
-            <Separator className="my-4" />
-            <div className="w-full space-y-2 text-sm">
-              {values.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{values.phone}</span>
-                </div>
-              )}
-              {values.city && values.country && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    {values.city},{" "}
-                    {countries.find((c) => c.value === values.country)?.label ??
-                      values.country}
+                <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                  <span className="inline-flex items-center gap-1">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    {watchAll.role}
                   </span>
+
+                  {watchAll.city && watchAll.country && (
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      {watchAll.city},{" "}
+                      {countries.find((c) => c.value === watchAll.country)
+                        ?.label ?? watchAll.country}
+                    </span>
+                  )}
                 </div>
-              )}
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span>Rôle : {values.role}</span>
+              </div>
+
+              <div className="shrink-0">
+                <Button
+                  onClick={form.handleSubmit(save)}
+                  disabled={form.formState.isSubmitting}
+                  className="w-full md:w-auto"
+                  type="submit"
+                >
+                  {form.formState.isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Enregistrer
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* RIGHT: Forms */}
-        <div className="md:col-span-8 lg:col-span-9 space-y-6">
-          <Card>
+        <div className="grid gap-6 md:grid-cols-12">
+          {/* Account */}
+          <Card className="md:col-span-6">
             <CardHeader>
               <CardTitle>Compte</CardTitle>
-              <CardDescription>Identité, rôle et statut.</CardDescription>
+              <CardDescription>Identité, rôle et statut</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label>Nom complet</Label>
-                  <Input
-                    placeholder="Nom et prénom"
-                    {...form.register("name")}
-                  />
+              <div className="grid gap-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nom complet</Label>
+                    <Input
+                      placeholder="Nom et prénom"
+                      {...form.register("name")}
+                    />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      placeholder="email@exemple.com"
+                      {...form.register("email")}
+                      disabled
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    placeholder="email@exemple.com"
-                    {...form.register("email")}
-                    disabled
-                  />
-                </div>
-                <div>
-                  <Label>Rôle</Label>
-                  <Select
-                    value={form.getValues("role")}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onValueChange={(v) => form.setValue("role", v as any)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {r}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Rôle</Label>
+                    <Controller
+                      control={form.control}
+                      name="role"
+                      render={({ field }) => (
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map((r) => (
+                              <SelectItem key={r} value={r}>
+                                {r}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <Label>Genre</Label>
+                    <Controller
+                      control={form.control}
+                      name="genre"
+                      render={({ field }) => (
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(v) => field.onChange(v || null)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="MALE">Homme</SelectItem>
+                            <SelectItem value="FEMALE">Femme</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
+            <CardFooter className="justify-end">
               <Button
                 onClick={form.handleSubmit(save)}
                 disabled={form.formState.isSubmitting}
+                type="submit"
               >
                 {form.formState.isSubmitting ? (
                   <>
@@ -341,15 +375,14 @@ export default function SuperAdminProfileClient() {
             </CardFooter>
           </Card>
 
-          <Card>
+          {/* Profile */}
+          <Card className="md:col-span-6">
             <CardHeader>
               <CardTitle>Profil</CardTitle>
-              <CardDescription>
-                Adresse, pays, biographie, genre.
-              </CardDescription>
+              <CardDescription>Adresse, pays, biographie</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Adresse</Label>
                   <Input placeholder="Adresse" {...form.register("address")} />
@@ -369,6 +402,7 @@ export default function SuperAdminProfileClient() {
                     {...form.register("zipCode")}
                   />
                 </div>
+
                 <div className="md:col-span-2">
                   <Label>Pays</Label>
                   <Popover open={countryOpen} onOpenChange={setCountryOpen}>
@@ -378,13 +412,12 @@ export default function SuperAdminProfileClient() {
                         role="combobox"
                         className={cn(
                           "w-full justify-between",
-                          !form.getValues("country") && "text-muted-foreground"
+                          !watchAll.country && "text-muted-foreground"
                         )}
                       >
-                        {form.getValues("country")
-                          ? countries.find(
-                              (c) => c.value === form.getValues("country")
-                            )?.label || form.getValues("country")
+                        {watchAll.country
+                          ? countries.find((c) => c.value === watchAll.country)
+                              ?.label || watchAll.country
                           : "Sélectionnez un pays"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -400,18 +433,12 @@ export default function SuperAdminProfileClient() {
                                 key={c.value}
                                 value={c.value}
                                 onSelect={(v) => {
-                                  form.setValue("country", v);
+                                  form.setValue("country", v, {
+                                    shouldDirty: true,
+                                  });
                                   setCountryOpen(false);
                                 }}
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    c.value === form.getValues("country")
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
                                 {c.label}
                               </CommandItem>
                             ))}
@@ -432,10 +459,11 @@ export default function SuperAdminProfileClient() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
+            <CardFooter className="justify-end">
               <Button
                 onClick={form.handleSubmit(save)}
                 disabled={form.formState.isSubmitting}
+                type="submit"
               >
                 {form.formState.isSubmitting ? (
                   <>
@@ -452,80 +480,18 @@ export default function SuperAdminProfileClient() {
             </CardFooter>
           </Card>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
 
 function LoadingSkeleton() {
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-72 mt-2" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-24" />
-          <Skeleton className="h-9 w-24" />
-        </div>
-      </div>
-
+    <div className="container mx-auto p-4 space-y-6">
+      <Skeleton className="h-24 w-full" />
       <div className="grid gap-6 md:grid-cols-12">
-        <Card className="md:col-span-4 lg:col-span-3">
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-4 w-48 mt-1" />
-          </CardHeader>
-          <CardContent className="flex flex-col items-center">
-            <Skeleton className="h-32 w-32 rounded-full" />
-            <Skeleton className="h-6 w-40 mt-4" />
-            <Skeleton className="h-4 w-32 mt-2" />
-            <Skeleton className="h-px w-full my-4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </CardContent>
-        </Card>
-
-        <div className="md:col-span-8 lg:col-span-9 space-y-6">
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-64 mt-1" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-64 mt-1" />
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                ))}
-                <div className="md:col-span-2 space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-24 w-full" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Skeleton className="h-[420px] md:col-span-6" />
+        <Skeleton className="h-[420px] md:col-span-6" />
       </div>
     </div>
   );

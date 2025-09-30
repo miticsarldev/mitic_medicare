@@ -71,7 +71,7 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
     }).format(n);
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-4 p-4">
       <div className="flex items-end justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Plans & Tarifs</h2>
@@ -175,11 +175,11 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-muted-foreground">
-              <tr className="[&>th]:py-2 [&>th]:px-2 text-left">
-                <th className="w-[28%]">Plan</th>
+              <tr className="[&>th]:py-2 [&>th]:px-2 text-center">
+                <th className="text-left">Plan</th>
                 <th>Statut</th>
-                <th>Prix Docteur / mois</th>
-                <th>Prix Hôpital / mois</th>
+                <th>Docteur</th>
+                <th>Hôpital</th>
                 <th>Limites</th>
                 <th>Abonnés</th>
                 <th>Maj</th>
@@ -218,14 +218,14 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
                         {cfg.isActive ? "Actif" : "Inactif"}
                       </Badge>
                     </td>
-                    <td className="whitespace-nowrap">
+                    <td className="whitespace-nowrap text-center">
                       {fmt(dPrice, cfg.currency)}
                     </td>
-                    <td className="whitespace-nowrap">
+                    <td className="whitespace-nowrap text-center">
                       {fmt(hPrice, cfg.currency)}
                     </td>
                     <td className="whitespace-nowrap">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-2">
                         <Mini label="RDV" value={chip(lim?.maxAppointments)} />
                         <Mini label="Patients" value={chip(lim?.maxPatients)} />
                         <Mini
@@ -235,7 +235,7 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
                       </div>
                     </td>
                     <td>
-                      <div className="flex items-center gap-3">
+                      <div className="flex justify-center items-center gap-3">
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           <Users className="h-3 w-3" />
                           {doctors}
@@ -276,7 +276,7 @@ export default function PlansClient({ plans }: { plans: PlanWithStats[] }) {
 
 function Mini({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-md border px-2 py-1 text-[11px] leading-none">
+    <div className="rounded-md border px-2 py-1 text-[11px] leading-none flex items-center justify-center">
       <span className="text-muted-foreground">{label}:</span>{" "}
       <span className="font-medium">{value}</span>
     </div>
@@ -284,6 +284,8 @@ function Mini({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 /* -------------------- EDIT DIALOG -------------------- */
+
+const LimitNumber = z.union([z.number().int().positive(), z.null()]).optional();
 
 const PlanSchema = z.object({
   code: z.enum(["FREE", "STANDARD", "PREMIUM"]),
@@ -295,18 +297,9 @@ const PlanSchema = z.object({
   priceDoctorMonth: z.coerce.number().min(0),
   priceHospitalMonth: z.coerce.number().min(0),
   limits: z.object({
-    maxAppointments: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
-    maxPatients: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
-    maxDoctorsPerHospital: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
-    storageGb: z
-      .union([z.coerce.number().int().positive(), z.null(), z.undefined()])
-      .optional(),
+    maxAppointments: LimitNumber,
+    maxPatients: LimitNumber,
+    maxDoctorsPerHospital: LimitNumber,
   }),
 });
 type PlanForm = z.infer<typeof PlanSchema>;
@@ -349,7 +342,6 @@ function EditPlanDialog({
       maxPatients: openPlan?.limits?.maxPatients ?? undefined,
       maxDoctorsPerHospital:
         openPlan?.limits?.maxDoctorsPerHospital ?? undefined,
-      storageGb: openPlan?.limits?.storageGb ?? undefined,
     },
   };
 
@@ -380,11 +372,9 @@ function EditPlanDialog({
         maxAppointments: data.limits.maxAppointments ?? null,
         maxPatients: data.limits.maxPatients ?? null,
         maxDoctorsPerHospital: data.limits.maxDoctorsPerHospital ?? null,
-        storageGb: data.limits.storageGb ?? null,
       },
       priceDoctorMonth: data.priceDoctorMonth,
       priceHospitalMonth: data.priceHospitalMonth,
-      currency: data.currency,
     });
     toast({ title: "Plan enregistré" });
     onClose();
@@ -434,12 +424,6 @@ function EditPlanDialog({
             <Input type="number" step="1" {...register("priceHospitalMonth")} />
           </div>
 
-          {/* Currency */}
-          <div>
-            <Label>Devise</Label>
-            <Input {...register("currency")} />
-          </div>
-
           {/* Interval (RHF-controlled Select) */}
           <div>
             <Label>Intervalle (affichage)</Label>
@@ -477,7 +461,6 @@ function EditPlanDialog({
           </div>
 
           {/* Limits */}
-
           <div className="md:col-span-2 pt-2">
             <div className="text-sm font-medium mb-2">Limites</div>
 
@@ -538,18 +521,49 @@ function LimitField<T extends { limits: any }>({
       <Controller
         control={control}
         name={name}
-        render={({ field }) => (
-          <Input
-            type="number"
-            placeholder="Illimité"
-            value={field.value ?? ""} // keep empty string for null/undefined
-            onChange={(e) => {
-              const raw = e.target.value;
-              // convert "" -> undefined (means unlimited), otherwise Number
-              field.onChange(raw === "" ? undefined : Number(raw));
-            }}
-          />
-        )}
+        render={({ field }) => {
+          const display =
+            field.value === null || field.value === undefined
+              ? ""
+              : String(field.value);
+
+          return (
+            <Input
+              // TIP: using text avoids browser number re-validation hiccups
+              // If you prefer a spinner, keep type="number" — both work with this handler.
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Illimité"
+              value={display}
+              onChange={(e) => {
+                const raw = e.target.value.trim();
+
+                if (raw === "") {
+                  // empty => unlimited
+                  field.onChange(null);
+                  return;
+                }
+
+                // accept digits only (ignore accidental non-numeric)
+                const n = Number(raw);
+                if (Number.isNaN(n)) {
+                  // don't overwrite while the user is mid-typing a non-number;
+                  // keep last valid value in the field state
+                  return;
+                }
+
+                // positive only per schema
+                if (n <= 0) {
+                  field.onChange(null);
+                  return;
+                }
+
+                field.onChange(n);
+              }}
+            />
+          );
+        }}
       />
     </div>
   );
