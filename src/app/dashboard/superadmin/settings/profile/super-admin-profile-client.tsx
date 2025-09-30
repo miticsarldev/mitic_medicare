@@ -56,6 +56,8 @@ import {
   updateUserAdmin,
 } from "@/app/actions/superadmin-user-actions";
 import { countries } from "@/constant";
+import { useAvatarUpload } from "@/lib/upload/useAvatarUpload";
+import { useSession } from "next-auth/react";
 
 const roles: UserRole[] = [
   "SUPER_ADMIN",
@@ -68,7 +70,7 @@ const roles: UserRole[] = [
 const FormSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères."),
   email: z.string().email("Email invalide."),
-  phone: z.string().optional().nullable(), // DB requires phone, but we won't overwrite if omitted
+  phone: z.string().optional().nullable(),
   role: z.enum([
     "SUPER_ADMIN",
     "HOSPITAL_ADMIN",
@@ -93,8 +95,21 @@ type FormValues = z.infer<typeof FormSchema>;
 
 export default function SuperAdminProfileClient() {
   const { toast } = useToast();
+  const { update } = useSession();
   const [loading, setLoading] = React.useState(true);
+
+  // avatar state
+  const avatar = useAvatarUpload({ folder: "avatars/admins", maxMB: 5 });
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = React.useState<string | null>(
+    null
+  );
+  const [originalAvatarUrl, setOriginalAvatarUrl] = React.useState<
+    string | null
+  >(null);
+
   const [countryOpen, setCountryOpen] = React.useState(false);
 
   const form = useForm<FormValues>({
@@ -137,7 +152,9 @@ export default function SuperAdminProfileClient() {
           genre: data.profile.genre ?? null,
           avatarUrl: data.profile.avatarUrl ?? "",
         });
-        setAvatarPreview(data.profile.avatarUrl || null);
+        const current = data.profile.avatarUrl || null;
+        setAvatarPreview(current);
+        setOriginalAvatarUrl(current);
       } catch (e: any) {
         toast({
           title: "Erreur",
@@ -151,18 +168,84 @@ export default function SuperAdminProfileClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // cleanup object URL
+  React.useEffect(() => {
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+  }, [previewObjectUrl]);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // ensure onChange fires even if same file picked again
+    e.currentTarget.value = "";
+
+    if (!file) return;
+    setAvatarFile(file);
+
+    // swap preview object URL
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    const objUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objUrl);
+    setAvatarPreview(objUrl);
+  };
+
   const save = async (vals: FormValues) => {
-    console.log("Saving", vals);
+    // upload → DB update → session update → delete old; rollback on failure
+    let newUrl: string | null = null;
     try {
-      await updateUserAdmin({
+      // 1) Upload first (so we can rollback if DB fails)
+      if (avatarFile) {
+        newUrl = await avatar.onPick(avatarFile); // throws if fails
+      }
+
+      // 2) Persist in DB
+      const res = await updateUserAdmin({
         ...vals,
         dateOfBirth: vals.dateOfBirth || null,
+        avatarUrl: newUrl ?? vals.avatarUrl ?? null, // pass url key correctly
       });
+
+      const effectiveAvatarUrl =
+        (res as any)?.avatarUrl ??
+        newUrl ??
+        vals.avatarUrl ??
+        originalAvatarUrl ??
+        null;
+      const effectiveName = (res as any)?.name ?? vals.name;
+
+      // 3) Update session (navbar etc.)
+      await update({
+        name: effectiveName,
+        userProfile: { avatarUrl: effectiveAvatarUrl },
+      });
+
+      // 4) Clean old file if changed
+      if (newUrl && originalAvatarUrl && originalAvatarUrl !== newUrl) {
+        await avatar.deleteByUrl(originalAvatarUrl);
+      }
+
+      // 5) Sync UI/local state
+      setOriginalAvatarUrl(effectiveAvatarUrl);
+      setAvatarPreview(effectiveAvatarUrl);
+      setAvatarFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      // reflect in form too
+      form.setValue("avatarUrl", effectiveAvatarUrl ?? undefined, {
+        shouldDirty: false,
+      });
+
       toast({ title: "Profil mis à jour" });
     } catch (e: any) {
+      // rollback newly uploaded file
+      if (newUrl) {
+        await avatar.deleteByUrl(newUrl).catch(() => {});
+      }
       toast({
         title: "Erreur",
-        description: String(e.message || e),
+        description:
+          String(e?.message || e) || "Impossible de mettre à jour le profil.",
         variant: "destructive",
       });
     }
@@ -179,17 +262,17 @@ export default function SuperAdminProfileClient() {
     .toUpperCase();
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="container mx-auto p-4">
       <form
         onSubmit={form.handleSubmit(save, (errors) => {
           console.error("Invalid form", errors);
-          // Optional: surface a toast
           toast({
             title: "Champs invalides",
             description: "Vérifiez les informations surlignées.",
             variant: "destructive",
           });
         })}
+        className="gap-4 space-y-4"
       >
         {/* Header / identity card */}
         <Card className="overflow-hidden">
@@ -202,6 +285,7 @@ export default function SuperAdminProfileClient() {
                       avatarPreview || "/placeholder.svg?height=112&width=112"
                     }
                     alt="Avatar"
+                    className="object-contain"
                   />
                   <AvatarFallback className="text-2xl">
                     {initials}
@@ -210,21 +294,14 @@ export default function SuperAdminProfileClient() {
                 <label className="absolute -bottom-1 -right-1 rounded-full bg-primary text-primary-foreground p-2 shadow cursor-pointer">
                   <Camera className="h-4 w-4" />
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      // TODO: upload -> url
-                      // const url = await upload(file)
-                      // form.setValue("avatarUrl", url, { shouldDirty: true })
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setAvatarPreview(reader.result as string);
-                      };
-                      reader.readAsDataURL(file);
+                    onClick={(e) => {
+                      (e.currentTarget as HTMLInputElement).value = "";
                     }}
+                    onChange={handleAvatarChange}
                   />
                 </label>
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -25,8 +25,12 @@ import {
   Save,
   ScrollText,
   Cake,
+  Camera,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAvatarUpload } from "@/lib/upload/useAvatarUpload";
+import { useSession } from "next-auth/react";
 
 type AdminData = {
   id: string;
@@ -34,7 +38,7 @@ type AdminData = {
   email: string;
   phone: string;
   role: string;
-  dateOfBirth: string | null; // Format ISO-8601 (ex: "1990-01-01T00:00:00.000Z")
+  dateOfBirth: string | null;
   profile: {
     address: string;
     city: string;
@@ -52,6 +56,8 @@ export default function ProfilePage() {
   const [admin, setAdmin] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // form state
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -66,7 +72,21 @@ export default function ProfilePage() {
     dateOfBirth: "",
   });
 
-  // Synchronise le formulaire quand les données admin changent
+  // avatar state (preview + upload)
+  const { update } = useSession();
+  const avatar = useAvatarUpload({
+    folder: "avatars/hospital-admins",
+    maxMB: 5,
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [originalAvatarUrl, setOriginalAvatarUrl] = useState<string | null>(
+    null
+  );
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // sync form when admin changes
   useEffect(() => {
     if (admin) {
       setForm({
@@ -82,16 +102,17 @@ export default function ProfilePage() {
         country: admin.profile.country,
         dateOfBirth: admin.dateOfBirth ? admin.dateOfBirth.split("T")[0] : "",
       });
+      setAvatarPreview(admin.profile.avatarUrl || null);
+      setOriginalAvatarUrl(admin.profile.avatarUrl || null);
     }
   }, [admin]);
 
+  // fetch
   const fetchAdminData = async () => {
     try {
       setLoading(true);
       const res = await fetch("/api/hospital_admin/profil");
-
       if (!res.ok) throw new Error("Failed to fetch admin data");
-
       const data = await res.json();
       setAdmin(data.admin);
     } catch (error) {
@@ -105,24 +126,51 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchAdminData();
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  // choose file (allow re-select same file)
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // ensure onChange fires if the same file picked again
+    e.currentTarget.value = "";
+    if (!file) return;
+
+    setAvatarFile(file);
+
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    const objUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objUrl);
+    setAvatarPreview(objUrl);
+  };
+
+  // submit with upload-first, rollback on failure, cleanup old on success
   const handleSubmit = async () => {
     setSaving(true);
+    let newUrl: string | null = null;
+
     try {
-      // Formatage de la date pour l'envoyer au serveur
+      // 1) upload (so we can rollback if PATCH fails)
+      if (avatarFile) {
+        newUrl = await avatar.onPick(avatarFile); // throws on failure
+      }
+
+      // 2) format payload for PATCH
       const formattedData = {
         ...form,
         dateOfBirth: form.dateOfBirth
           ? `${form.dateOfBirth}T00:00:00.000Z`
           : null,
+        ...(newUrl ? { avatarUrl: newUrl } : {}), // let API accept avatarUrl
       };
 
       const res = await fetch("/api/hospital_admin/profil/modify", {
@@ -132,12 +180,32 @@ export default function ProfilePage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        // rollback just-uploaded file
+        if (newUrl) await avatar.deleteByUrl(newUrl).catch(() => {});
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Erreur lors de la mise à jour");
       }
 
-      // Rafraîchir les données après la mise à jour
+      // 3) success: cleanup old avatar if changed
+      if (newUrl && originalAvatarUrl && originalAvatarUrl !== newUrl) {
+        await avatar.deleteByUrl(originalAvatarUrl).catch(() => {});
+      }
+
+      // 4) refresh local data
       await fetchAdminData();
+
+      // 5) update session (so navbar/user menu reflects changes immediately)
+      const effectiveAvatar = newUrl ?? originalAvatarUrl ?? null;
+
+      await update({
+        userProfile: { avatarUrl: effectiveAvatar },
+      });
+
+      // 6) UI cleanup
+      setAvatarFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setOriginalAvatarUrl(effectiveAvatar);
+      setAvatarPreview(effectiveAvatar);
 
       toast({
         title: "Profil mis à jour ✅",
@@ -166,9 +234,7 @@ export default function ProfilePage() {
           <Skeleton className="h-8 w-64" />
         </div>
         <Skeleton className="h-5 w-80" />
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left column skeleton */}
           <Card className="col-span-1">
             <CardContent className="flex flex-col items-center text-center py-8 space-y-4">
               <Skeleton className="w-24 h-24 rounded-full" />
@@ -181,10 +247,7 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Right column skeleton */}
           <div className="col-span-1 md:col-span-2 space-y-6">
-            {/* Personal info skeleton */}
             <Card>
               <CardHeader>
                 <Skeleton className="h-6 w-48" />
@@ -198,8 +261,6 @@ export default function ProfilePage() {
                 ))}
               </CardContent>
             </Card>
-
-            {/* Address skeleton */}
             <Card>
               <CardHeader>
                 <Skeleton className="h-6 w-48" />
@@ -213,8 +274,6 @@ export default function ProfilePage() {
                 ))}
               </CardContent>
             </Card>
-
-            {/* Bio skeleton */}
             <Card>
               <CardHeader>
                 <Skeleton className="h-6 w-48" />
@@ -241,6 +300,13 @@ export default function ProfilePage() {
       </div>
     );
 
+  const initials = admin.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <div className="p-2 sm:p-4 max-w-6xl mx-auto space-y-4">
       <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -254,13 +320,37 @@ export default function ProfilePage() {
         {/* Left column - Aperçu */}
         <Card className="col-span-1">
           <CardContent className="flex flex-col items-center text-center py-8">
-            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-xl font-semibold text-gray-600">
-              {admin.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
+            <div className="relative mb-2 group">
+              <Avatar className="w-24 h-24 border-4 border-background">
+                <AvatarImage
+                  src={avatarPreview || "/placeholder.svg?height=96&width=96"}
+                  alt="Avatar"
+                />
+                <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+              </Avatar>
+              <label
+                htmlFor="avatar-upload"
+                className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                title="Changer la photo"
+              >
+                <Camera className="h-5 w-5" />
+                <span className="sr-only">Changer la photo</span>
+              </label>
+              <input
+                ref={fileInputRef}
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onClick={(e) => {
+                  // ensure same-file reselect triggers change
+                  (e.currentTarget as HTMLInputElement).value = "";
+                }}
+                onChange={handleAvatarChange}
+              />
             </div>
-            <h2 className="mt-4 text-xl font-semibold">{admin.name}</h2>
+
+            <h2 className="mt-2 text-xl font-semibold">{admin.name}</h2>
             <p className="text-sm text-muted-foreground">
               Membre depuis{" "}
               {new Date(admin.createdAt).toLocaleDateString("fr-FR", {

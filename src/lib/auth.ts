@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
@@ -57,7 +58,7 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, trigger, user, session }) {
       if (user) {
         return {
           ...token,
@@ -72,6 +73,19 @@ export const authOptions: AuthOptions = {
           isApproved: user.isApproved,
         };
       }
+
+      // When client calls useSession().update(payload)
+      if (trigger === "update" && session) {
+        if (session.name !== undefined) token.name = session.name;
+        if ((session as any).userProfile?.avatarUrl !== undefined) {
+          token.userProfile = {
+            ...(token.userProfile as any),
+            avatarUrl: (session as any).userProfile.avatarUrl,
+          };
+          token.image = (session as any).userProfile.avatarUrl ?? token.image;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

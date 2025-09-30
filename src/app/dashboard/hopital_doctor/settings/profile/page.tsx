@@ -1,10 +1,8 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-
 import type React from "react";
-
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -69,7 +67,8 @@ import {
   updatePatientProfile,
 } from "@/app/dashboard/patient/actions";
 import { countries } from "@/constant";
-
+import { useAvatarUpload } from "@/lib/upload/useAvatarUpload";
+import { useSession } from "next-auth/react";
 
 interface ProfileData {
   name: string;
@@ -90,6 +89,7 @@ interface ProfileData {
   avatarUrl?: string;
   createdAt?: string;
 }
+
 const profileFormSchema = z.object({
   name: z.string().min(2, {
     message: "Le nom doit contenir au moins 2 caractères.",
@@ -110,7 +110,6 @@ const profileFormSchema = z.object({
     })
     .optional(),
   dateOfBirth: z.string().optional(),
-
   allergies: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -137,17 +136,24 @@ const vitalsFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 type VitalsFormValues = z.infer<typeof vitalsFormSchema>;
 
-
 export default function ProfilePage() {
   const { toast } = useToast();
+  const { update } = useSession();
+
   const [isLoading, setIsLoading] = useState(false);
   const [openCountry, setOpenCountry] = useState(false);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // avatar state
+  const avatar = useAvatarUpload({ folder: "avatars/users", maxMB: 5 });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // const [vitalsData, setVitalsData] = useState<any>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [originalAvatarUrl, setOriginalAvatarUrl] = useState<string | null>(
+    null
+  );
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -157,7 +163,6 @@ export default function ProfilePage() {
       phone: "",
       bio: "",
       dateOfBirth: "",
-      
       allergies: "",
       address: "",
       city: "",
@@ -172,7 +177,6 @@ export default function ProfilePage() {
     mode: "onChange",
   });
 
-  // Vitals form
   const vitalsForm = useForm<VitalsFormValues>({
     resolver: zodResolver(vitalsFormSchema),
     defaultValues: {
@@ -188,13 +192,12 @@ export default function ProfilePage() {
     mode: "onChange",
   });
 
-  // Fetch profile data
+  // Fetch profile
   useEffect(() => {
     const fetchProfileData = async () => {
       setIsLoadingProfile(true);
       try {
         const data = await getPatientProfile();
-        console.log("Données du profil reçues:", data);
         setProfileData({
           ...data.profile,
           dateOfBirth: data.profile.dateOfBirth
@@ -204,14 +207,12 @@ export default function ProfilePage() {
             ? new Date(data.profile.createdAt).toISOString()
             : undefined,
         });
-        // setVitalsData(data.vitals);
 
-        // Set avatar preview if available
         if (data.profile.avatarUrl) {
           setAvatarPreview(data.profile.avatarUrl);
+          setOriginalAvatarUrl(data.profile.avatarUrl);
         }
 
-        // Reset form with fetched data
         profileForm.reset({
           name: data.profile.name || "",
           email: data.profile.email || "",
@@ -220,7 +221,6 @@ export default function ProfilePage() {
           dateOfBirth: data.profile.dateOfBirth
             ? new Date(data.profile.dateOfBirth).toISOString().split("T")[0]
             : "",
-          
           allergies: data.profile.allergies || "",
           address: data.profile.address || "",
           city: data.profile.city || "",
@@ -258,85 +258,97 @@ export default function ProfilePage() {
     };
 
     fetchProfileData();
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast, profileForm, vitalsForm]);
 
-  const reloadPage = () => {
-  window.location.reload();
-};
-  // Profile form
+  // Submit with upload/rollback/session update
+  async function onSubmitProfile(data: ProfileFormValues) {
+    setIsLoading(true);
+    let newUrl: string | null = null;
 
- async function onSubmitProfile(data: ProfileFormValues) {
-  setIsLoading(true);
-  try {
-    const formData = new FormData();
+    try {
+      const formData = new FormData();
 
-    // Append profile data
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        formData.append(key, value);
+      // Append scalar fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null)
+          formData.append(key, value as string);
+      });
+
+      // Upload first, pass URL to backend (no file blob)
+      if (avatarFile) {
+        newUrl = await avatar.onPick(avatarFile); // throws if upload fails
+        formData.append("avatarUrl", newUrl); // <— send URL (rename if your API expects "avatar")
       }
-    });
 
-    // Append avatar if changed
-    if (avatarFile) {
-      formData.append("avatar", avatarFile);
-    }
+      await updatePatientProfile(formData);
 
-    await updatePatientProfile(formData);
+      // delete old file if changed
+      if (newUrl && originalAvatarUrl && originalAvatarUrl !== newUrl) {
+        await avatar.deleteByUrl(originalAvatarUrl).catch(() => {});
+      }
 
-    toast({
-      title: "Profil mis à jour",
-      description:
-        "Vos informations personnelles ont été mises à jour avec succès.",
-    });
-    
-    // Recharger la page après un court délai pour que l'utilisateur voit le toast
-    setTimeout(() => {
-      reloadPage();
-    }, 1000);
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    toast({
-      title: "Erreur",
-      description: "Impossible de mettre à jour le profil.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-}
+      const effectiveAvatarUrl = newUrl ?? originalAvatarUrl ?? null;
 
+      // Update session immediately so UI (navbar etc.) reflects new avatar/name
+      await update({
+        userProfile: { avatarUrl: effectiveAvatarUrl },
+      });
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // Local UI refresh (no page reload)
+      setOriginalAvatarUrl(effectiveAvatarUrl);
+      setAvatarPreview(effectiveAvatarUrl);
+      setAvatarFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
       toast({
-        title: "Photo de profil mise à jour",
-        description: "Votre photo de profil a été mise à jour avec succès.",
+        title: "Profil mis à jour",
+        description:
+          "Vos informations personnelles ont été mises à jour avec succès.",
       });
+    } catch (error) {
+      // rollback uploaded file if backend update failed
+      if (newUrl) await avatar.deleteByUrl(newUrl).catch(() => {});
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le profil.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
+  }
+
+  // Live preview (and allow reselecting same file)
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // allow same-file reselect
+    event.currentTarget.value = "";
+    if (!file) return;
+
+    setAvatarFile(file);
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    const url = URL.createObjectURL(file);
+    setObjectUrl(url);
+    setAvatarPreview(url);
   };
 
-  // Calculate age from date of birth
+  // Calculate age
   const calculateAge = (dateOfBirth: string) => {
     if (!dateOfBirth) return null;
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
     return age;
   };
-
 
   if (isLoadingProfile) {
     return <Loading />;
@@ -386,10 +398,15 @@ export default function ProfilePage() {
                 <span className="sr-only">Changer la photo</span>
               </label>
               <input
+                ref={fileInputRef}
                 id="avatar-upload"
                 type="file"
                 accept="image/*"
                 className="hidden"
+                onClick={(e) => {
+                  // ensure change fires even if same file is chosen
+                  (e.currentTarget as HTMLInputElement).value = "";
+                }}
                 onChange={handleAvatarChange}
               />
             </div>
@@ -400,18 +417,23 @@ export default function ProfilePage() {
               <p className="text-sm text-muted-foreground">
                 Membre depuis{" "}
                 {profileData?.createdAt
-                  ? new Date(profileData.createdAt).toLocaleDateString("fr-FR", {
-                      month: "long",
-                      year: "numeric",
-                    })
+                  ? new Date(profileData.createdAt).toLocaleDateString(
+                      "fr-FR",
+                      {
+                        month: "long",
+                        year: "numeric",
+                      }
+                    )
                   : "Date inconnue"}
               </p>
               <p className="text-sm text-muted-foreground">
                 {profileData?.dateOfBirth
-                  ? `Né(e) le ${new Date(profileData.dateOfBirth).toLocaleDateString("fr-FR", {
+                  ? `Né(e) le ${new Date(
+                      profileData.dateOfBirth
+                    ).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "long",
-                      year: "numeric"
+                      year: "numeric",
                     })}`
                   : "Date de naissance non renseignée"}
               </p>
@@ -435,14 +457,12 @@ export default function ProfilePage() {
                 </div>
               )}
               {profileData?.dateOfBirth && (
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span>{calculateAge(profileData.dateOfBirth)} ans</span>
-              </div>
-            )}
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{calculateAge(profileData.dateOfBirth)} ans</span>
+                </div>
+              )}
             </div>
-
-            
           </CardContent>
         </Card>
 
@@ -450,7 +470,6 @@ export default function ProfilePage() {
           <Tabs defaultValue="profile">
             <TabsList className="mb-4">
               <TabsTrigger value="profile">Profil</TabsTrigger>
-              {/* <TabsTrigger value="vitals">Signes Vitaux</TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="profile">
@@ -528,7 +547,6 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
                         <FormField
                           control={profileForm.control}
                           name="gender"

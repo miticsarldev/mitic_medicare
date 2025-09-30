@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import RootSessionProvider from "@/components/session-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { EdgeStoreProvider } from "@/lib/edgestore";
+import { UploadProvider } from "@/providers/UploadProvider";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -74,7 +76,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <RootSessionProvider>
-            {children}
+            <EdgeStoreProvider>
+              <UploadProvider>{children}</UploadProvider>
+            </EdgeStoreProvider>
             <Toaster />
           </RootSessionProvider>
         </ThemeProvider>

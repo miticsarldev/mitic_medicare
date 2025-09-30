@@ -125,6 +125,7 @@ export function TeamSwitcher() {
                 <AvatarImage
                   src={user?.userProfile?.avatarUrl ?? undefined}
                   alt={`${user?.name}'s Image`}
+                  className="object-contain"
                 />
                 <AvatarFallback
                   className={cn(

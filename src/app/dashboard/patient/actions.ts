@@ -1218,14 +1218,7 @@ export async function updatePatientProfile(formData: FormData) {
     ) as string;
 
     // Handle avatar upload if provided
-    const avatar = formData.get("avatar") as File;
-    let avatarUrl: string | undefined = undefined;
-
-    if (avatar && avatar.size > 0) {
-      // In a real implementation, you would upload the avatar to a storage service
-      // and get back a URL. For this example, we'll just simulate it.
-      avatarUrl = `/placeholder.svg?height=128&width=128&text=${encodeURIComponent(name.charAt(0))}`;
-    }
+    const avatarUrl = formData.get("avatar") as string;
 
     // Update user data
     await prisma.user.update({

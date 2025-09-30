@@ -37,6 +37,7 @@ export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
                   : "https://github.com/shadcn.png"
               }
               alt={user?.name || "Utilisateur"}
+              className="object-contain"
             />
             <AvatarFallback>
               {`${user?.name

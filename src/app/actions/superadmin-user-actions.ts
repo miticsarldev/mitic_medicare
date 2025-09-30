@@ -81,10 +81,9 @@ export async function updateUserAdmin(input: {
   name: string;
   email: string;
   role: UserRole;
-  isApproved?: boolean; // optional if you want to allow toggling
-  isActive?: boolean; // optional if you want to allow toggling
+  isApproved?: boolean;
+  isActive?: boolean;
   dateOfBirth?: string | null;
-  // profile
   bio?: string | null;
   address?: string | null;
   city?: string | null;
@@ -114,7 +113,6 @@ export async function updateUserAdmin(input: {
     avatarUrl,
   } = input;
 
-  // Build safe user update
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userData: any = {
     name,
@@ -155,5 +153,5 @@ export async function updateUserAdmin(input: {
   });
 
   revalidatePath("/dashboard/superadmin/settings/profile");
-  return { success: true };
+  return { success: true, name, avatarUrl: avatarUrl ?? null };
 }

@@ -57,10 +57,11 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
-                  src={user?.userProfile?.avatarUrl ?? undefined}
+                  src={user?.userProfile?.avatarUrl ?? user?.image ?? undefined}
                   alt={
                     user?.name ? `${user.name} Image Profile` : "Image Profile"
                   }
+                  className="object-contain"
                 />
                 <AvatarFallback className="rounded-lg">
                   {initials}

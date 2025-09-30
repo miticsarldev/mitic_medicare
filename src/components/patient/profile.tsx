@@ -4,19 +4,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
   Activity,
-  //   CalendarIcon,
   Camera,
   Check,
   ChevronsUpDown,
   Droplets,
   Heart,
-  //   Info,
   Loader2,
   TreesIcon as Lungs,
   MapPin,
@@ -80,15 +78,8 @@ import {
 } from "@/app/dashboard/patient/actions";
 import { countries } from "@/constant";
 import { BloodType } from "@prisma/client";
-// import { Calendar } from "../ui/calendar";
-// import { fr } from "date-fns/locale";
-// import { format } from "date-fns";
-// import {
-//   TooltipProvider,
-//   Tooltip,
-//   TooltipContent,
-//   TooltipTrigger,
-// } from "@/components/ui/tooltip";
+import { useAvatarUpload } from "@/lib/upload/useAvatarUpload";
+import { useSession } from "next-auth/react";
 
 interface ProfileData {
   name: string;
@@ -180,6 +171,10 @@ export default function ProfilePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [vitalsData, setVitalsData] = useState<any>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const avatar = useAvatarUpload({ folder: "avatars/patients", maxMB: 5 });
+  const { update } = useSession();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -220,12 +215,19 @@ export default function ProfilePage() {
     mode: "onChange",
   });
 
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+  }, [previewObjectUrl]);
+
   // Fetch profile data
   useEffect(() => {
     const fetchProfileData = async () => {
       setIsLoadingProfile(true);
       try {
         const data = await getPatientProfile();
+        console.log(data);
         setProfileData({
           ...data.profile,
           dateOfBirth: data.profile.dateOfBirth
@@ -295,6 +297,9 @@ export default function ProfilePage() {
 
   async function onSubmitProfile(data: ProfileFormValues) {
     setIsLoading(true);
+    const oldUrl = profileData?.avatarUrl ?? null;
+    let newUrl: string | null = null;
+
     try {
       const formData = new FormData();
 
@@ -305,12 +310,30 @@ export default function ProfilePage() {
         }
       });
 
-      // Append avatar if changed
       if (avatarFile) {
-        formData.append("avatar", avatarFile);
+        newUrl = await avatar.onPick(avatarFile); // throws if upload fails
+        formData.append("avatar", newUrl); // IMPORTANT: use "avatarUrl"
       }
 
       await updatePatientProfile(formData);
+      const effectiveAvatarUrl = newUrl ?? oldUrl;
+
+      if (newUrl && oldUrl && oldUrl !== newUrl) {
+        await avatar.deleteByUrl(oldUrl);
+      }
+
+      await update({
+        userProfile: { avatarUrl: effectiveAvatarUrl },
+      });
+
+      setProfileData((p) =>
+        p ? { ...p, avatarUrl: effectiveAvatarUrl || undefined } : p
+      );
+
+      setAvatarPreview(effectiveAvatarUrl || null);
+      setAvatarFile(null);
+
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
       toast({
         title: "Profil mis à jour",
@@ -318,6 +341,7 @@ export default function ProfilePage() {
           "Vos informations personnelles ont été mises à jour avec succès.",
       });
     } catch (error) {
+      if (newUrl) await avatar.deleteByUrl(newUrl);
       console.error("Error updating profile:", error);
       toast({
         title: "Erreur",
@@ -358,19 +382,18 @@ export default function ProfilePage() {
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    event.currentTarget.value = "";
 
-      toast({
-        title: "Photo de profil mise à jour",
-        description: "Votre photo de profil a été mise à jour avec succès.",
-      });
-    }
+    if (!file) return;
+
+    setAvatarFile(file);
+
+    // revoke old object URL
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+
+    const objUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objUrl);
+    setAvatarPreview(objUrl);
   };
 
   // Calculate age from date of birth
@@ -469,8 +492,13 @@ export default function ProfilePage() {
             <div className="relative mb-4 group">
               <Avatar className="h-32 w-32 border-4 border-background">
                 <AvatarImage
-                  src={avatarPreview || "/placeholder.svg?height=128&width=128"}
+                  src={
+                    avatar.preview ||
+                    avatarPreview ||
+                    "/placeholder.svg?height=128&width=128"
+                  }
                   alt="Photo de profil"
+                  className="object-contain"
                 />
                 <AvatarFallback className="text-4xl">
                   {profileData?.name
@@ -493,6 +521,10 @@ export default function ProfilePage() {
                 type="file"
                 accept="image/*"
                 className="hidden"
+                ref={fileInputRef}
+                onClick={(e) => {
+                  (e.currentTarget as HTMLInputElement).value = "";
+                }}
                 onChange={handleAvatarChange}
               />
             </div>

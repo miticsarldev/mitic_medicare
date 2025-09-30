@@ -1,10 +1,8 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-
 import type React from "react";
-
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,7 +14,6 @@ import {
   MapPin,
   Phone,
   Save,
-  User,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,13 +39,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -69,9 +59,10 @@ import {
   updatePatientProfile,
 } from "@/app/dashboard/patient/actions";
 import { countries } from "@/constant";
+import { useAvatarUpload } from "@/lib/upload/useAvatarUpload";
+import { useSession } from "next-auth/react";
 
-
-interface ProfileData {
+type ProfileData = {
   name: string;
   email: string;
   phone?: string;
@@ -89,14 +80,15 @@ interface ProfileData {
   emergencyContactRelation?: string;
   avatarUrl?: string;
   createdAt?: string;
-}
+};
+
 const profileFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Le nom doit contenir au moins 2 caractères.",
-  }),
-  email: z.string().email({
-    message: "Veuillez entrer une adresse email valide.",
-  }),
+  name: z
+    .string()
+    .min(2, { message: "Le nom doit contenir au moins 2 caractères." }),
+  email: z
+    .string()
+    .email({ message: "Veuillez entrer une adresse email valide." }),
   phone: z
     .string()
     .min(10, {
@@ -105,12 +97,9 @@ const profileFormSchema = z.object({
     .optional(),
   bio: z
     .string()
-    .max(500, {
-      message: "La bio ne peut pas dépasser 500 caractères.",
-    })
+    .max(500, { message: "La bio ne peut pas dépasser 500 caractères." })
     .optional(),
   dateOfBirth: z.string().optional(),
-
   allergies: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -123,30 +112,25 @@ const profileFormSchema = z.object({
   emergencyContactRelation: z.string().optional(),
 });
 
-const vitalsFormSchema = z.object({
-  height: z.string().optional(),
-  weight: z.string().optional(),
-  bloodPressureSystolic: z.string().optional(),
-  bloodPressureDiastolic: z.string().optional(),
-  heartRate: z.string().optional(),
-  respiratoryRate: z.string().optional(),
-  temperature: z.string().optional(),
-  oxygenSaturation: z.string().optional(),
-});
-
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
-type VitalsFormValues = z.infer<typeof vitalsFormSchema>;
-
 
 export default function ProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [openCountry, setOpenCountry] = useState(false);
+
+  // avatar state
+  const avatar = useAvatarUpload({ folder: "avatars/doctors", maxMB: 5 });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null);
+  const [originalAvatarUrl, setOriginalAvatarUrl] = useState<string | null>(
+    null
+  );
+  const { update } = useSession();
+
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // const [vitalsData, setVitalsData] = useState<any>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   const profileForm = useForm<ProfileFormValues>({
@@ -157,7 +141,6 @@ export default function ProfilePage() {
       phone: "",
       bio: "",
       dateOfBirth: "",
-      
       allergies: "",
       address: "",
       city: "",
@@ -172,29 +155,12 @@ export default function ProfilePage() {
     mode: "onChange",
   });
 
-  // Vitals form
-  const vitalsForm = useForm<VitalsFormValues>({
-    resolver: zodResolver(vitalsFormSchema),
-    defaultValues: {
-      height: "",
-      weight: "",
-      bloodPressureSystolic: "",
-      bloodPressureDiastolic: "",
-      heartRate: "",
-      respiratoryRate: "",
-      temperature: "",
-      oxygenSaturation: "",
-    },
-    mode: "onChange",
-  });
-
-  // Fetch profile data
   useEffect(() => {
     const fetchProfileData = async () => {
       setIsLoadingProfile(true);
       try {
         const data = await getPatientProfile();
-        console.log("Données du profil reçues:", data);
+
         setProfileData({
           ...data.profile,
           dateOfBirth: data.profile.dateOfBirth
@@ -204,14 +170,11 @@ export default function ProfilePage() {
             ? new Date(data.profile.createdAt).toISOString()
             : undefined,
         });
-        // setVitalsData(data.vitals);
 
-        // Set avatar preview if available
-        if (data.profile.avatarUrl) {
-          setAvatarPreview(data.profile.avatarUrl);
-        }
+        const current = data.profile.avatarUrl || null;
+        setAvatarPreview(current);
+        setOriginalAvatarUrl(current);
 
-        // Reset form with fetched data
         profileForm.reset({
           name: data.profile.name || "",
           email: data.profile.email || "",
@@ -220,7 +183,6 @@ export default function ProfilePage() {
           dateOfBirth: data.profile.dateOfBirth
             ? new Date(data.profile.dateOfBirth).toISOString().split("T")[0]
             : "",
-          
           allergies: data.profile.allergies || "",
           address: data.profile.address || "",
           city: data.profile.city || "",
@@ -231,19 +193,6 @@ export default function ProfilePage() {
           emergencyContactName: data.profile.emergencyContactName || "",
           emergencyContactPhone: data.profile.emergencyContactPhone || "",
           emergencyContactRelation: data.profile.emergencyContactRelation || "",
-        });
-
-        vitalsForm.reset({
-          height: data.vitals?.height?.toString() || "",
-          weight: data.vitals?.weight?.toString() || "",
-          bloodPressureSystolic:
-            data.vitals?.bloodPressureSystolic?.toString() || "",
-          bloodPressureDiastolic:
-            data.vitals?.bloodPressureDiastolic?.toString() || "",
-          heartRate: data.vitals?.heartRate?.toString() || "",
-          respiratoryRate: data.vitals?.respiratoryRate?.toString() || "",
-          temperature: data.vitals?.temperature?.toString() || "",
-          oxygenSaturation: data.vitals?.oxygenSaturation?.toString() || "",
         });
       } catch (error) {
         console.error("Error fetching profile data:", error);
@@ -258,89 +207,98 @@ export default function ProfilePage() {
     };
 
     fetchProfileData();
-  }, [toast, profileForm, vitalsForm]);
+    // cleanup preview object URL on unmount
+    return () => {
+      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const reloadPage = () => {
-  window.location.reload();
-};
-  // Profile form
-
- async function onSubmitProfile(data: ProfileFormValues) {
-  setIsLoading(true);
-  try {
-    const formData = new FormData();
-
-    // Append profile data
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        formData.append(key, value);
-      }
-    });
-
-    // Append avatar if changed
-    if (avatarFile) {
-      formData.append("avatar", avatarFile);
-    }
-
-    await updatePatientProfile(formData);
-
-    toast({
-      title: "Profil mis à jour",
-      description:
-        "Vos informations personnelles ont été mises à jour avec succès.",
-    });
-    
-    // Recharger la page après un court délai pour que l'utilisateur voit le toast
-    setTimeout(() => {
-      reloadPage();
-    }, 1000);
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    toast({
-      title: "Erreur",
-      description: "Impossible de mettre à jour le profil.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-}
-
-
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      toast({
-        title: "Photo de profil mise à jour",
-        description: "Votre photo de profil a été mise à jour avec succès.",
-      });
-    }
-  };
-
-  // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string) => {
     if (!dateOfBirth) return null;
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
     return age;
   };
 
+  // Allow re-selecting the same file and keep preview correct
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
 
-  if (isLoadingProfile) {
-    return <Loading />;
+    // make sure onChange fires even if same file picked again
+    e.currentTarget.value = "";
+
+    if (!file) return;
+    setAvatarFile(file);
+
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    const objUrl = URL.createObjectURL(file);
+    setPreviewObjectUrl(objUrl);
+    setAvatarPreview(objUrl);
+  };
+
+  // Submit with upload → DB → cleanup (rollback on fail)
+  async function onSubmitProfile(data: ProfileFormValues) {
+    setIsLoading(true);
+    let newUrl: string | null = null;
+
+    try {
+      const formData = new FormData();
+
+      // basic fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) formData.append(key, value);
+      });
+
+      // upload first so we can rollback if DB fails
+      if (avatarFile) {
+        newUrl = await avatar.onPick(avatarFile); // throws if upload fails
+        // pass URL to server action (send both keys for compatibility)
+        formData.append("avatarUrl", newUrl);
+        formData.append("avatar", newUrl);
+      }
+
+      await updatePatientProfile(formData);
+
+      // success: delete previous file if changed
+      if (newUrl && originalAvatarUrl && originalAvatarUrl !== newUrl) {
+        await avatar.deleteByUrl(originalAvatarUrl).catch(() => {});
+      }
+
+      // UI sync
+      const effective = newUrl ?? originalAvatarUrl ?? null;
+      setOriginalAvatarUrl(effective);
+      setAvatarPreview(effective);
+      setAvatarFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      await update({
+        userProfile: { avatarUrl: effective },
+      });
+
+      toast({
+        title: "Profil mis à jour",
+        description:
+          "Vos informations personnelles ont été mises à jour avec succès.",
+      });
+    } catch (error) {
+      // rollback newly uploaded file
+      if (newUrl) await avatar.deleteByUrl(newUrl).catch(() => {});
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le profil.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
+
+  if (isLoadingProfile) return <Loading />;
 
   return (
     <div className="container mx-auto p-4">
@@ -358,8 +316,7 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Photo de profil</CardTitle>
             <CardDescription>
-              Cette photo sera affichée sur votre profil et visible par vos
-              médecins.
+              Cette photo sera visible par vos patients.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center">
@@ -368,16 +325,18 @@ export default function ProfilePage() {
                 <AvatarImage
                   src={avatarPreview || "/placeholder.svg?height=128&width=128"}
                   alt="Photo de profil"
+                  className="object-contain"
                 />
                 <AvatarFallback className="text-4xl">
                   {profileData?.name
                     ? profileData.name
                         .split(" ")
-                        .map((n: string) => n[0])
+                        .map((n) => n[0])
                         .join("")
                     : "?"}
                 </AvatarFallback>
               </Avatar>
+
               <label
                 htmlFor="avatar-upload"
                 className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
@@ -385,37 +344,32 @@ export default function ProfilePage() {
                 <Camera className="h-6 w-6" />
                 <span className="sr-only">Changer la photo</span>
               </label>
+
               <input
+                ref={fileInputRef}
                 id="avatar-upload"
                 type="file"
                 accept="image/*"
                 className="hidden"
+                onClick={(e) => {
+                  // ensure picking the same file triggers onChange
+                  (e.currentTarget as HTMLInputElement).value = "";
+                }}
                 onChange={handleAvatarChange}
               />
             </div>
+
             <div className="text-center">
               <h3 className="font-medium text-lg">
                 {profileData?.name || "Utilisateur"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Membre depuis{" "}
-                {profileData?.createdAt
-                  ? new Date(profileData.createdAt).toLocaleDateString("fr-FR", {
-                      month: "long",
-                      year: "numeric",
-                    })
-                  : "Date inconnue"}
-              </p>
-              <p className="text-sm text-muted-foreground">
                 {profileData?.dateOfBirth
-                  ? `Né(e) le ${new Date(profileData.dateOfBirth).toLocaleDateString("fr-FR", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric"
-                    })}`
+                  ? `Âge: ${calculateAge(profileData.dateOfBirth)} ans`
                   : "Date de naissance non renseignée"}
               </p>
             </div>
+
             <Separator className="my-4" />
             <div className="w-full space-y-2 pl-12">
               {profileData?.phone && (
@@ -434,15 +388,7 @@ export default function ProfilePage() {
                   </span>
                 </div>
               )}
-              {profileData?.dateOfBirth && (
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span>{calculateAge(profileData.dateOfBirth)} ans</span>
-              </div>
-            )}
             </div>
-
-            
           </CardContent>
         </Card>
 
@@ -450,7 +396,6 @@ export default function ProfilePage() {
           <Tabs defaultValue="profile">
             <TabsList className="mb-4">
               <TabsTrigger value="profile">Profil</TabsTrigger>
-              {/* <TabsTrigger value="vitals">Signes Vitaux</TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="profile">
@@ -528,27 +473,14 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
                         <FormField
                           control={profileForm.control}
                           name="gender"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Genre</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionnez votre genre" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="MALE">Homme</SelectItem>
-                                  <SelectItem value="FEMALE">Femme</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              {/* keep Select if you want */}
+                              <Input placeholder="MALE / FEMALE" {...field} />
                               <FormMessage />
                             </FormItem>
                           )}
@@ -568,8 +500,7 @@ export default function ProfilePage() {
                               />
                             </FormControl>
                             <FormDescription>
-                              Vous pouvez mentionner vos intérêts, mode de vie,
-                              ou toute information pertinente pour vos médecins.
+                              Détaillez votre activité et vos spécialisations.
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -582,8 +513,7 @@ export default function ProfilePage() {
                     <CardHeader>
                       <CardTitle>Adresse</CardTitle>
                       <CardDescription>
-                        Votre adresse sera utilisée pour les services à domicile
-                        et les urgences.
+                        Utilisée pour la facturation et le contact.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -665,8 +595,7 @@ export default function ProfilePage() {
                                     >
                                       {field.value
                                         ? countries.find(
-                                            (country) =>
-                                              country.value === field.value
+                                            (c) => c.value === field.value
                                           )?.label
                                         : "Sélectionnez un pays"}
                                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -798,23 +727,6 @@ function Loading() {
               <div className="space-y-2">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-24 w-full" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-64 mt-1" />
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                ))}
               </div>
             </CardContent>
           </Card>
