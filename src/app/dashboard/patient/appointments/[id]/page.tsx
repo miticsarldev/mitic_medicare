@@ -145,13 +145,16 @@ export default async function AppointmentDetailPage({
               </div>
             )}
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Link
-                href={`/dashboard/patient/appointments/reschedule/${appointment.doctorId}`}
-              >
-                <Button className="flex-1">Reprogrammer</Button>
-              </Link>
-            </div>
+            {appointment.status !== "CONFIRMED" ||
+              (appointment.status !== "CONFIRMED" && (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Link
+                    href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}
+                  >
+                    <Button className="flex-1">Reprogrammer</Button>
+                  </Link>
+                </div>
+              ))}
           </CardContent>
         </Card>
 

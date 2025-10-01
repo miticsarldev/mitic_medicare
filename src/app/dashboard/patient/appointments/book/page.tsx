@@ -30,12 +30,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   bookAppointment,
   getAvailableDoctors,
   getDoctorAvailableTimeSlots,
+  getDoctorAvailableDatesRange,
 } from "../../actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -47,7 +48,7 @@ export type SimpleDoctor = {
   hospital?: string;
   department?: string;
   consultationFee?: number;
-  isIndependant?: boolean;
+  isIndependent?: boolean;
 };
 
 export default function BookAppointmentPage() {
@@ -64,6 +65,16 @@ export default function BookAppointmentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState<Date>(
+    startOfMonth(new Date())
+  );
+  const [availableDateSet, setAvailableDateSet] = useState<Set<string>>(
+    new Set()
+  );
+
+  // formateur yyyy-MM-dd
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   // Fetch doctors on initial load
   useEffect(() => {
@@ -81,6 +92,30 @@ export default function BookAppointmentPage() {
 
     fetchDoctors();
   }, []);
+
+  // recharge quand médecin OU mois change
+  useEffect(() => {
+    const loadMonth = async () => {
+      setAvailableDateSet(new Set()); // reset le temps du chargement
+      if (!selectedDoctor) return;
+
+      const start = startOfMonth(visibleMonth);
+      const end = endOfMonth(visibleMonth);
+
+      const dates = await getDoctorAvailableDatesRange(
+        selectedDoctor,
+        ymd(start),
+        ymd(end)
+      );
+      setAvailableDateSet(new Set(dates));
+    };
+
+    loadMonth();
+    // réinitialise date & heures si on change de médecin
+    setDate(undefined);
+    setTimeSlots([]);
+    setSelectedTime(null);
+  }, [selectedDoctor, visibleMonth]);
 
   // Fetch doctors when search query changes
   useEffect(() => {
@@ -232,7 +267,7 @@ export default function BookAppointmentPage() {
                           {doctor.hospital}
                           {doctor.department && ` • ${doctor.department}`}
                         </p>
-                        {doctor.isIndependant && doctor.consultationFee && (
+                        {doctor.isIndependent && doctor.consultationFee && (
                           <span className="text-xs font-medium text-primary">
                             {new Intl.NumberFormat("fr-ML", {
                               style: "currency",
@@ -307,11 +342,17 @@ export default function BookAppointmentPage() {
                       mode="single"
                       selected={date}
                       onSelect={setDate}
+                      onMonthChange={(m) => setVisibleMonth(startOfMonth(m))}
                       initialFocus
-                      disabled={(date) => {
+                      disabled={(d) => {
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
-                        return date < today;
+
+                        if (d < today) return true;
+                        if (!selectedDoctor) return true;
+
+                        const k = ymd(d);
+                        return !availableDateSet.has(k);
                       }}
                     />
                   </PopoverContent>

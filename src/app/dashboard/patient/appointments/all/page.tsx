@@ -159,7 +159,7 @@ export default function AppointmentsPage() {
   };
 
   // Handle status filter
-  const handleStatusFilter = (status: string | null) => {
+  const handleStatusFilter = (status: AppointmentStatus | null) => {
     setStatusFilter(status);
     setCurrentPage(1);
   };
@@ -430,7 +430,7 @@ export default function AppointmentsPage() {
                                   Actions
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              {/* <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
                                   <Link
                                     href={`/dashboard/patient/appointments/${appointment.id}`}
@@ -449,6 +449,17 @@ export default function AppointmentsPage() {
                                     </Link>
                                   </DropdownMenuItem>
                                 )}
+                              </DropdownMenuContent> */}
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link
+                                    href={`/dashboard/patient/appointments/${appointment.id}`}
+                                  >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Voir les détails
+                                  </Link>
+                                </DropdownMenuItem>
+                                {/* Pas de reprogrammation dans l’historique */}
                               </DropdownMenuContent>
                             </DropdownMenu>
 

@@ -616,14 +616,60 @@ export async function getPatientAppointments({
     }
 
     const now = new Date();
+
     if (time === "upcoming") {
-      where.status = { in: ["PENDING", "CONFIRMED"] };
+      // Limite au futur
       where.scheduledAt = { gte: now };
-    } else if (time === "past") {
-      where.OR = [
-        { scheduledAt: { lt: now } },
-        { status: { in: ["CANCELED", "COMPLETED", "NO_SHOW"] } },
+
+      // Statuts autorisés en "à venir"
+      const allowed: AppointmentStatus[] = [
+        AppointmentStatus.PENDING,
+        AppointmentStatus.CONFIRMED,
       ];
+
+      if (status) {
+        if (Array.isArray(status)) {
+          const intersection = status.filter((s) => allowed.includes(s));
+          where.status = { in: intersection.length ? intersection : allowed };
+        } else {
+          where.status = allowed.includes(status) ? status : { in: allowed };
+        }
+      } else {
+        where.status = { in: allowed };
+      }
+    } else if (time === "past") {
+      // Historique : soit passé, soit statuts finaux
+      const finalized: AppointmentStatus[] = [
+        AppointmentStatus.COMPLETED,
+        AppointmentStatus.CANCELED,
+        AppointmentStatus.NO_SHOW,
+      ];
+
+      // Si l’utilisateur a choisi un statut, on filtre dessus
+      if (status) {
+        if (Array.isArray(status)) {
+          const intersection = status.filter((s) => finalized.includes(s));
+          if (intersection.length) {
+            where.status = { in: intersection };
+          } else {
+            // aucun statut compatible -> forcer 0 résultat
+            where.status = "__NONE__" as unknown as AppointmentStatus;
+          }
+        } else {
+          if (finalized.includes(status)) {
+            where.status = status;
+          } else {
+            where.status = "__NONE__" as unknown as AppointmentStatus;
+          }
+        }
+        // on n’a pas besoin du OR avec la date si on filtre explicitement par statut finalisé
+      } else {
+        // pas de statut choisi : comportement actuel
+        where.OR = [
+          { scheduledAt: { lt: now } },
+          { status: { in: finalized } },
+        ];
+      }
     }
 
     // Calculate pagination
@@ -3515,4 +3561,106 @@ export async function getPatientMedicalHistory(): Promise<GetMedicalHistoryResul
         "Une erreur s'est produite lors du chargement de l'historique médical",
     };
   }
+}
+
+// Renvoie la liste des dates (yyyy-MM-dd) qui ont au moins 1 créneau libre
+export async function getDoctorAvailableDatesRange(
+  doctorId: string,
+  startISO: string, // "2025-10-01"
+  endISO: string // "2025-10-31"
+): Promise<string[]> {
+  if (!doctorId) return [];
+
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return [];
+
+  // 1) disponibilités actives du médecin
+  const availabilities = await prisma.doctorAvailability.findMany({
+    where: { doctorId, isActive: true },
+    select: {
+      dayOfWeek: true,
+      startTime: true,
+      endTime: true,
+      slotDuration: true,
+    },
+  });
+  if (!availabilities.length) return [];
+
+  // 2) RDV existants sur la période
+  const existingAppointments = await prisma.appointment.findMany({
+    where: {
+      doctorId,
+      scheduledAt: { gte: start, lte: end },
+      status: { in: ["PENDING", "CONFIRMED"] },
+    },
+    select: { scheduledAt: true },
+  });
+
+  // index des rdv existants par jour -> Set("HH:mm")
+  const bookedByDate = new Map<string, Set<string>>();
+  for (const appt of existingAppointments) {
+    const yyyy = appt.scheduledAt.getFullYear();
+    const mm = String(appt.scheduledAt.getMonth() + 1).padStart(2, "0");
+    const dd = String(appt.scheduledAt.getDate()).padStart(2, "0");
+    const hh = String(appt.scheduledAt.getHours()).padStart(2, "0");
+    const mi = String(appt.scheduledAt.getMinutes()).padStart(2, "0");
+    const key = `${yyyy}-${mm}-${dd}`;
+    if (!bookedByDate.has(key)) bookedByDate.set(key, new Set());
+    bookedByDate.get(key)!.add(`${hh}:${mi}`);
+  }
+
+  // 3) pour chaque date de la plage, vérifie s'il reste au moins 1 créneau
+  const yesDates: string[] = [];
+  for (
+    let d = new Date(start.getTime()), today0 = new Date();
+    d <= end;
+    d.setDate(d.getDate() + 1)
+  ) {
+    // ignore passé
+    today0.setHours(0, 0, 0, 0);
+    const day0 = new Date(d.getTime());
+    day0.setHours(0, 0, 0, 0);
+    if (day0 < today0) continue;
+
+    const dow = d.getDay(); // 0..6
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const dateKey = `${yyyy}-${mm}-${dd}`;
+
+    // toutes les dispos correspondant à ce jour de semaine
+    const dayAvail = availabilities.filter((a) => a.dayOfWeek === dow);
+    if (dayAvail.length === 0) continue;
+
+    // génère tous les créneaux de la journée et soustrait les RDV
+    let hasFree = false;
+    outer: for (const slot of dayAvail) {
+      const [sh, sm] = slot.startTime.split(":").map(Number);
+      const [eh, em] = slot.endTime.split(":").map(Number);
+      const step = slot.slotDuration ?? 30;
+
+      let curH = sh,
+        curM = sm;
+      const bookedSet = bookedByDate.get(dateKey) ?? new Set<string>();
+
+      while (curH < eh || (curH === eh && curM < em)) {
+        const label = `${String(curH).padStart(2, "0")}:${String(curM).padStart(2, "0")}`;
+        if (!bookedSet.has(label)) {
+          hasFree = true;
+          break outer;
+        }
+        // next
+        curM += step;
+        if (curM >= 60) {
+          curH += Math.floor(curM / 60);
+          curM = curM % 60;
+        }
+      }
+    }
+
+    if (hasFree) yesDates.push(dateKey);
+  }
+
+  return yesDates;
 }
