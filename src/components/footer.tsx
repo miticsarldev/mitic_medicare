@@ -3,12 +3,17 @@
 import type React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, MapPin, Phone, Shield } from "lucide-react";
+import { Mail, MapPin, Shield } from "lucide-react";
 import { motion } from "framer-motion";
+import { SiWhatsapp } from "react-icons/si";
 
 import { cn } from "@/lib/utils";
+import { contactEmail, primaryContactNumber } from "@/constant";
 
 export function Footer({ className }: React.HTMLAttributes<HTMLElement>) {
+  const whatsappHref1 = `https://wa.me/${primaryContactNumber.replace(/\D/g, "")}`;
+  const email = contactEmail;
+
   // Animation variants
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
@@ -147,24 +152,31 @@ export function Footer({ className }: React.HTMLAttributes<HTMLElement>) {
                     Bamako, MALI
                   </p>
                 </motion.div>
-                <motion.div
+                <motion.a
+                  href={whatsappHref1}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   variants={fadeInUp}
-                  className="flex items-center space-x-3"
+                  className="flex items-center space-x-3 group"
+                  aria-label="Ouvrir WhatsApp"
                 >
-                  <Phone className="h-5 w-5 text-primary" />
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    +223 77 77 77 77
+                  <SiWhatsapp className="h-5 w-5 text-green-500" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400 group-hover:underline">
+                    {primaryContactNumber}
                   </p>
-                </motion.div>
-                <motion.div
+                </motion.a>
+
+                <motion.a
+                  href={`mailto:${email}`}
                   variants={fadeInUp}
-                  className="flex items-center space-x-3"
+                  className="flex items-center space-x-3 group"
+                  aria-label="Envoyer un email"
                 >
                   <Mail className="h-5 w-5 text-primary" />
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    contact@miticsarlml.com
+                  <p className="text-sm text-gray-600 dark:text-gray-400 group-hover:underline">
+                    {email}
                   </p>
-                </motion.div>
+                </motion.a>
               </motion.div>
             </motion.div>
           </motion.div>

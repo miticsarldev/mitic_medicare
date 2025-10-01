@@ -10,6 +10,12 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "files.edgestore.dev",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "example.com",
         port: "",
         pathname: "/**",

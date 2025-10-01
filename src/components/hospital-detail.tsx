@@ -16,8 +16,6 @@ import {
   Grid3X3,
   Clock,
   ChevronRight,
-  ThumbsUp,
-  ThumbsDown,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -763,19 +761,6 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                                         <p className="text-sm text-muted-foreground mb-4">
                                           {review.content}
                                         </p>
-
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                            <button className="flex items-center gap-1 hover:text-primary">
-                                              <ThumbsUp className="h-4 w-4" />{" "}
-                                              {review.likes}
-                                            </button>
-                                            <button className="flex items-center gap-1 hover:text-primary">
-                                              <ThumbsDown className="h-4 w-4" />{" "}
-                                              {review.dislikes}
-                                            </button>
-                                          </div>
-                                        </div>
                                       </CardContent>
                                     </Card>
                                   </motion.div>

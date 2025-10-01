@@ -54,6 +54,7 @@ export function SearchResults({ results, type }: SearchResultsProps) {
                         "/placeholder.svg?height=96&width=96"
                       }
                       alt={doctor.user.name}
+                      className="object-contain"
                     />
                     <AvatarFallback className="text-xl bg-primary text-primary-foreground">
                       {getInitials(doctor.user.name)}

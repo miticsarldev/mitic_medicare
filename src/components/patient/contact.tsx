@@ -6,7 +6,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Clock, Loader2, Mail, MessageSquare, Phone, Send } from "lucide-react";
+import { Clock, Loader2, Mail, MessageSquare, Send } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { contactEmail, primaryContactNumber } from "@/constant";
+import { SiWhatsapp } from "react-icons/si";
 
 const contactFormSchema = z.object({
   subject: z.string().min(5, {
@@ -60,6 +62,7 @@ type ContactFormValues = z.infer<typeof contactFormSchema>;
 export default function ContactPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const whatsappHref1 = `https://wa.me/${primaryContactNumber.replace(/\D/g, "")}`;
 
   // Default values for the form
   const defaultValues: Partial<ContactFormValues> = {
@@ -384,29 +387,39 @@ export default function ContactPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
+              {/* Téléphone - ouvre WhatsApp */}
+              <a
+                href={whatsappHref1}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 group"
+              >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Phone className="h-5 w-5" />
+                  <SiWhatsapp className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="font-medium">Téléphone</p>
-                  <p className="text-sm text-muted-foreground">
-                    +223 77 77 77 77
+                  <p className="text-sm text-muted-foreground group-hover:underline">
+                    {primaryContactNumber}
                   </p>
                 </div>
-              </div>
+              </a>
 
-              <div className="flex items-center gap-3">
+              {/* Email - ouvre le client mail */}
+              <a
+                href={`mailto:${contactEmail}`}
+                className="flex items-center gap-3 group"
+              >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Mail className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">
-                    contact@miticsarl.com
+                  <p className="text-sm text-muted-foreground group-hover:underline">
+                    {contactEmail}
                   </p>
                 </div>
-              </div>
+              </a>
 
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">

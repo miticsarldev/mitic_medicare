@@ -353,27 +353,93 @@ export const upcomingAppointments = [
     reason: "Consultation",
   },
 ];
+
 export const appointmentsByDate = {
   "2025-03-17": [
-    { id: 1, patient: "Mariam Diallo", time: "09:00", reason: "Consultation générale", status: "pending" },
-    { id: 2, patient: "Alima Konté", time: "10:30", reason: "Suivi diabète", status: "pending" },
-    { id: 3, patient: "Fatoumata Sow", time: "14:00", reason: "Douleurs dorsales", status: "accepted" },
-    { id: 4, patient: "Issa Sylla", time: "16:00", reason: "Bilan de santé", status: "rejected" },
+    {
+      id: 1,
+      patient: "Mariam Diallo",
+      time: "09:00",
+      reason: "Consultation générale",
+      status: "pending",
+    },
+    {
+      id: 2,
+      patient: "Alima Konté",
+      time: "10:30",
+      reason: "Suivi diabète",
+      status: "pending",
+    },
+    {
+      id: 3,
+      patient: "Fatoumata Sow",
+      time: "14:00",
+      reason: "Douleurs dorsales",
+      status: "accepted",
+    },
+    {
+      id: 4,
+      patient: "Issa Sylla",
+      time: "16:00",
+      reason: "Bilan de santé",
+      status: "rejected",
+    },
   ],
   "2025-03-18": [
-    { id: 5, patient: "Amara konaté", time: "08:30", reason: "Examen annuel", status: "pending" },
-    { id: 6, patient: "Papa touré", time: "11:00", reason: "Suivi hypertension", status: "pending" },
+    {
+      id: 5,
+      patient: "Amara konaté",
+      time: "08:30",
+      reason: "Examen annuel",
+      status: "pending",
+    },
+    {
+      id: 6,
+      patient: "Papa touré",
+      time: "11:00",
+      reason: "Suivi hypertension",
+      status: "pending",
+    },
   ],
   "2025-03-19": [
-    { id: 7, patient: "Penda Diarra", time: "09:45", reason: "Consultation pédiatrique", status: "pending" },
-    { id: 8, patient: "Massiré Dramé", time: "13:00", reason: "Allergies saisonnières", status: "accepted" },
+    {
+      id: 7,
+      patient: "Penda Diarra",
+      time: "09:45",
+      reason: "Consultation pédiatrique",
+      status: "pending",
+    },
+    {
+      id: 8,
+      patient: "Massiré Dramé",
+      time: "13:00",
+      reason: "Allergies saisonnières",
+      status: "accepted",
+    },
   ],
 };
+
 export const patientReviews = [
-  { id: 1, patient: "Sophie Martin", rating: 5, comment: "Excellent médecin, très à l'écoute." },
-  { id: 2, patient: "David Garcia", rating: 4, comment: "Consultation efficace, je recommande." },
-  { id: 3, patient: "Laura Dubois", rating: 5, comment: "Très satisfaite de la prise en charge." },
+  {
+    id: 1,
+    patient: "Sophie Martin",
+    rating: 5,
+    comment: "Excellent médecin, très à l'écoute.",
+  },
+  {
+    id: 2,
+    patient: "David Garcia",
+    rating: 4,
+    comment: "Consultation efficace, je recommande.",
+  },
+  {
+    id: 3,
+    patient: "Laura Dubois",
+    rating: 5,
+    comment: "Très satisfaite de la prise en charge.",
+  },
 ];
+
 export const revenueData = [
   { month: "Jan", revenue: 12000 },
   { month: "Fév", revenue: 15000 },
@@ -390,9 +456,29 @@ export const pendingAppointments = [
 
 export const patientData = {
   recentActivity: [
-    { type: "appointment", description: "Consultation avec Mme. Dupont", date: new Date(2024, 2, 12, 10, 0) },
-    { type: "medication", description: "Prescription de Levothyrox", date: new Date(2024, 2, 11, 14, 30) },
-    { type: "test", description: "Résultats d'analyse de sang", date: new Date(2024, 2, 10, 9, 15) },
-    { type: "appointment", description: "Suivi avec M. Lemoine", date: new Date(2024, 2, 9, 16, 0) },
+    {
+      type: "appointment",
+      description: "Consultation avec Mme. Dupont",
+      date: new Date(2024, 2, 12, 10, 0),
+    },
+    {
+      type: "medication",
+      description: "Prescription de Levothyrox",
+      date: new Date(2024, 2, 11, 14, 30),
+    },
+    {
+      type: "test",
+      description: "Résultats d'analyse de sang",
+      date: new Date(2024, 2, 10, 9, 15),
+    },
+    {
+      type: "appointment",
+      description: "Suivi avec M. Lemoine",
+      date: new Date(2024, 2, 9, 16, 0),
+    },
   ],
 };
+
+export const primaryContactNumber = "+33 7 53 92 77 21";
+export const secondaryContactNumber = "+223 73 81 00 23";
+export const contactEmail = "contact@miticsarlml.com";

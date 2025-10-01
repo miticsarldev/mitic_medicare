@@ -380,6 +380,7 @@ export default function ProfilePage() {
                 <AvatarImage
                   src={avatarPreview || "/placeholder.svg?height=128&width=128"}
                   alt="Photo de profil"
+                  className="object-contain"
                 />
                 <AvatarFallback className="text-4xl">
                   {profileData?.name

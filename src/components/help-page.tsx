@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  ChevronRight,
-  Phone,
-  Mail,
-  MessageSquare,
-  FileQuestion,
-  Clock,
-} from "lucide-react";
+import { ChevronRight, Mail, MessageSquare, FileQuestion } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +26,12 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { SiWhatsapp } from "react-icons/si";
+import {
+  contactEmail,
+  primaryContactNumber,
+  secondaryContactNumber,
+} from "@/constant";
 
 export default function HelpCenterComponent() {
   const [loading, setLoading] = useState(false);
@@ -192,7 +191,7 @@ export default function HelpCenterComponent() {
               },
               {
                 icon: <MessageSquare className="h-8 w-8 text-primary" />,
-                title: "Support en ligne",
+                title: "Formulaire de contact",
                 description:
                   "Discutez avec notre équipe de support en temps réel",
                 link: "#contact",
@@ -501,18 +500,18 @@ export default function HelpCenterComponent() {
             >
               {[
                 {
-                  icon: <Phone className="h-6 w-6 text-primary" />,
-                  title: "Par téléphone",
+                  icon: <SiWhatsapp className="h-6 w-6 text-primary" />,
+                  title: "Par Whatsapp",
                   description:
                     "Notre équipe de support est disponible du lundi au vendredi, de 8h à 18h",
-                  info: "+223 77 77 77 77",
+                  info: `${primaryContactNumber} / ${secondaryContactNumber}`,
                 },
                 {
                   icon: <Mail className="h-6 w-6 text-primary" />,
                   title: "Par email",
                   description:
                     "Envoyez-nous un email et nous vous répondrons dans les 24 heures",
-                  info: "support@miticsarlml.com",
+                  info: contactEmail,
                 },
               ].map((contact, index) => (
                 <motion.div key={index} custom={index} variants={cardVariants}>
@@ -553,7 +552,8 @@ export default function HelpCenterComponent() {
               viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1">
+                {/* Left: Contact form */}
                 <motion.div
                   initial={{ opacity: 0, x: -30 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -564,8 +564,10 @@ export default function HelpCenterComponent() {
                     Envoyez-nous un message
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    Remplissez le formulaire ci-dessous et nous vous répondrons
-                    dans les plus brefs délais
+                    Notre équipe de support est disponible{" "}
+                    <span className="font-semibold">24h/24 et 7j/7</span>.
+                    Remplissez le formulaire ci-dessous, nous vous répondrons
+                    dans les meilleurs délais.
                   </p>
 
                   <form className="space-y-4" onSubmit={handleSubmit}>
@@ -648,8 +650,8 @@ export default function HelpCenterComponent() {
                         onChange={handleChange}
                         rows={5}
                         className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="Décrivez votre problème en détail..."
-                      ></Textarea>
+                        placeholder="Décrivez votre demande en détail..."
+                      />
                     </motion.div>
 
                     <motion.div
@@ -669,78 +671,6 @@ export default function HelpCenterComponent() {
                       </Button>
                     </motion.div>
                   </form>
-                </motion.div>
-
-                <motion.div
-                  className="flex flex-col justify-center"
-                  initial={{ opacity: 0, x: 30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                >
-                  <motion.div
-                    className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm"
-                    whileHover={{ y: -5 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <h4 className="text-xl font-semibold mb-4">
-                      Heures de support
-                    </h4>
-
-                    <motion.div
-                      className="space-y-3"
-                      initial="hidden"
-                      whileInView="visible"
-                      viewport={{ once: true }}
-                      variants={staggerContainer}
-                    >
-                      {[
-                        { day: "Lundi - Vendredi", hours: "8h - 18h" },
-                        { day: "Samedi", hours: "9h - 15h" },
-                        { day: "Dimanche", hours: "Fermé" },
-                      ].map((schedule, index) => (
-                        <motion.div
-                          key={index}
-                          variants={fadeInUp}
-                          className="flex justify-between items-center"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5 text-primary" />
-                            <span className="font-medium">{schedule.day}</span>
-                          </div>
-                          <span>{schedule.hours}</span>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-
-                    <motion.div
-                      className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700"
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.5, duration: 0.5 }}
-                    >
-                      <h4 className="text-xl font-semibold mb-4">
-                        Support d&apos;urgence
-                      </h4>
-                      <p className="text-muted-foreground mb-4">
-                        Pour les urgences techniques en dehors des heures de
-                        bureau :
-                      </p>
-                      <motion.div
-                        className="flex items-center gap-2"
-                        whileHover={{ x: 5 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 10,
-                        }}
-                      >
-                        <Phone className="h-5 w-5 text-primary" />
-                        <span className="font-medium">+223 70 00 00 00</span>
-                      </motion.div>
-                    </motion.div>
-                  </motion.div>
                 </motion.div>
               </div>
             </motion.div>

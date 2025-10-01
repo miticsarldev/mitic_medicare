@@ -395,21 +395,6 @@ export default function HospitalDoctors({ hospital }: HospitalDoctorsProps) {
                                 </Badge>
                               )}
                             </div>
-
-                            <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
-                              {doctor.user.phone && (
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />{" "}
-                                  {doctor.user.phone}
-                                </span>
-                              )}
-                              {doctor.user.email && (
-                                <span className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />{" "}
-                                  {doctor.user.email}
-                                </span>
-                              )}
-                            </div>
                           </div>
                         </div>
 

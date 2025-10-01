@@ -369,6 +369,7 @@ export default function AppointmentsPage() {
                                 `/placeholder.svg?height=48&width=48`
                               }
                               alt={appointment.doctorName}
+                              className="object-contain"
                             />
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {appointment.doctorName
@@ -646,6 +647,7 @@ export default function AppointmentsPage() {
                                 `/placeholder.svg?height=48&width=48`
                               }
                               alt={appointment.doctorName}
+                              className="object-contain"
                             />
                             <AvatarFallback className="bg-muted text-muted-foreground">
                               {appointment.doctorName

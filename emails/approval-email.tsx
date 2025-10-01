@@ -88,15 +88,14 @@ export const ApprovalEmail = ({
               <Text className="mb-2">
                 Pour toute assistance, contactez-nous à
                 <Link
-                  href="mailto:support@miticcare.com"
+                  href="mailto:contact@miticsarlml.com"
                   className="text-purple-600"
                 >
-                  {" "}
-                  support@miticcare.com
+                  contact@miticsarlml
                 </Link>
               </Text>
               <Text>
-                &copy; 2024 MITIC CARE - Hamdallaye ACI 2000, Bamako, MALI
+                &copy; 2025 MITIC CARE - Hamdallaye ACI 2000, Bamako, MALI
               </Text>
             </Section>
           </Container>

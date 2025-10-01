@@ -242,6 +242,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
             <AvatarImage
               src={patient.user.profile?.avatarUrl || "/avatar-placeholder.png"}
               alt={patient.user.name}
+              className="object-contain"
             />
             <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
               {getInitials(patient.user.name)}

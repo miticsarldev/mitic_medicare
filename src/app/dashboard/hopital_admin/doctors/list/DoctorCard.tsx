@@ -1,19 +1,36 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import {
-  Card, CardHeader, CardTitle, CardContent, CardFooter,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
 } from "@/components/ui/card";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
-  MoreVertical, Star, Phone, CheckCircle,
-   Briefcase, BookOpen, User, Calendar,
-   Mail,
+  MoreVertical,
+  Star,
+  Phone,
+  CheckCircle,
+  Briefcase,
+  BookOpen,
+  User,
+  Calendar,
+  Mail,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,9 +72,15 @@ interface DoctorCardProps {
   onChangeStatus?: (doctorId: string, isActive: boolean) => void;
 }
 
-export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: DoctorCardProps) {
+export function DoctorCard({
+  doctor,
+  onChangeDepartment,
+  onChangeStatus,
+}: DoctorCardProps) {
   const [showDetails, setShowDetails] = useState(false);
-  const [weeklySlots, setWeeklySlots] = useState<{ day: string; slot: string; taken: boolean }[]>([]);
+  const [weeklySlots, setWeeklySlots] = useState<
+    { day: string; slot: string; taken: boolean }[]
+  >([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   useEffect(() => {
@@ -65,12 +88,13 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
       setLoadingSlots(true);
       getDoctorSlotsWithTakenStatus(doctor.id)
         .then((data) => {
-          const transformedSlots = Object.entries(data).flatMap(([day, { all, taken }]) =>
-            all.map((slot) => ({
-              day,
-              slot,
-              taken: taken.includes(slot),
-            }))
+          const transformedSlots = Object.entries(data).flatMap(
+            ([day, { all, taken }]) =>
+              all.map((slot) => ({
+                day,
+                slot,
+                taken: taken.includes(slot),
+              }))
           );
           setWeeklySlots(transformedSlots);
         })
@@ -97,10 +121,17 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 {doctor.avatarUrl ? (
-                  <AvatarImage src={doctor.avatarUrl} alt={doctor.name} />
+                  <AvatarImage
+                    src={doctor.avatarUrl}
+                    alt={doctor.name}
+                    className="object-contain"
+                  />
                 ) : (
                   <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                    {doctor.name.split(' ').map(n => n[0]).join('')}
+                    {doctor.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
                   </AvatarFallback>
                 )}
               </Avatar>
@@ -160,7 +191,9 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4 text-yellow-500" />
             <span>{doctor.averageRating.toFixed(1)}</span>
-            <span className="text-muted-foreground text-xs">({doctor.patientsCount} patients)</span>
+            <span className="text-muted-foreground text-xs">
+              ({doctor.patientsCount} patients)
+            </span>
           </div>
         </CardContent>
 
@@ -186,10 +219,17 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
             <div className="flex items-start gap-4">
               <Avatar className="h-14 w-14">
                 {doctor.avatarUrl ? (
-                  <AvatarImage src={doctor.avatarUrl} alt={doctor.name} />
+                  <AvatarImage
+                    src={doctor.avatarUrl}
+                    alt={doctor.name}
+                    className="object-contain"
+                  />
                 ) : (
                   <AvatarFallback className="bg-primary/10 text-primary font-medium text-xl">
-                    {doctor.name.split(' ').map(n => n[0]).join('')}
+                    {doctor.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
                   </AvatarFallback>
                 )}
               </Avatar>
@@ -197,7 +237,10 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                 <DialogTitle className="text-xl flex items-center gap-2">
                   {doctor.name}
                   {doctor.isVerified && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       <CheckCircle className="h-3 w-3" />
                       Vérifié
                     </Badge>
@@ -229,27 +272,35 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Coordonnées</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                      Coordonnées
+                    </h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                         <Phone className="h-5 w-5 text-primary" />
                         <span>{doctor.phone}</span>
                       </div>
                       <div className="flex items-start gap-3">
-                          <Mail className="h-5 w-5 text-primary mt-0.5" />
-                          <span>{doctor.email}</span>
-                        </div>
+                        <Mail className="h-5 w-5 text-primary mt-0.5" />
+                        <span>{doctor.email}</span>
+                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Statistiques</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                      Statistiques
+                    </h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                         <Star className="h-5 w-5 text-yellow-500" />
                         <div>
-                          <span className="font-medium">{doctor.averageRating.toFixed(1)}</span>
-                          <span className="text-muted-foreground text-sm ml-2">({doctor.patientsCount} patients)</span>
+                          <span className="font-medium">
+                            {doctor.averageRating.toFixed(1)}
+                          </span>
+                          <span className="text-muted-foreground text-sm ml-2">
+                            ({doctor.patientsCount} patients)
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -259,20 +310,28 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                 <div className="space-y-3">
                   {doctor.education && (
                     <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-1">Formation</h4>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                        Formation
+                      </h4>
                       <div className="flex items-start gap-3">
                         <BookOpen className="h-5 w-5 text-primary mt-0.5" />
-                        <p className="whitespace-pre-line">{doctor.education}</p>
+                        <p className="whitespace-pre-line">
+                          {doctor.education}
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {doctor.experience && (
                     <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-1">Expérience</h4>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                        Expérience
+                      </h4>
                       <div className="flex items-start gap-3">
                         <Briefcase className="h-5 w-5 text-primary mt-0.5" />
-                        <p className="whitespace-pre-line">{doctor.experience}</p>
+                        <p className="whitespace-pre-line">
+                          {doctor.experience}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -296,27 +355,33 @@ export function DoctorCard({ doctor, onChangeDepartment, onChangeStatus }: Docto
                 </div>
               ) : weeklySlots.length > 0 ? (
                 <div className="space-y-4">
-                  {Array.from(new Set(weeklySlots.map(s => s.day))).map(day => (
-                    <div key={day} className="space-y-2">
-                      <h4 className="font-medium">{frenchDayNames[day] || day}</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {weeklySlots
-                          .filter(slot => slot.day === day)
-                          .map(slot => (
-                            <Badge
-                              key={slot.slot}
-                              variant={slot.taken ? "secondary" : "default"}
-                              className="px-3 py-1 rounded-full"
-                            >
-                              {slot.slot}
-                              {slot.taken && (
-                                <span className="ml-1 text-xs opacity-70">(occupé)</span>
-                              )}
-                            </Badge>
-                          ))}
+                  {Array.from(new Set(weeklySlots.map((s) => s.day))).map(
+                    (day) => (
+                      <div key={day} className="space-y-2">
+                        <h4 className="font-medium">
+                          {frenchDayNames[day] || day}
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {weeklySlots
+                            .filter((slot) => slot.day === day)
+                            .map((slot) => (
+                              <Badge
+                                key={slot.slot}
+                                variant={slot.taken ? "secondary" : "default"}
+                                className="px-3 py-1 rounded-full"
+                              >
+                                {slot.slot}
+                                {slot.taken && (
+                                  <span className="ml-1 text-xs opacity-70">
+                                    (occupé)
+                                  </span>
+                                )}
+                              </Badge>
+                            ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

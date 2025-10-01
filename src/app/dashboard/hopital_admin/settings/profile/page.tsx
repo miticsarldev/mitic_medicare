@@ -325,6 +325,7 @@ export default function ProfilePage() {
                 <AvatarImage
                   src={avatarPreview || "/placeholder.svg?height=96&width=96"}
                   alt="Avatar"
+                  className="object-contain"
                 />
                 <AvatarFallback className="text-xl">{initials}</AvatarFallback>
               </Avatar>

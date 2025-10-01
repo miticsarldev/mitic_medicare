@@ -2,6 +2,14 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { average, parseExperienceYears } from "@/config/search.helpers";
+import {
+  FILTERS_BY_TYPE,
+  type AllowedType,
+  type DoctorSortBy,
+  type HospitalSortBy,
+  type DepartmentSortBy,
+} from "@/config/filters.config";
 import {
   DepartmentWithDetails,
   HospitalWithDetails,
@@ -10,14 +18,13 @@ import {
 } from "@/types/ui-actions.types";
 
 export type SearchFilters = {
-  type: "doctor" | "hospital" | "department";
+  type: AllowedType;
   query?: string;
   specialization?: string;
   city?: string;
-  minRating?: number;
-  gender?: string;
-  availability?: string;
-  experience?: string;
+  minRating?: number; // average rating (post-filter)
+  gender?: "MALE" | "FEMALE";
+  experience?: string; // you store it as text; we keep it text for query, parse to number only for sorting
   sortBy?: string;
   page?: number;
   limit?: number;
@@ -31,10 +38,18 @@ export type SearchResults = {
   facets: {
     specializations: { name: string; count: number }[];
     cities: { name: string; count: number }[];
-    ratings: { value: number; count: number }[];
+    ratings: { value: number; count: number }[]; // (reserved; can be filled later)
     genders: { value: string; count: number }[];
     experienceLevels: { value: string; count: number }[];
   };
+};
+
+export type SearchParams = {
+  query: string;
+  type: "doctor" | "hospital" | "department";
+  specialization?: string;
+  city?: string;
+  limit?: number;
 };
 
 export async function searchHealthcare(
@@ -53,6 +68,14 @@ export async function searchHealthcare(
     limit = 10,
   } = filters;
 
+  const skip = (page - 1) * limit;
+
+  // validate sortBy for the selected type
+  const allowedSorts = FILTERS_BY_TYPE[type].sortBy as readonly string[];
+  const sort: string | undefined = allowedSorts.includes(sortBy ?? "")
+    ? (sortBy as string)
+    : undefined;
+
   let doctors: any[] = [];
   let hospitals: any[] = [];
   let departments: any[] = [];
@@ -66,25 +89,18 @@ export async function searchHealthcare(
     experienceLevels: [],
   };
 
-  const skip = (page - 1) * limit;
-
   try {
     if (type === "doctor") {
-      // Build doctor filters
-      const doctorFilters: any = {
+      // WHERE
+      const where: any = {
         AND: [
-          // Search by name if query is provided
           query
             ? {
                 user: {
-                  name: {
-                    contains: query,
-                    mode: "insensitive",
-                  },
+                  name: { contains: query, mode: "insensitive" },
                 },
               }
             : {},
-          // Filter by specialization if provided
           specialization && specialization !== "all"
             ? {
                 specialization: {
@@ -93,364 +109,300 @@ export async function searchHealthcare(
                 },
               }
             : {},
-          // Filter by city if provided
           city && city !== "all"
             ? {
                 OR: [
                   {
                     user: {
                       profile: {
-                        city: {
-                          contains: city,
-                          mode: "insensitive",
-                        },
+                        city: { contains: city, mode: "insensitive" },
                       },
                     },
                   },
                   {
-                    hospital: {
-                      city: {
-                        contains: city,
-                        mode: "insensitive",
-                      },
-                    },
+                    hospital: { city: { contains: city, mode: "insensitive" } },
                   },
                 ],
               }
             : {},
-          // Filter by gender if provided
-          gender && gender !== "all"
-            ? {
-                user: {
-                  profile: {
-                    genre: gender,
-                  },
-                },
-              }
-            : {},
-          // Filter by experience if provided
+          gender ? { user: { profile: { genre: gender } } } : {},
           experience && experience !== "all"
-            ? {
-                experience: {
-                  contains: experience,
-                  mode: "insensitive",
-                },
-              }
+            ? { experience: { contains: experience, mode: "insensitive" } }
             : {},
-          // Only include verified doctors
-          {
-            isVerified: true,
-          },
+          { isVerified: true },
         ],
       };
 
-      // Determine sort order
-      let orderBy: any = {
-        user: {
-          name: "asc",
-        },
-      };
+      // ORDER BY
+      // Many sorts can be done in SQL. For avg rating & review count we can use relation aggregates.
+      let orderBy: any = { user: { name: "asc" } }; // default
 
-      if (sortBy === "rating_high") {
-        // We'll handle this after fetching since it's calculated
-      } else if (sortBy === "price_low") {
-        orderBy = {
-          consultationFee: "asc",
-        };
-      } else if (sortBy === "price_high") {
-        orderBy = {
-          consultationFee: "desc",
-        };
-      } else if (sortBy === "experience_high") {
-        orderBy = {
-          experience: "desc",
-        };
+      switch (sort as DoctorSortBy | undefined) {
+        case "name_az":
+          orderBy = { user: { name: "asc" } };
+          break;
+        case "experience_high":
+          // experience is TEXT => fallback: order by createdAt desc in SQL, then final JS sort by parsed years
+          orderBy = { createdAt: "desc" };
+          break;
+        case "fee_low":
+          orderBy = { consultationFee: "asc" };
+          break;
+        case "fee_high":
+          orderBy = { consultationFee: "desc" };
+          break;
+        case "reviews_high":
+          orderBy = { reviews: { _count: "desc" } };
+          break;
+        case "rating_high":
+          // Prisma supports relation aggregate orderBy on numeric fields:
+          // orderBy: { reviews: { _avg: { rating: 'desc' } } }
+          orderBy = { reviews: { _avg: { rating: "desc" } } };
+          break;
+        case "recently_added":
+          orderBy = { createdAt: "desc" };
+          break;
+        default:
+          // keep default
+          break;
       }
 
-      // Count total results
-      totalCount = await prisma.doctor.count({
-        where: doctorFilters,
-      });
+      totalCount = await prisma.doctor.count({ where });
 
-      // Fetch doctors
-      doctors = await prisma.doctor.findMany({
-        where: doctorFilters,
+      const rows = await prisma.doctor.findMany({
+        where,
         include: {
-          user: {
-            include: {
-              profile: true,
-            },
-          },
+          user: { include: { profile: true } },
           hospital: true,
           department: true,
-          availabilities: true,
-          reviews: true,
+          reviews: { select: { rating: true } },
         },
         orderBy,
         skip,
         take: limit,
       });
 
-      // Calculate average rating for each doctor
-      doctors = doctors.map((doctor) => {
-        const ratings = doctor.reviews.map((r) => r.rating);
-        const doctorReviews = doctor.reviews.length;
-        const avgRating =
-          ratings.length > 0
-            ? ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length
-            : 0;
-
-        return {
-          ...doctor,
-          avgRating,
-          doctorReviews,
-          experience: doctor.experience ?? undefined,
-        };
+      // compute avgRating & numeric experience for downstream sorting/filtering
+      let computed = rows.map((d) => {
+        const ratings = d.reviews.map((r) => r.rating);
+        const avgRating = average(ratings);
+        const expYears = parseExperienceYears(d.experience ?? undefined);
+        return { ...d, avgRating, expYears, reviewCount: ratings.length };
       });
 
-      // Sort by rating if requested
-      if (sortBy === "rating_high") {
-        doctors.sort((a, b) => b.avgRating - a.avgRating);
-      }
-
-      // Filter by minimum rating if provided
+      // post-filter by min average rating (cannot reliably do in SQL)
       if (minRating) {
-        doctors = doctors.filter((doctor) => doctor.avgRating >= minRating);
+        computed = computed.filter((d) => d.avgRating >= minRating);
       }
 
-      // Get facets (for filters)
-      // Specializations facet
+      // final JS sort for the cases that need computed values (experience_high if text)
+      if (sort === "experience_high") {
+        computed.sort((a, b) => b.expYears - a.expYears);
+      }
+
+      doctors = computed;
+
+      // FACETS
       const specializationFacets = await prisma.doctor.groupBy({
         by: ["specialization"],
-        where: {
-          specialization: {
-            not: "",
-          },
-          isVerified: true,
-        },
-        _count: {
-          id: true,
-        },
+        where: { isVerified: true, specialization: { not: "" } },
+        _count: { _all: true },
       });
 
       facets.specializations = specializationFacets
-        .filter((f) => f.specialization !== null)
+        .filter((f) => f.specialization)
         .map((f) => ({
           name: f.specialization as string,
-          count: f._count.id,
+          count: f._count._all,
         }))
         .sort((a, b) => b.count - a.count);
 
-      // Cities facet
       const cityFacets = await prisma.hospital.groupBy({
         by: ["city"],
-        where: {
-          city: {
-            not: "",
-          },
-        },
-        _count: {
-          id: true,
-        },
+        where: { isVerified: true, city: { not: "" } },
+        _count: { _all: true },
       });
-
       facets.cities = cityFacets
-        .filter((f) => f.city !== null)
-        .map((f) => ({
-          name: f.city as string,
-          count: f._count.id,
-        }))
+        .filter((f) => f.city)
+        .map((f) => ({ name: f.city as string, count: f._count._all }))
         .sort((a, b) => b.count - a.count);
 
-      // Gender facets
       const genderFacets = await prisma.userProfile.groupBy({
         by: ["genre"],
-        where: {
-          user: {
-            doctor: {
-              isVerified: true,
-            },
-          },
-        },
-        _count: {
-          id: true,
-        },
+        where: { user: { doctor: { isVerified: true } } },
+        _count: { _all: true },
       });
-
       facets.genders = genderFacets
-        .filter((f) => f.genre !== null)
-        .map((f) => ({
-          value: f.genre!,
-          count: f._count.id,
-        }));
+        .filter((f) => f.genre)
+        .map((f) => ({ value: f.genre as string, count: f._count._all }));
 
-      // Experience levels facet (simplified)
+      // (Optional static buckets)
       facets.experienceLevels = [
         { value: "1-5", count: 0 },
         { value: "5-10", count: 0 },
         { value: "10+", count: 0 },
       ];
-    } else if (type === "hospital") {
-      // Hospital filters
-      const hospitalFilters: any = {
+    }
+
+    if (type === "hospital") {
+      const where: any = {
         AND: [
-          // Search by name if query is provided
           query
             ? {
-                name: {
-                  contains: query,
-                  mode: "insensitive",
-                },
+                OR: [
+                  { name: { contains: query, mode: "insensitive" } },
+                  { description: { contains: query, mode: "insensitive" } },
+                ],
               }
             : {},
-          // Filter by city if provided
           city && city !== "all"
-            ? {
-                city: {
-                  contains: city,
-                  mode: "insensitive",
-                },
-              }
+            ? { city: { contains: city, mode: "insensitive" } }
             : {},
-          // Only include verified hospitals
-          {
-            isVerified: true,
-          },
+          { isVerified: true },
         ],
       };
 
-      // Count total results
-      totalCount = await prisma.hospital.count({
-        where: hospitalFilters,
-      });
+      let orderBy: any = { name: "asc" };
 
-      // Fetch hospitals
-      hospitals = await prisma.hospital.findMany({
-        where: hospitalFilters,
+      switch (sort as HospitalSortBy | undefined) {
+        case "name_az":
+          orderBy = { name: "asc" };
+          break;
+        case "rating_high":
+          orderBy = { reviews: { _avg: { rating: "desc" } } };
+          break;
+        case "reviews_high":
+          orderBy = { reviews: { _count: "desc" } };
+          break;
+        case "doctors_high":
+          orderBy = { doctors: { _count: "desc" } };
+          break;
+        case "departments_high":
+          orderBy = { departments: { _count: "desc" } };
+          break;
+        case "recently_added":
+          orderBy = { createdAt: "desc" };
+          break;
+        default:
+          break;
+      }
+
+      totalCount = await prisma.hospital.count({ where });
+
+      const rows = await prisma.hospital.findMany({
+        where,
         include: {
-          departments: true,
-          doctors: {
-            include: {
-              user: true,
-            },
-            where: {
-              isVerified: true,
-            },
-          },
+          departments: { select: { id: true } },
+          doctors: { where: { isVerified: true }, select: { id: true } },
+          reviews: { select: { rating: true } },
         },
-        orderBy: {
-          name: "asc",
-        },
+        orderBy,
         skip,
         take: limit,
       });
 
-      // Get facets for hospitals
-      const cityFacets = await prisma.hospital.groupBy({
-        by: ["city"],
-        where: {
-          city: {
-            not: "",
-          },
-          isVerified: true,
-        },
-        _count: {
-          id: true,
-        },
+      hospitals = rows.map((h) => {
+        const ratings = h.reviews.map((r) => r.rating);
+        const avgRating = average(ratings);
+        return {
+          ...h,
+          avgRating,
+          reviewCount: ratings.length,
+          doctorsCount: h.doctors.length,
+          departmentsCount: h.departments.length,
+        };
       });
 
+      const cityFacets = await prisma.hospital.groupBy({
+        by: ["city"],
+        where: { isVerified: true, city: { not: "" } },
+        _count: { _all: true },
+      });
       facets.cities = cityFacets
-        .filter((f) => f.city !== null)
-        .map((f) => ({
-          name: f.city as string,
-          count: f._count.id,
-        }))
+        .filter((f) => f.city)
+        .map((f) => ({ name: f.city as string, count: f._count._all }))
         .sort((a, b) => b.count - a.count);
-    } else if (type === "department") {
-      // Department filters
-      const departmentFilters: any = {
+
+      // (Optional placeholders)
+      facets.genders = [];
+      facets.experienceLevels = [];
+    }
+
+    if (type === "department") {
+      const where: any = {
         AND: [
-          // Search by name if query is provided
-          query
-            ? {
-                name: {
-                  contains: query,
-                  mode: "insensitive",
-                },
-              }
-            : {},
-          // Filter by hospital city if city is provided
+          query ? { name: { contains: query, mode: "insensitive" } } : {},
           city && city !== "all"
             ? {
                 hospital: {
-                  city: {
-                    contains: city,
-                    mode: "insensitive",
-                  },
+                  city: { contains: city, mode: "insensitive" },
+                  isVerified: true,
                 },
               }
-            : {},
+            : { hospital: { isVerified: true } },
         ],
       };
 
-      // Count total results
-      totalCount = await prisma.department.count({
-        where: departmentFilters,
-      });
+      let orderBy: any = { name: "asc" };
 
-      // Fetch departments
-      departments = await prisma.department.findMany({
-        where: departmentFilters,
+      switch (sort as DepartmentSortBy | undefined) {
+        case "name_az":
+          orderBy = { name: "asc" };
+          break;
+        case "doctors_high":
+          orderBy = { doctors: { _count: "desc" } };
+          break;
+        case "hospital_az":
+          orderBy = { hospital: { name: "asc" } };
+          break;
+        case "recently_added":
+          orderBy = { createdAt: "desc" };
+          break;
+        default:
+          break;
+      }
+
+      totalCount = await prisma.department.count({ where });
+
+      const rows = await prisma.department.findMany({
+        where,
         include: {
           hospital: true,
           doctors: {
-            include: {
-              user: true,
-            },
-            where: {
-              isVerified: true,
-            },
+            where: { isVerified: true },
+            select: { id: true, reviews: { select: { rating: true } } },
           },
         },
-        orderBy: {
-          name: "asc",
-        },
+        orderBy,
         skip,
         take: limit,
       });
 
-      // Get facets for departments
-      const cityFacets = await prisma.hospital.groupBy({
-        by: ["city"],
-        where: {
-          city: {
-            not: "",
-          },
-          isVerified: true,
-        },
-        _count: {
-          id: true,
-        },
+      departments = rows.map((d) => {
+        const allRatings = d.doctors.flatMap((doc) =>
+          doc.reviews.map((r) => r.rating)
+        );
+        const avgRating = average(allRatings);
+        return { ...d, doctorsCount: d.doctors.length, avgRating };
       });
 
+      const cityFacets = await prisma.hospital.groupBy({
+        by: ["city"],
+        where: { isVerified: true, city: { not: "" } },
+        _count: { _all: true },
+      });
       facets.cities = cityFacets
-        .filter((f) => f.city !== null)
-        .map((f) => ({
-          name: f.city as string,
-          count: f._count.id,
-        }))
+        .filter((f) => f.city)
+        .map((f) => ({ name: f.city as string, count: f._count._all }))
         .sort((a, b) => b.count - a.count);
+
+      facets.genders = [];
+      facets.experienceLevels = [];
     }
 
-    return {
-      doctors,
-      hospitals,
-      departments,
-      totalCount,
-      facets,
-    };
-  } catch (error) {
-    console.error("Error searching healthcare:", error);
+    return { doctors, hospitals, departments, totalCount, facets };
+  } catch (e) {
+    console.error("searchHealthcare error:", e);
     return {
       doctors: [],
       hospitals: [],
@@ -467,13 +419,135 @@ export async function searchHealthcare(
   }
 }
 
-export type SearchParams = {
-  query: string;
-  type: "doctor" | "hospital" | "department";
-  specialization?: string;
-  city?: string;
-  limit?: number;
-};
+// Get all cities for dropdown
+export async function getCities(): Promise<string[]> {
+  try {
+    // Get cities from hospitals
+    const hospitalCities = await prisma.hospital.findMany({
+      select: {
+        city: true,
+      },
+      distinct: ["city"],
+      where: {
+        city: {
+          not: "",
+        },
+      },
+    });
+
+    // Get cities from user profiles
+    const profileCities = await prisma.userProfile.findMany({
+      select: {
+        city: true,
+      },
+      distinct: ["city"],
+      where: {
+        city: {
+          not: null,
+        },
+      },
+    });
+
+    // Combine and deduplicate
+    const allCities = [
+      ...hospitalCities.map((h) => h.city),
+      ...profileCities.map((p) => p.city),
+    ].filter((city): city is string => city !== null);
+
+    // Remove duplicates and sort
+    return Array.from(new Set(allCities)).sort();
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    return [];
+  }
+}
+
+// Get top doctors
+export async function getTopDoctors(limit: number = 6): Promise<TopDoctor[]> {
+  const doctors = await prisma.doctor.findMany({
+    where: {
+      user: {
+        isActive: true,
+        isApproved: true,
+      },
+    },
+    select: {
+      id: true,
+      specialization: true,
+      experience: true,
+      user: {
+        select: {
+          name: true,
+          isApproved: true,
+          profile: {
+            select: {
+              avatarUrl: true,
+              genre: true,
+              city: true,
+            },
+          },
+        },
+      },
+      reviews: {
+        select: {
+          rating: true,
+        },
+      },
+    },
+  });
+
+  const doctorsWithRatings = doctors
+    .map((doctor) => {
+      const ratings = doctor.reviews.map((r) => r.rating);
+      const avgRating =
+        ratings.length > 0
+          ? ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length
+          : 0;
+
+      return {
+        id: doctor.id,
+        name: doctor.user.name,
+        specialization: doctor.specialization,
+        avatarUrl: doctor.user.profile?.avatarUrl || null,
+        isVerified: doctor.user?.isApproved,
+        rating: Math.round(avgRating),
+        reviews: ratings.length,
+        genre: doctor.user?.profile?.genre ?? null,
+        city: doctor.user.profile?.city,
+        experience: doctor.experience,
+      };
+    })
+    .filter((doctor) => doctor.reviews > 0)
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, limit);
+
+  return doctorsWithRatings;
+}
+
+// Get all specializations for dropdown
+export async function getSpecializations(): Promise<string[]> {
+  try {
+    const specializations = await prisma.doctor.findMany({
+      select: {
+        specialization: true,
+      },
+      distinct: ["specialization"],
+      where: {
+        specialization: {
+          not: "",
+        },
+      },
+    });
+
+    return specializations
+      .map((s) => s.specialization)
+      .filter((s): s is string => s !== null)
+      .sort();
+  } catch (error) {
+    console.error("Error fetching specializations:", error);
+    return [];
+  }
+}
 
 export async function searchHealthcareItems(params: SearchParams) {
   const { query, type, specialization, city, limit = 10 } = params;
@@ -612,136 +686,6 @@ export async function searchHealthcareItems(params: SearchParams) {
     console.error("Search error:", error);
     throw new Error("Failed to perform search");
   }
-}
-
-// Get all specializations for dropdown
-export async function getSpecializations(): Promise<string[]> {
-  try {
-    const specializations = await prisma.doctor.findMany({
-      select: {
-        specialization: true,
-      },
-      distinct: ["specialization"],
-      where: {
-        specialization: {
-          not: "",
-        },
-      },
-    });
-
-    return specializations
-      .map((s) => s.specialization)
-      .filter((s): s is string => s !== null)
-      .sort();
-  } catch (error) {
-    console.error("Error fetching specializations:", error);
-    return [];
-  }
-}
-
-// Get all cities for dropdown
-export async function getCities(): Promise<string[]> {
-  try {
-    // Get cities from hospitals
-    const hospitalCities = await prisma.hospital.findMany({
-      select: {
-        city: true,
-      },
-      distinct: ["city"],
-      where: {
-        city: {
-          not: "",
-        },
-      },
-    });
-
-    // Get cities from user profiles
-    const profileCities = await prisma.userProfile.findMany({
-      select: {
-        city: true,
-      },
-      distinct: ["city"],
-      where: {
-        city: {
-          not: null,
-        },
-      },
-    });
-
-    // Combine and deduplicate
-    const allCities = [
-      ...hospitalCities.map((h) => h.city),
-      ...profileCities.map((p) => p.city),
-    ].filter((city): city is string => city !== null);
-
-    // Remove duplicates and sort
-    return Array.from(new Set(allCities)).sort();
-  } catch (error) {
-    console.error("Error fetching cities:", error);
-    return [];
-  }
-}
-
-// Get top doctors
-export async function getTopDoctors(limit: number = 6): Promise<TopDoctor[]> {
-  const doctors = await prisma.doctor.findMany({
-    where: {
-      user: {
-        isActive: true,
-        isApproved: true,
-      },
-    },
-    select: {
-      id: true,
-      specialization: true,
-      experience: true,
-      user: {
-        select: {
-          name: true,
-          isApproved: true,
-          profile: {
-            select: {
-              avatarUrl: true,
-              genre: true,
-              city: true,
-            },
-          },
-        },
-      },
-      reviews: {
-        select: {
-          rating: true,
-        },
-      },
-    },
-  });
-
-  const doctorsWithRatings = doctors
-    .map((doctor) => {
-      const ratings = doctor.reviews.map((r) => r.rating);
-      const avgRating =
-        ratings.length > 0
-          ? ratings.reduce((acc, rating) => acc + rating, 0) / ratings.length
-          : 0;
-
-      return {
-        id: doctor.id,
-        name: doctor.user.name,
-        specialization: doctor.specialization,
-        avatarUrl: doctor.user.profile?.avatarUrl || null,
-        isVerified: doctor.user?.isApproved,
-        rating: Math.round(avgRating),
-        reviews: ratings.length,
-        genre: doctor.user?.profile?.genre ?? null,
-        city: doctor.user.profile?.city,
-        experience: doctor.experience,
-      };
-    })
-    .filter((doctor) => doctor.reviews > 0)
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, limit);
-
-  return doctorsWithRatings;
 }
 
 export async function getHospitalById(

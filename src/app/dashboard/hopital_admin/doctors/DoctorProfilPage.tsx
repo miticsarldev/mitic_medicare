@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import React from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +22,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AppointmentStatus } from "@prisma/client";
 
 export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
-
-
   // Get initials for avatar fallback
   const getInitials = (name: string) => {
     return name
@@ -48,7 +46,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
       default:
         return status;
     }
-  }
+  };
 
   if (!doctor) return <div className="p-4 text-center">Chargement...</div>;
 
@@ -61,10 +59,10 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
             <Avatar className="h-28 w-28 md:h-40 md:w-40 border-4 border-white dark:border-gray-800 shadow-lg">
               <AvatarImage
                 src={
-                  doctor.avatarUrl ||
-                  "/placeholder.svg?height=160&width=160"
+                  doctor.avatarUrl || "/placeholder.svg?height=160&width=160"
                 }
                 alt={doctor.name}
+                className="object-contain"
               />
               <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
                 {getInitials(doctor.name)}
@@ -75,12 +73,13 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className={`h-5 w-5 ${i < Math.floor(doctor.averageRating)
-                    ? "text-yellow-400 fill-yellow-400"
-                    : i < Math.ceil(doctor.averageRating)
-                      ? "text-yellow-400 fill-yellow-400 opacity-50"
-                      : "text-gray-300 dark:text-gray-600"
-                    }`}
+                  className={`h-5 w-5 ${
+                    i < Math.floor(doctor.averageRating)
+                      ? "text-yellow-400 fill-yellow-400"
+                      : i < Math.ceil(doctor.averageRating)
+                        ? "text-yellow-400 fill-yellow-400 opacity-50"
+                        : "text-gray-300 dark:text-gray-600"
+                  }`}
                 />
               ))}
               <span className="ml-2 text-sm font-medium">
@@ -110,7 +109,6 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                   )}
                 </div>
               </div>
-
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -120,18 +118,14 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                   <p className="text-sm font-mediumd">
                     {doctor.department?.name || ""}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Departement
-                  </p>
+                  <p className="text-xs text-muted-foreground">Departement</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-sm font-medium">
-                    {doctor.experience}
-                  </p>
+                  <p className="text-sm font-medium">{doctor.experience}</p>
                   <p className="text-xs text-muted-foreground">
                     Pratique médicale
                   </p>
@@ -149,13 +143,22 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
             <CardHeader>
               <Tabs defaultValue="about" className="w-full">
                 <TabsList className="grid grid-cols-3 w-full">
-                  <TabsTrigger value="about" className="flex items-center gap-2 justify-center">
+                  <TabsTrigger
+                    value="about"
+                    className="flex items-center gap-2 justify-center"
+                  >
                     <User2 className="w-4 h-4" /> À propos
                   </TabsTrigger>
-                  <TabsTrigger value="appointments" className="flex items-center gap-2 justify-center">
+                  <TabsTrigger
+                    value="appointments"
+                    className="flex items-center gap-2 justify-center"
+                  >
                     <Users2 className="w-4 h-4" /> Rendez-vous
                   </TabsTrigger>
-                  <TabsTrigger value="info" className="flex items-center gap-2 justify-center">
+                  <TabsTrigger
+                    value="info"
+                    className="flex items-center gap-2 justify-center"
+                  >
                     <Info className="w-4 h-4" /> Infos
                   </TabsTrigger>
                 </TabsList>
@@ -163,19 +166,27 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                 <TabsContent value="about">
                   <CardContent className="space-y-6 pt-5 text-sm text-muted-foreground">
                     <div>
-                      <h4 className="font-semibold text-base mb-1">Présentation</h4>
+                      <h4 className="font-semibold text-base mb-1">
+                        Présentation
+                      </h4>
                       <p>{doctor.bio || "Aucune biographie disponible."}</p>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-base mb-1">Département</h4>
-                      <Badge variant="secondary">{doctor.department?.name}</Badge>
+                      <h4 className="font-semibold text-base mb-1">
+                        Département
+                      </h4>
+                      <Badge variant="secondary">
+                        {doctor.department?.name}
+                      </Badge>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-base mb-1">Formation</h4>
+                      <h4 className="font-semibold text-base mb-1">
+                        Formation
+                      </h4>
                       <ul className="list-disc ml-5">
-                        {doctor.education?.split("\n").map((edu, idx) => (
-                          <li key={idx}>{edu}</li>
-                        ))}
+                        {doctor.education
+                          ?.split("\n")
+                          .map((edu, idx) => <li key={idx}>{edu}</li>)}
                       </ul>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -183,7 +194,6 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                         <Clock className="w-4 h-4" />
                         {doctor.experience} ans d&apos;expérience
                       </div>
-                      
                     </div>
                   </CardContent>
                 </TabsContent>
@@ -193,19 +203,37 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                     {doctor.appointments?.length ? (
                       <div className="max-h-[300px] overflow-y-auto space-y-4 pr-2 pt-5">
                         {doctor.appointments.map((appt) => (
-                          <Card key={appt.id} className="bg-muted/50 border p-4">
+                          <Card
+                            key={appt.id}
+                            className="bg-muted/50 border p-4"
+                          >
                             <div className="flex justify-between items-start">
                               <div>
-                                <div className="font-medium">{appt.patient.user.name}</div>
-                                <div className="text-xs text-muted-foreground">{appt.patient.user.email}</div>
+                                <div className="font-medium">
+                                  {appt.patient.user.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {appt.patient.user.email}
+                                </div>
                                 <div className="text-xs text-muted-foreground mt-1">
-                                  {new Date(appt.scheduledAt).toLocaleDateString()} - {new Date(appt.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                  {new Date(
+                                    appt.scheduledAt
+                                  ).toLocaleDateString()}{" "}
+                                  -{" "}
+                                  {new Date(
+                                    appt.scheduledAt
+                                  ).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   Motif : {appt.reason || "Aucun motif fourni."}
                                 </div>
                               </div>
-                              <Badge variant="secondary">{translateStatus(appt.status)}</Badge>
+                              <Badge variant="secondary">
+                                {translateStatus(appt.status)}
+                              </Badge>
                             </div>
                           </Card>
                         ))}
@@ -229,15 +257,18 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                     <div className="flex items-start gap-2">
                       <MapPin className="w-4 h-4 mt-0.5" />
                       <span>
-                        {doctor.address || 'Non renseignée'},<br />
+                        {doctor.address || "Non renseignée"},<br />
                         {doctor.city}, {doctor.state}, {doctor.country}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <BadgeCheck className="w-4 h-4" /> Licence : {doctor.licenseNumber}
+                      <BadgeCheck className="w-4 h-4" /> Licence :{" "}
+                      {doctor.licenseNumber}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4" /> Note moyenne : {doctor.averageRating.toFixed(1)} ({doctor.reviewsCount} avis)
+                      <Star className="w-4 h-4" /> Note moyenne :{" "}
+                      {doctor.averageRating.toFixed(1)} ({doctor.reviewsCount}{" "}
+                      avis)
                     </div>
                   </CardContent>
                 </TabsContent>

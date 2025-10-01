@@ -1,5 +1,10 @@
 import { Suspense } from "react";
-import { searchHealthcare, type SearchFilters } from "@/app/actions/ui-actions";
+import {
+  getCities,
+  getSpecializations,
+  searchHealthcare,
+  type SearchFilters,
+} from "@/app/actions/ui-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchHeader } from "./search-header";
 import { FilterSidebar } from "./filter-sidebar";
@@ -19,14 +24,14 @@ export default async function SearchPage({
   const minRating = searchParams.minRating
     ? Number(searchParams.minRating)
     : undefined;
-  const gender = searchParams.gender as string | undefined;
+  const gender = searchParams.gender as "MALE" | "FEMALE" | undefined;
   const experience = searchParams.experience as string | undefined;
   const sortBy = searchParams.sortBy as string | undefined;
   const page = searchParams.page ? Number(searchParams.page as string) : 1;
 
   const filters: SearchFilters = {
     type,
-    query: undefined,
+    query,
     specialization,
     city,
     minRating,
@@ -37,6 +42,11 @@ export default async function SearchPage({
     limit: 10,
   };
 
+  const [specializations, cities] = await Promise.all([
+    getSpecializations(),
+    getCities(),
+  ]);
+
   // Fetch search results
   const results = await searchHealthcare(filters);
 
@@ -46,15 +56,18 @@ export default async function SearchPage({
         <div className="max-w-screen-xl mx-auto">
           <Navbar />
           <SearchHeader initialQuery={query || ""} activeType={type} />
-
           <div className="w-full px-4 py-1 sm:py-2 md:py-4 mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-4">
               <Suspense
                 fallback={<Skeleton className="h-[600px] w-full rounded-xl" />}
               >
-                <FilterSidebar initialFilters={filters} />
+                <FilterSidebar
+                  key={type}
+                  initialFilters={filters}
+                  specializations={specializations}
+                  cities={cities}
+                />
               </Suspense>
-
               <div className="lg:col-span-3 space-y-4">
                 <Suspense
                   fallback={

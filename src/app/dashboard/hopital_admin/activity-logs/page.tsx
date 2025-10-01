@@ -1143,6 +1143,7 @@ export default function ActivityLogsPage() {
                       <AvatarImage
                         src={selectedLog.userAvatar}
                         alt={selectedLog.userName}
+                        className="object-contain"
                       />
                       <AvatarFallback>
                         {selectedLog.userName.charAt(0)}

@@ -3,11 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  getSpecializations,
-  getCities,
-  type SearchFilters,
-} from "../actions/ui-actions";
+import { type SearchFilters } from "../actions/ui-actions";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -24,18 +20,24 @@ import {
 } from "@/components/ui/accordion";
 import { Filter, Star, MapPin, Users, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { FILTERS_BY_TYPE } from "@/config/filters.config";
+import { labelForSort } from "@/utils/function";
 
 interface FilterSidebarProps {
   initialFilters: SearchFilters;
+  specializations: string[];
+  cities: string[];
 }
 
-export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
+export function FilterSidebar({
+  initialFilters,
+  specializations,
+  cities,
+}: FilterSidebarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<SearchFilters>(initialFilters);
-  const [specializations, setSpecializations] = useState<string[]>([]);
-  const [cities, setCities] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
   const [activeAccordions, setActiveAccordions] = useState<string[]>([
@@ -43,59 +45,78 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
     "city",
     "rating",
   ]);
+  const sortOptions = FILTERS_BY_TYPE[filters.type].sortBy as readonly string[];
 
   useEffect(() => {
-    const loadFilterOptions = async () => {
-      const specs = await getSpecializations();
-      const cityList = await getCities();
-
-      setSpecializations(specs);
-      setCities(cityList);
-    };
-
-    loadFilterOptions();
-  }, []);
-
-  useEffect(() => {
-    // Count active filters
-    let count = 0;
-    if (filters.specialization) count++;
-    if (filters.city) count++;
-    if (filters.minRating) count++;
-    if (filters.gender) count++;
-    if (filters.experience) count++;
-    if (filters.sortBy) count++;
-
+    const allowed = new Set<keyof SearchFilters>(
+      FILTERS_BY_TYPE[filters.type].fields as readonly (keyof SearchFilters)[]
+    );
+    const count = (
+      Object.entries(filters) as [keyof SearchFilters, unknown][]
+    ).filter(([k, v]) => v !== undefined && v !== "" && allowed.has(k)).length;
     setActiveFiltersCount(count);
   }, [filters]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleFilterChange = (key: keyof SearchFilters, value: any) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value === "all" ? undefined : value,
-    }));
+  useEffect(() => {
+    if (filters.type === "doctor")
+      setActiveAccordions(["specialization", "city", "rating"]);
+    if (filters.type === "hospital")
+      setActiveAccordions(["city", "rating", "sort"]);
+    if (filters.type === "department") setActiveAccordions(["city", "sort"]);
+  }, [filters.type]);
+
+  useEffect(() => {
+    setFilters(initialFilters); // <-- keep filters in sync with props (type, query, etc.)
+  }, [initialFilters]);
+
+  const handleFilterChange = (key: keyof SearchFilters, value: unknown) => {
+    setFilters((prev) => {
+      const next = { ...prev, [key]: value === "all" ? undefined : value };
+
+      if (key === "type") {
+        const nextType = value as SearchFilters["type"];
+        const allowed = new Set<keyof SearchFilters>(
+          FILTERS_BY_TYPE[nextType].fields as readonly (keyof SearchFilters)[]
+        );
+        (Object.keys(next) as Array<keyof SearchFilters>).forEach((k) => {
+          if (!["type", "query"].includes(k as string) && !allowed.has(k)) {
+            (next as Record<string, unknown>)[k as string] = undefined;
+          }
+        });
+      }
+      return next;
+    });
   };
 
   const applyFilters = () => {
     setIsLoading(true);
-
     const params = new URLSearchParams(searchParams.toString());
+    const allowedKeys = new Set<string>([
+      "type",
+      "query",
+      ...FILTERS_BY_TYPE[filters.type].fields, // this is a readonly string[] union
+    ]);
 
-    // Update params with filter values
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined) {
-        params.set(key, String(value));
-      } else {
-        params.delete(key);
-      }
+    // drop disallowed params
+    Array.from(params.keys()).forEach((k) => {
+      if (!allowedKeys.has(k)) params.delete(k);
     });
 
-    router.push(`/search?${params.toString()}`);
+    // always set type
+    params.set("type", filters.type);
 
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    // apply allowed values
+    (Object.entries(filters) as [keyof SearchFilters, unknown][]).forEach(
+      ([key, value]) => {
+        const k = String(key);
+        if (!allowedKeys.has(k)) return;
+        if (value !== undefined && value !== "") params.set(k, String(value));
+        else params.delete(k);
+      }
+    );
+
+    router.push(`/search?${params.toString()}`);
+    setTimeout(() => setIsLoading(false), 500);
   };
 
   const resetFilters = () => {
@@ -447,36 +468,17 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
               }
               className="space-y-2"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="rating_high" id="sort-rating" />
-                <Label htmlFor="sort-rating" className="cursor-pointer text-sm">
-                  Meilleure évaluation
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="price_low" id="sort-price-low" />
-                <Label
-                  htmlFor="sort-price-low"
-                  className="cursor-pointer text-sm"
-                >
-                  Prix croissant
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="price_high" id="sort-price-high" />
-                <Label
-                  htmlFor="sort-price-high"
-                  className="cursor-pointer text-sm"
-                >
-                  Prix décroissant
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="experience_high" id="sort-exp" />
-                <Label htmlFor="sort-exp" className="cursor-pointer text-sm">
-                  Plus d&apos;expérience
-                </Label>
-              </div>
+              {sortOptions.map((opt) => (
+                <div key={opt} className="flex items-center space-x-2">
+                  <RadioGroupItem value={opt} id={`sort-${opt}`} />
+                  <Label
+                    htmlFor={`sort-${opt}`}
+                    className="cursor-pointer text-sm"
+                  >
+                    {labelForSort(opt)} {/* implement your label mapping */}
+                  </Label>
+                </div>
+              ))}
             </RadioGroup>
           </AccordionContent>
         </AccordionItem>
@@ -499,6 +501,12 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
     </div>
   );
 
+  const typeLabel: Record<SearchFilters["type"], string> = {
+    doctor: "Médecins",
+    department: "Départements",
+    hospital: "Hôpitaux",
+  };
+
   // Desktop view
   return (
     <>
@@ -512,7 +520,7 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
               className="flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
-              <span>Filtres</span>
+              <span>Filtres — {typeLabel[filters.type]}</span>
               {activeFiltersCount > 0 && (
                 <Badge
                   variant="secondary"
@@ -528,7 +536,9 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
             className="w-[300px] sm:w-[400px] overflow-y-auto"
           >
             <div className="py-6">
-              <h2 className="text-lg font-semibold mb-6">Filtres</h2>
+              <h2 className="text-lg font-semibold mb-6">
+                Filtres — {typeLabel[filters.type]}
+              </h2>
               {filterContent}
             </div>
           </SheetContent>
@@ -546,7 +556,7 @@ export function FilterSidebar({ initialFilters }: FilterSidebarProps) {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Filter className="h-5 w-5" />
-                <span>Filtres</span>
+                <span>Filtres — {typeLabel[filters.type]}</span>
                 {activeFiltersCount > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {activeFiltersCount}

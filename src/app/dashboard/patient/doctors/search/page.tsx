@@ -492,8 +492,6 @@ export default function DoctorSearchPage() {
             <SelectContent>
               <SelectItem value="rating">Meilleure note</SelectItem>
               <SelectItem value="experience">Expérience</SelectItem>
-              <SelectItem value="price_low">Prix croissant</SelectItem>
-              <SelectItem value="price_high">Prix décroissant</SelectItem>
               <SelectItem value="availability">Disponibilité</SelectItem>
             </SelectContent>
           </Select>
@@ -649,6 +647,7 @@ export default function DoctorSearchPage() {
                     <AvatarImage
                       src={doctor.avatar || "/placeholder.svg"}
                       alt={doctor.name}
+                      className="object-contain"
                     />
                     <AvatarFallback>
                       {doctor.name
@@ -862,6 +861,7 @@ export default function DoctorSearchPage() {
                         <AvatarImage
                           src={selectedDoctor.avatar || "/placeholder.svg"}
                           alt={selectedDoctor.name}
+                          className="object-contain"
                         />
                         <AvatarFallback>
                           {selectedDoctor.name

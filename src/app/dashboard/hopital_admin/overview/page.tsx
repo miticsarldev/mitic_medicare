@@ -708,7 +708,11 @@ export default function HospitalAdminOverviewPage() {
                 >
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={doctor.avatar} alt={doctor.name} />
+                      <AvatarImage
+                        src={doctor.avatar}
+                        alt={doctor.name}
+                        className="object-contain"
+                      />
                       <AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>

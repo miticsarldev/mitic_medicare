@@ -168,6 +168,7 @@ export default async function AppointmentDetailPage({
                 <AvatarImage
                   src="/placeholder.svg?height=80&width=80"
                   alt={doctor.user.name}
+                  className="object-contain"
                 />
                 <AvatarFallback>
                   {doctor.user.name.substring(0, 2)}
