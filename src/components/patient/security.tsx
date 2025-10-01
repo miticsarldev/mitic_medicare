@@ -36,6 +36,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { signOut } from "next-auth/react";
 import { changePassword, deleteAccount } from "@/app/dashboard/patient/actions";
 
 const passwordFormSchema = z
@@ -89,6 +90,7 @@ export default function SecurityPage() {
         description: "Votre mot de passe a été modifié avec succès.",
       });
       form.reset();
+      signOut({ callbackUrl: "/" });
     } catch (error) {
       console.error("Error changing password:", error);
       toast({
