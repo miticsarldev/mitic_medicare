@@ -760,7 +760,7 @@ export function DashboardContent({
                           </div>
                           <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">
-                              Numéro de licence
+                              N° Ordre du Médecin
                             </span>
                             <span className="font-medium">
                               {selectedUser.doctor.licenseNumber}

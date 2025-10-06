@@ -621,7 +621,7 @@ export default function HospitalsPage() {
   }, [itemsPerPage]);
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4 p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
@@ -657,7 +657,7 @@ export default function HospitalsPage() {
 
         <TabsContent value="list" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center">
+            <CardHeader className="flex flex-row items-center p-4">
               <div className="flex-1">
                 <CardTitle>Liste des Établissements</CardTitle>
                 <CardDescription>
@@ -702,7 +702,7 @@ export default function HospitalsPage() {
                 </DropdownMenu>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>

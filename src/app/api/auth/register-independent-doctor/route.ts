@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     });
     if (existingLicenseNumber) {
       return NextResponse.json(
-        { error: "Numéro de licence déjà utilisé." },
+        { error: "N° Ordre de Médecins déjà utilisé." },
         { status: 400 }
       );
     }

@@ -120,7 +120,8 @@ export const VerificationEmailHospital = ({
                   Documents nécessaires pour la vérification :
                 </Text>
                 <Text className="text-sm text-gray-600 m-0 mb-1">
-                  • Licence d&apos;exploitation de l&apos;établissement
+                  • N° Ordre du Médecins d&apos;exploitation de
+                  l&apos;établissement
                 </Text>
                 <Text className="text-sm text-gray-600 m-0 mb-1">
                   • Numéro d&apos;enregistrement officiel

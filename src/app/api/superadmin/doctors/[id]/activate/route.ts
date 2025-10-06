@@ -1,9 +1,9 @@
-// app/api/superadmin/doctors/[id]/activate/route.ts
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   request: NextRequest,
@@ -36,6 +36,8 @@ export async function PATCH(
         },
       },
     });
+
+    revalidatePath("/dashboard/superadmin/users/doctors");
 
     return NextResponse.json({
       success: true,

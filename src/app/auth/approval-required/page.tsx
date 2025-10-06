@@ -109,9 +109,9 @@ export default function AccountUnderReview() {
           status: "in-progress",
         },
         {
-          title: "Vérification de licence",
+          title: "Vérification du N° Ordre du Médecins",
           description:
-            "Nous confirmons votre numéro de licence auprès des autorités compétentes",
+            "Nous confirmons votre N° Ordre des Médecins auprès des autorités compétentes",
           icon: <ClipboardCheck className="h-5 w-5 text-blue-600" />,
           status: "in-progress",
         },

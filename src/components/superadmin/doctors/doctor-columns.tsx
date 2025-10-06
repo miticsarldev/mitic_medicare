@@ -95,7 +95,9 @@ export function useDoctorColumns({
         cell: ({ row }) => (
           <div className="flex flex-col">
             <span className="font-medium">{row.original.user.name}</span>
-            <span>{row.original.hospital?.name}</span>
+            {row.original.hospital?.name && (
+              <span className="text-xs">{row.original.hospital.name}</span>
+            )}
             <span className="text-xs">{row.original.specialization}</span>
             <span className="text-xs text-muted-foreground">
               {row.original.user.email}
@@ -105,6 +107,42 @@ export function useDoctorColumns({
             </span>
           </div>
         ),
+      },
+      {
+        accessorKey: "profileType",
+        header: ({ column }) => (
+          <div
+            className="items-center cursor-pointer hidden md:flex"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Profil
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="hidden md:block">
+            {row.original.isIndependent ? (
+              <Badge
+                variant="outline"
+                className="border-blue-500 text-blue-600 text-xs p-1"
+              >
+                Indépendant
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="border-amber-500 text-amber-600 text-xs p-1"
+              >
+                Hôpital
+              </Badge>
+            )}
+          </div>
+        ),
+        sortingFn: (a, b) => {
+          const av = a.original.isIndependent ? 1 : 0;
+          const bv = b.original.isIndependent ? 1 : 0;
+          return av - bv;
+        },
       },
       {
         accessorKey: "location",
@@ -141,10 +179,20 @@ export function useDoctorColumns({
             {row.original.isVerified && (
               <Badge
                 variant="outline"
-                className="border-blue-500 text-blue-500"
+                className="border-blue-500 text-blue-500 text-xs p-1"
               >
                 <Check className="mr-1 h-3 w-3" />
                 Vérifié
+              </Badge>
+            )}
+
+            {!row.original.isVerified && (
+              <Badge
+                variant="outline"
+                className="border-yellow-500 text-yellow-500 whitespace-nowrap text-xs p-1"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Non Vérifié
               </Badge>
             )}
           </div>
@@ -187,13 +235,9 @@ export function useDoctorColumns({
                 </span>
                 <svg
                   className="h-4 w-4 fill-yellow-400 text-yellow-400"
-                  fill="currentColor"
                   viewBox="0 0 20 20"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 15.585l-7.07 3.707 1.35-7.857L.587 7.11l7.897-1.147L10 0l2.516 5.963 7.897 1.147-5.693 5.325 1.35 7.857z"
-                  />
+                  <path d="M10 15.585l-7.07 3.707 1.35-7.857L.587 7.11l7.897-1.147L10 0l2.516 5.963 7.897 1.147-5.693 5.325 1.35 7.857z" />
                 </svg>
               </div>
             ) : (
@@ -229,30 +273,37 @@ export function useDoctorColumns({
             className="items-center cursor-pointer hidden xl:flex"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            Abonnement
+            Abonne. (indépend.)
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="hidden xl:block">
-            <Badge
-              variant="outline"
-              className={
-                row.original.subscription?.plan === "FREE"
-                  ? "border-purple-500 text-purple-500"
-                  : row.original.subscription?.plan === "PREMIUM"
-                    ? "border-blue-500 text-blue-500"
-                    : row.original.subscription?.plan === "FREE"
-                      ? "border-amber-500 text-amber-500"
-                      : row.original.subscription?.plan === "STANDARD"
-                        ? "border-red-500 text-red-500"
-                        : "border-gray-500 text-gray-500"
-              }
-            >
-              {row.original.subscription?.plan || "Medecin d'Hopital"}
-            </Badge>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const isIndep = row.original.isIndependent;
+          const plan = row.original.subscription?.plan;
+
+          if (!isIndep) {
+            return (
+              <div className="hidden xl:block text-muted-foreground">—</div>
+            );
+          }
+
+          const cls =
+            plan === "FREE"
+              ? "border-purple-500 text-purple-500"
+              : plan === "STANDARD"
+                ? "border-blue-500 text-blue-500"
+                : plan === "PREMIUM"
+                  ? "border-amber-500 text-amber-500"
+                  : "border-gray-500 text-gray-500";
+
+          return (
+            <div className="hidden xl:block">
+              <Badge variant="outline" className={cls}>
+                {plan ?? "—"}
+              </Badge>
+            </div>
+          );
+        },
       },
       {
         id: "actions",

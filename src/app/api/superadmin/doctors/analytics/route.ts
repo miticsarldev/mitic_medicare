@@ -30,9 +30,7 @@ export async function GET(request: NextRequest) {
     // Get verified doctors count
     const verifiedDoctors = await prisma.doctor.count({
       where: {
-        user: {
-          isApproved: true,
-        },
+        isVerified: true,
       },
     });
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -62,7 +63,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import {
   bulkDeleteDoctors,
-  bulkExportDoctors,
   updateDoctorStatus,
   updateDoctorVerification,
 } from "@/app/actions/doctor-actions";
@@ -184,11 +184,6 @@ export default function DoctorsPage() {
     fetchDoctors();
   }, [fetchDoctors]);
 
-  // Fetch analytics data
-  useEffect(() => {
-    fetchAnalytics();
-  }, []);
-
   // Fetch specialties, locations, and hospitals
   useEffect(() => {
     fetchSpecialties();
@@ -199,22 +194,7 @@ export default function DoctorsPage() {
     fetchFilterOptions();
   }, []);
 
-  // Fetch analytics data
-  useEffect(() => {
-    fetchAnalytics();
-  }, []);
-
-  const fetchFilterOptions = async () => {
-    try {
-      const response = await fetch("/api/superadmin/doctors/filters");
-      const data = await response.json();
-      setLocations(data.cities);
-    } catch (error) {
-      console.error("Failed to fetch filter options", error);
-    }
-  };
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       const response = await fetch("/api/superadmin/doctors/analytics");
 
@@ -231,6 +211,21 @@ export default function DoctorsPage() {
         description: "Failed to fetch analytics data",
         variant: "destructive",
       });
+    }
+  }, []);
+
+  // Fetch analytics data
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await fetch("/api/superadmin/doctors/filters");
+      const data = await response.json();
+      setLocations(data.cities);
+    } catch (error) {
+      console.error("Failed to fetch filter options", error);
     }
   };
 
@@ -374,8 +369,9 @@ export default function DoctorsPage() {
       toast({ title: "Success", description: "Statut mis à jour" });
       // keep this if you want the table to refetch from server too
       fetchDoctors();
+      fetchAnalytics();
     },
-    [patchDoctorLocally, fetchDoctors]
+    [patchDoctorLocally, fetchDoctors, fetchAnalytics]
   );
 
   const handleVerificationChange = useCallback(
@@ -389,15 +385,12 @@ export default function DoctorsPage() {
         });
         return;
       }
-
-      // Optimistic local patch
       patchDoctorLocally(doctorId, { isVerified: verified });
-
       toast({ title: "Success", description: "Vérification mise à jour" });
-      // optional: refresh list from server
       fetchDoctors();
+      fetchAnalytics(); // ← re-pull KPIs
     },
-    [patchDoctorLocally, fetchDoctors]
+    [patchDoctorLocally, fetchDoctors, fetchAnalytics]
   );
 
   // Get table columns using our custom hook
@@ -486,6 +479,7 @@ export default function DoctorsPage() {
 
         setRowSelection({});
         fetchDoctors();
+        fetchAnalytics();
       } catch (error) {
         console.error("Error bulk deleting doctors:", error);
         toast({
@@ -496,53 +490,63 @@ export default function DoctorsPage() {
       }
     } else if (action === "export") {
       try {
-        const result = await bulkExportDoctors(selectedRows);
-
-        if (result.error) {
-          throw new Error(result.error);
-        }
-
-        if (!result.data) {
-          throw new Error("Failed to export doctors");
-        }
-        // Create CSV content
-        const headers = Object.keys(result.data[0]).join(",");
-        const rows = result.data
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((doctor: any) =>
-            Object.values(doctor)
-              .map((value) =>
-                typeof value === "string"
-                  ? `"${value.replace(/"/g, '""')}"`
-                  : value
-              )
-              .join(",")
-          )
-          .join("\n");
-        const csvContent = `${headers}\n${rows}`;
-
-        // Create download link
-        const blob = new Blob([csvContent], {
-          type: "text/csv;charset=utf-8;",
+        const res = await fetch("/api/superadmin/doctors/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: selectedRows }),
         });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(json?.error || "Failed to export doctors");
+        }
+
+        const rows: any[] = json?.data ?? [];
+        if (!Array.isArray(rows) || rows.length === 0) {
+          toast({
+            title: "Export CSV",
+            description: "Aucune donnée à exporter.",
+          });
+          return;
+        }
+
+        // Build CSV safely
+        const toCsv = (items: any[]) => {
+          const cols = Array.from(
+            new Set(items.flatMap((o) => Object.keys(o)))
+          );
+          const escape = (v: unknown) => {
+            if (v === null || v === undefined) return "";
+            const s = String(v);
+            return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+          };
+          const header = cols.join(",");
+          const lines = items.map((o) =>
+            cols.map((c) => escape(o[c])).join(",")
+          );
+          return [header, ...lines].join("\n");
+        };
+
+        const csv = toCsv(rows);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", "doctors_export.csv");
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `doctors_export_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
 
         toast({
-          title: "Success",
-          description: `${selectedRows.length} doctors exported successfully`,
+          title: "Export CSV prêt",
+          description: `${rows.length} médecins exportés.`,
         });
       } catch (error) {
         console.error("Error exporting doctors:", error);
         toast({
-          title: "Error",
-          description: "Failed to export doctors",
+          title: "Erreur",
+          description: "Échec de l’export CSV",
           variant: "destructive",
         });
       }
@@ -626,7 +630,7 @@ export default function DoctorsPage() {
   }, [itemsPerPage]);
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4 p-4 bg-transparent">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
@@ -666,7 +670,7 @@ export default function DoctorsPage() {
 
         <TabsContent value="list" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center">
+            <CardHeader className="flex flex-row items-center p-4">
               <div className="flex-1">
                 <CardTitle>Liste des Médecins</CardTitle>
                 <CardDescription>
@@ -711,7 +715,7 @@ export default function DoctorsPage() {
                 </DropdownMenu>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -1229,16 +1233,11 @@ export default function DoctorsPage() {
                             const percentage =
                               (plan.count / analytics.totalDoctors) * 100;
                             let color = "bg-gray-500";
-
-                            if (plan.plan === "FREE") {
-                              color = "bg-purple-500";
-                            } else if (plan.plan === "FREE") {
-                              color = "bg-yellow-500";
-                            } else if (plan.plan === "STANDARD") {
+                            if (plan.plan === "FREE") color = "bg-purple-500";
+                            else if (plan.plan === "STANDARD")
                               color = "bg-blue-500";
-                            } else if (plan.plan === "PREMIUM") {
-                              color = "bg-gray-500";
-                            }
+                            else if (plan.plan === "PREMIUM")
+                              color = "bg-amber-500";
 
                             return (
                               <div

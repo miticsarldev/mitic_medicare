@@ -11,7 +11,7 @@ import type {
 export interface AppointmentWithRelations extends Appointment {
   patient: Patient & {
     user: User & {
-      profile: UserProfile;
+      profile: UserProfile | null;
     };
   };
   doctor: Doctor & {

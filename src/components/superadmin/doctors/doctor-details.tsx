@@ -36,51 +36,10 @@ export default function DoctorDetails({
   doctor,
   onEdit,
   onDelete,
+  onStatusChange,
+  onVerificationChange,
 }: DoctorDetailsProps) {
   if (!doctor) return null;
-
-  const toggleDoctorStatus = async (isActive: boolean) => {
-    try {
-      const response = await fetch(
-        `/api/superadmin/doctors/${doctor.user.id}/activate`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ isActive }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Échec de la mise à jour");
-
-      // Rafraîchir les données après la mise à jour
-      window.location.reload();
-    } catch (error) {
-      console.error("Error updating doctor status:", error);
-    }
-  };
-
-  const toggleDoctorVerification = async (isVerified: boolean) => {
-    try {
-      const response = await fetch(
-        `/api/superadmin/doctors/${doctor.user.id}/verify`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ isVerified }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Échec de la mise à jour");
-      // Rafraîchir les données après la mise à jour
-      window.location.reload();
-    } catch (error) {
-      console.error("Error updating doctor verification:", error);
-    }
-  };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -213,40 +172,29 @@ export default function DoctorDetails({
                       Abonnement
                     </Label>
                     <div>
-                      {(() => {
-                        const plan =
-                          doctor.subscription?.plan ??
-                          doctor.hospital?.subscription?.plan ??
-                          null;
-
-                        if (!plan) {
+                      {doctor.isIndependent ? (
+                        (() => {
+                          const plan = doctor.subscription?.plan ?? null;
+                          const color =
+                            plan === "FREE"
+                              ? "border-purple-500 text-purple-500"
+                              : plan === "STANDARD"
+                                ? "border-blue-500 text-blue-500"
+                                : plan === "PREMIUM"
+                                  ? "border-amber-500 text-amber-500"
+                                  : "border-gray-500 text-gray-500";
                           return (
-                            <Badge
-                              variant="outline"
-                              className="border-gray-500 text-gray-500"
-                            >
-                              Aucun
+                            <Badge variant="outline" className={color}>
+                              {plan ?? "—"}
                             </Badge>
                           );
-                        }
-
-                        const color =
-                          plan === "FREE"
-                            ? "border-purple-500 text-purple-500"
-                            : plan === "STANDARD"
-                              ? "border-blue-500 text-blue-500"
-                              : plan === "PREMIUM"
-                                ? "border-amber-500 text-amber-500"
-                                : "border-gray-500 text-gray-500";
-
-                        return (
-                          <Badge variant="outline" className={color}>
-                            {plan}
-                          </Badge>
-                        );
-                      })()}
+                        })()
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
                     </div>
                   </div>
+
                   {doctor.hospital && (
                     <div>
                       <Label className="text-xs text-muted-foreground">
@@ -259,7 +207,7 @@ export default function DoctorDetails({
                   )}
                   <div>
                     <Label className="text-xs text-muted-foreground">
-                      Numéro de licence
+                      N° Ordre du médecin
                     </Label>
                     <p className="text-sm font-medium">
                       {doctor.licenseNumber}
@@ -366,7 +314,7 @@ export default function DoctorDetails({
                       <Button
                         variant={doctor.user.isActive ? "outline" : "default"}
                         size="sm"
-                        onClick={() => toggleDoctorStatus(false)}
+                        onClick={() => onStatusChange(doctor.id, "inactive")}
                         disabled={!doctor.user.isActive}
                       >
                         Désactiver
@@ -374,7 +322,7 @@ export default function DoctorDetails({
                       <Button
                         variant={doctor.user.isActive ? "default" : "outline"}
                         size="sm"
-                        onClick={() => toggleDoctorStatus(true)}
+                        onClick={() => onStatusChange(doctor.id, "active")}
                         disabled={doctor.user.isActive}
                       >
                         Activer
@@ -393,7 +341,7 @@ export default function DoctorDetails({
                       variant={doctor.isVerified ? "outline" : "default"}
                       size="sm"
                       onClick={() =>
-                        toggleDoctorVerification(!doctor.isVerified)
+                        onVerificationChange(doctor.id, !doctor.isVerified)
                       }
                     >
                       {doctor.isVerified

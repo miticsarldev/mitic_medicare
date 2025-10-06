@@ -26,7 +26,7 @@ const hospitalDoctorSchema = z.object({
     .string()
     .min(8, "Le numéro de téléphone doit avoir au moins 8 chiffres"),
   specialty: z.string().min(1, "Veuillez sélectionner une spécialité"),
-  licenseNumber: z.string().min(1, "Le numéro de licence est requis"),
+  licenseNumber: z.string().min(1, "Le N° Ordre des Médecins est requis"),
   department: z.string().min(1, "Le département est requis"),
   startDate: z.string().min(1, "La date de début est requise"),
   isFullTime: z.boolean(),
@@ -177,10 +177,10 @@ export default function HospitalDoctorRegistration() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Numéro de licence *</Label>
+              <Label>N° Ordre des Médecins *</Label>
               <Input
                 {...register("licenseNumber")}
-                placeholder="Numéro de licence médicale"
+                placeholder="N° Ordre des Médecins médicale"
               />
               {errors.licenseNumber && (
                 <p className="text-red-500 text-sm mt-1">

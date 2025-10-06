@@ -173,7 +173,7 @@ export default function DoctorCreateEditModal({
     if (!formData.location.trim()) e.location = "Localisation requise.";
     if (!formData.phone.trim()) e.phone = "Numéro de téléphone requis";
     if (!formData.licenseNumber.trim())
-      e.licenseNumber = "Numéro de licence requis";
+      e.licenseNumber = "N° Ordre du médecin requis";
     if (mode === "create" && !formData.password)
       e.password = "Mot de passe requis.";
     if (doctorType === "hospital" && !formData.hospitalId)
@@ -536,7 +536,7 @@ export default function DoctorCreateEditModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="licenseNumber">Numéro de licence *</Label>
+                  <Label htmlFor="licenseNumber">N° Ordre du médecin *</Label>
                   <Input
                     id="licenseNumber"
                     name="licenseNumber"

@@ -292,6 +292,83 @@ export async function PUT(
   }
 }
 
+// export async function DELETE(
+//   _req: NextRequest,
+//   { params }: { params: { id: string } }
+// ) {
+//   try {
+//     const session = await getServerSession(authOptions);
+//     if (!session || session.user.role !== "SUPER_ADMIN") {
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+//     }
+
+//     const id = params.id;
+
+//     // Accept either doctor.id or user.id
+//     let doc = await prisma.doctor.findUnique({
+//       where: { id },
+//       select: { id: true, userId: true },
+//     });
+
+//     if (!doc) {
+//       doc = await prisma.doctor.findFirst({
+//         where: { userId: id },
+//         select: { id: true, userId: true },
+//       });
+//       if (!doc) {
+//         return NextResponse.json(
+//           { error: "Doctor not found" },
+//           { status: 404 }
+//         );
+//       }
+//     }
+
+//     const doctorId = doc.id;
+//     const userId = doc.userId;
+
+//     // Single interactive transaction: delete children → doctor → profile → user
+//     await prisma.$transaction(async (tx) => {
+//       await tx.review.deleteMany({ where: { doctorId } });
+//       await tx.appointment.deleteMany({ where: { doctorId } });
+//       await tx.doctorAvailability.deleteMany({ where: { doctorId } });
+//       await tx.subscription.deleteMany({ where: { doctorId } });
+
+//       await tx.doctor.delete({ where: { id: doctorId } });
+
+//       // In case profile isn't present or FK already cascades, ignore error
+//       await tx.userProfile
+//         .delete({ where: { userId } })
+//         .catch(() => Promise.resolve());
+
+//       await tx.user.delete({ where: { id: userId } });
+//     });
+
+//     revalidatePath("/dashboard/superadmin/users/doctors");
+
+//     return NextResponse.json({ success: true });
+//   } catch (err: unknown) {
+//     if (
+//       err instanceof Prisma.PrismaClientKnownRequestError &&
+//       err.code === "P2003"
+//     ) {
+//       return NextResponse.json(
+//         {
+//           error:
+//             "Impossible de supprimer ce médecin car des données associées existent (rendez-vous, dossiers, avis, etc.). " +
+//             "Désactivez le compte ou supprimez d'abord les dépendances.",
+//         },
+//         { status: 409 }
+//       );
+//     }
+
+//     console.error("Error deleting doctor:", err);
+//     return NextResponse.json(
+//       { error: "Failed to delete doctor" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
@@ -304,51 +381,78 @@ export async function DELETE(
 
     const id = params.id;
 
-    // We accept either a doctor.id or a user.id
-    // 1) Try to find a doctor by doctor.id
-    let doctor = await prisma.doctor.findUnique({
+    // Accept doctor.id or user.id
+    let doc = await prisma.doctor.findUnique({
       where: { id },
       select: { id: true, userId: true },
     });
-
-    // 2) If not found, maybe `id` is actually a user.id; find doctor by userId
-    if (!doctor) {
-      doctor = await prisma.doctor.findFirst({
+    if (!doc) {
+      doc = await prisma.doctor.findFirst({
         where: { userId: id },
         select: { id: true, userId: true },
       });
-      if (!doctor) {
+      if (!doc)
         return NextResponse.json(
           { error: "Doctor not found" },
           { status: 404 }
         );
-      }
     }
 
-    // Delete the User — most relations are anchored to the user and/or
-    // set to cascade (per your schema). If some relations are not cascade,
-    // Prisma/DB will raise a FK error which we catch below.
-    await prisma.user.delete({
-      where: { id: doctor.userId },
+    const doctorId = doc.id;
+    const userId = doc.userId;
+    const fallbackAuthorId = session.user.id; // reassign createdBy here
+
+    await prisma.$transaction(async (tx) => {
+      // 1) Reviews about this doctor + reviews authored by this user
+      await tx.review.deleteMany({
+        where: { OR: [{ doctorId }, { authorId: userId }] },
+      });
+
+      // 2) Prescriptions first (they point to PrescriptionOrder/MedicalRecord)
+      await tx.prescription.deleteMany({ where: { doctorId } });
+
+      // 3) Prescription orders next (they point to MedicalRecord)
+      await tx.prescriptionOrder.deleteMany({ where: { doctorId } });
+
+      // 4) Medical records (attachments cascade)
+      await tx.medicalRecord.deleteMany({ where: { doctorId } });
+
+      // 5) Availabilities (cascade exists, but explicit keeps intent clear)
+      await tx.doctorAvailability.deleteMany({ where: { doctorId } });
+
+      // 6) Independent subscription (hospital subs don’t have doctorId)
+      await tx.subscription.deleteMany({ where: { doctorId } });
+
+      // 7) Reassign non-nullable MedicalHistory.createdBy -> fallback user
+      await tx.medicalHistory.updateMany({
+        where: { createdBy: userId },
+        data: { createdBy: fallbackAuthorId },
+      });
+
+      // 8) Delete the doctor row
+      await tx.doctor.delete({ where: { id: doctorId } });
+
+      // 9) Finally delete the user (profile/accounts/sessions join tables cascade)
+      await tx.user.delete({ where: { id: userId } });
     });
 
     revalidatePath("/dashboard/superadmin/users/doctors");
-    return NextResponse.json({ success: true });
-  } catch (err: unknown) {
-    // Handle FK constraint errors cleanly (e.g., appointments/reviews exist)
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === "P2003") {
-        return NextResponse.json(
-          {
-            error:
-              "Impossible de supprimer ce médecin car des données associées existent (rendez-vous, dossiers, avis, etc.). " +
-              "Désactivez le compte ou supprimez d'abord les dépendances.",
-          },
-          { status: 409 }
-        );
-      }
-    }
 
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2003"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Impossible de supprimer ce médecin car des données associées existent. " +
+            "Les références ont peut-être été créées par d’autres objets. Réessayez ou contactez l’admin.",
+        },
+        { status: 409 }
+      );
+    }
     console.error("Error deleting doctor:", err);
     return NextResponse.json(
       { error: "Failed to delete doctor" },

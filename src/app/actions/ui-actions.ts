@@ -130,6 +130,7 @@ export async function searchHealthcare(
             ? { experience: { contains: experience, mode: "insensitive" } }
             : {},
           { isVerified: true },
+          { user: { isActive: true } },
         ],
       };
 
@@ -205,7 +206,11 @@ export async function searchHealthcare(
       // FACETS
       const specializationFacets = await prisma.doctor.groupBy({
         by: ["specialization"],
-        where: { isVerified: true, specialization: { not: "" } },
+        where: {
+          isVerified: true,
+          user: { isActive: true, isApproved: true },
+          specialization: { not: "" },
+        },
         _count: { _all: true },
       });
 
@@ -293,7 +298,10 @@ export async function searchHealthcare(
         where,
         include: {
           departments: { select: { id: true } },
-          doctors: { where: { isVerified: true }, select: { id: true } },
+          doctors: {
+            where: { isVerified: true, user: { isActive: true } },
+            select: { id: true, reviews: { select: { rating: true } } },
+          },
           reviews: { select: { rating: true } },
         },
         orderBy,
@@ -562,8 +570,13 @@ export async function searchHealthcareItems(params: SearchParams) {
     if (type === "doctor") {
       const doctors = await prisma.doctor.findMany({
         where: {
+          isVerified: true,
           user: {
+            isActive: true,
             name: { contains: query, mode: "insensitive" },
+            ...(city && city !== "all"
+              ? { profile: { city: { contains: city, mode: "insensitive" } } }
+              : {}),
           },
           ...(specialization && specialization !== "all" && { specialization }),
           ...(city && city !== "all" && { city }),
@@ -622,6 +635,7 @@ export async function searchHealthcareItems(params: SearchParams) {
             { description: { contains: query, mode: "insensitive" } },
           ],
           ...(city && city !== "all" && { city }),
+          isVerified: true,
         },
         select: {
           id: true,
@@ -657,6 +671,12 @@ export async function searchHealthcareItems(params: SearchParams) {
       const departments = await prisma.department.findMany({
         where: {
           name: { contains: query, mode: "insensitive" },
+          hospital: {
+            isVerified: true,
+            ...(city && city !== "all"
+              ? { city: { contains: city, mode: "insensitive" } }
+              : {}),
+          },
         },
         select: {
           id: true,

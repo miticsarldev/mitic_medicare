@@ -262,7 +262,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <BadgeCheck className="w-4 h-4" /> Licence :{" "}
+                      <BadgeCheck className="w-4 h-4" /> N° Ordre du Médecin :{" "}
                       {doctor.licenseNumber}
                     </div>
                     <div className="flex items-center gap-2">

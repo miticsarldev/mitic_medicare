@@ -78,6 +78,7 @@ import type {
   PaginationOptions,
 } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AppointmentStatus } from "@prisma/client";
 
 interface AppointmentsTableProps {
   initialData: AppointmentsData;
@@ -297,102 +298,134 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: AppointmentStatus) => {
     switch (status) {
       case "PENDING":
         return (
           <Badge className="bg-amber-100 text-amber-800">En attente</Badge>
         );
+      case "CONFIRMED":
+        return <Badge className="bg-lime-100 text-lime-800">Confirmé</Badge>;
+      case "NO_SHOW":
+        return (
+          <Badge className="bg-slate-100 text-slate-800">Non Présenté</Badge>
+        );
       case "COMPLETED":
         return <Badge className="bg-green-100 text-green-800">Complété</Badge>;
-      case "CANCELLED":
+      case "CANCELED":
         return <Badge className="bg-red-100 text-red-800">Annulé</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
   const handleExport = async (appointment: AppointmentWithRelations) => {
-  try {
-    const response = await fetch(`/api/appointments/export/${appointment.id}`, {
-      method: "GET", // ou POST si vous préférez envoyer l'ID dans le corps
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    try {
+      const response = await fetch(
+        `/api/appointments/export/${appointment.id}`,
+        {
+          method: "GET", // ou POST si vous préférez envoyer l'ID dans le corps
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    if (!response.ok) {
-      throw new Error("Échec de l'exportation du rendez-vous");
+      if (!response.ok) {
+        throw new Error("Échec de l'exportation du rendez-vous");
+      }
+
+      const data = await response.json();
+
+      // Formatage des données pour le CSV
+      const exportData = [
+        {
+          id: data.id,
+          patientName: data.patient.user.name,
+          patientEmail: data.patient.user.email,
+          patientPhone: data.patient.user.phone || "Non renseigné",
+          doctorName: data.doctor.user.name,
+          specialization: data.doctor.specialization,
+          hospitalName: data.doctor.hospital?.name || "Médecin indépendant",
+          scheduledAt: format(new Date(data.scheduledAt), "dd/MM/yyyy HH:mm", {
+            locale: fr,
+          }),
+          endTime: data.endTime
+            ? format(new Date(data.endTime), "dd/MM/yyyy HH:mm", { locale: fr })
+            : "Non défini",
+          status: data.status,
+          reason: data.reason || "Non renseigné",
+          type: data.type || "Consultation standard",
+          notes: data.notes || "Aucune note",
+          createdAt: format(new Date(data.createdAt), "dd/MM/yyyy HH:mm", {
+            locale: fr,
+          }),
+          updatedAt: format(new Date(data.updatedAt), "dd/MM/yyyy HH:mm", {
+            locale: fr,
+          }),
+          completedAt: data.completedAt
+            ? format(new Date(data.completedAt), "dd/MM/yyyy HH:mm", {
+                locale: fr,
+              })
+            : "N/A",
+          cancelledAt: data.cancelledAt
+            ? format(new Date(data.cancelledAt), "dd/MM/yyyy HH:mm", {
+                locale: fr,
+              })
+            : "N/A",
+          cancellationReason: data.cancellationReason || "N/A",
+        },
+      ];
+
+      // Créer le contenu CSV
+      const headers = Object.keys(exportData[0]).join(",");
+      const rows = exportData
+        .map((item) =>
+          Object.values(item)
+            .map((value) =>
+              typeof value === "string"
+                ? `"${value.replace(/"/g, '""')}"`
+                : value
+            )
+            .join(",")
+        )
+        .join("\n");
+      const csvContent = `${headers}\n${rows}`;
+
+      // Créer le lien de téléchargement
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `appointment_${appointment.id}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Succès",
+        description: "Rendez-vous exporté avec succès",
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'exportation:", error);
+      toast({
+        title: "Erreur",
+        description: "Échec de l'exportation du rendez-vous",
+        variant: "destructive",
+      });
     }
+  };
 
-    const data = await response.json();
-
-    // Formatage des données pour le CSV
-    const exportData = [{
-      id: data.id,
-      patientName: data.patient.user.name,
-      patientEmail: data.patient.user.email,
-      patientPhone: data.patient.user.phone || "Non renseigné",
-      doctorName: data.doctor.user.name,
-      specialization: data.doctor.specialization,
-      hospitalName: data.doctor.hospital?.name || "Médecin indépendant",
-      scheduledAt: format(new Date(data.scheduledAt), "dd/MM/yyyy HH:mm", { locale: fr }),
-      endTime: data.endTime ? format(new Date(data.endTime), "dd/MM/yyyy HH:mm", { locale: fr }) : "Non défini",
-      status: data.status,
-      reason: data.reason || "Non renseigné",
-      type: data.type || "Consultation standard",
-      notes: data.notes || "Aucune note",
-      createdAt: format(new Date(data.createdAt), "dd/MM/yyyy HH:mm", { locale: fr }),
-      updatedAt: format(new Date(data.updatedAt), "dd/MM/yyyy HH:mm", { locale: fr }),
-      completedAt: data.completedAt ? format(new Date(data.completedAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "N/A",
-      cancelledAt: data.cancelledAt ? format(new Date(data.cancelledAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "N/A",
-      cancellationReason: data.cancellationReason || "N/A",
-    }];
-
-    // Créer le contenu CSV
-    const headers = Object.keys(exportData[0]).join(",");
-    const rows = exportData
-      .map((item) =>
-        Object.values(item)
-          .map((value) =>
-            typeof value === "string" ? `"${value.replace(/"/g, '""')}"` : value
-          )
-          .join(",")
-      )
-      .join("\n");
-    const csvContent = `${headers}\n${rows}`;
-
-    // Créer le lien de téléchargement
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `appointment_${appointment.id}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Succès",
-      description: "Rendez-vous exporté avec succès",
-    });
-  } catch (error) {
-    console.error("Erreur lors de l'exportation:", error);
-    toast({
-      title: "Erreur",
-      description: "Échec de l'exportation du rendez-vous",
-      variant: "destructive",
-    });
-  }
-};
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
+  const getInitials = (name?: string) => {
+    const safe = (name ?? "").trim();
+    if (!safe) return "?";
+    return safe
+      .split(/\s+/)
       .map((part) => part[0])
       .join("")
       .toUpperCase()
-      .substring(0, 2);
+      .slice(0, 2);
   };
 
   // Generate pagination items
@@ -517,8 +550,10 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
                 <SelectContent>
                   <SelectItem value="ALL">Tous les statuts</SelectItem>
                   <SelectItem value="PENDING">En attente</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmés</SelectItem>
                   <SelectItem value="COMPLETED">Complétés</SelectItem>
-                  <SelectItem value="CANCELLED">Annulés</SelectItem>
+                  <SelectItem value="CANCELED">Annulés</SelectItem>
+                  <SelectItem value="NO_SHOW">Non présenté</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -581,7 +616,7 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
                   <SelectValue placeholder="Spécialisation" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL_SPECIALIZATIONS">
+                  <SelectItem value="ALL">
                     Toutes les spécialisations
                   </SelectItem>
                   {specializations.map((specialization) => (
@@ -605,7 +640,7 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
                   <SelectValue placeholder="Médecin" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL_DOCTORS">Tous les médecins</SelectItem>
+                  <SelectItem value="ALL">Tous les médecins</SelectItem>
                   {doctors.map((doctor) => (
                     <SelectItem key={doctor.id} value={doctor.id}>
                       {doctor.name}
@@ -627,9 +662,7 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
                   <SelectValue placeholder="Hôpital" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL_HOSPITALS">
-                    Tous les hôpitaux
-                  </SelectItem>
+                  <SelectItem value="ALL">Tous les hôpitaux</SelectItem>
                   {hospitals.map((hospital) => (
                     <SelectItem key={hospital.id} value={hospital.id}>
                       {hospital.name}
@@ -765,7 +798,9 @@ export function AppointmentsTable({ initialData }: AppointmentsTableProps) {
                             >
                               Voir les détails
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleExport(appointment)}>
+                            <DropdownMenuItem
+                              onClick={() => handleExport(appointment)}
+                            >
                               <Download className="mr-2 h-4 w-4" />
                               Exporter
                             </DropdownMenuItem>

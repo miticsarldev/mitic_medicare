@@ -64,7 +64,7 @@ const independentDoctorSchema = z.object({
       "Le mot de passe doit contenir au moins un caractère spécial"
     ),
   speciality: z.string().min(1, "Veuillez sélectionner une spécialité"),
-  licenseNumber: z.string().min(5, "Le numéro de licence est requis"),
+  licenseNumber: z.string().min(5, "Le N° d'ordre du médecin est requis"),
   terms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les politiques et confidentialité",
   }),
@@ -222,7 +222,7 @@ export default function IndependentDoctorRegistration() {
           </div>
 
           <p className="text-sm font-semibold text-accent-foreground border-b my-3">
-            Informations sur la specialité et la licence *
+            Informations sur la specialité et la N° d&apos;ordre du Médecin *
           </p>
 
           <div>
@@ -259,12 +259,12 @@ export default function IndependentDoctorRegistration() {
             )}
           </div>
           <div>
-            <Label htmlFor="licenseNumber">Licence *</Label>
+            <Label htmlFor="licenseNumber">N° Ordre du Médecin *</Label>
             <Input
               {...register("licenseNumber")}
               type="text"
               id="licenseNumber"
-              placeholder="Votre licence"
+              placeholder="Votre N° Ordre du Médecin"
             />
             {errors.licenseNumber && (
               <p className="text-red-500 text-xs mt-0.5">
