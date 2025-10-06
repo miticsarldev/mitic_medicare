@@ -3,6 +3,7 @@ import {
   getApprovalEmailTemplate,
   getPasswordResetCodeEmailTemplate,
   getPasswordResetSuccessEmailTemplate,
+  getPatientWelcomeEmailTemplate,
   getVerificationEmailTemplate,
 } from "./emailTemplate";
 import { UserRole } from "@prisma/client";
@@ -138,5 +139,38 @@ export async function sendApprovingEmail(
     console.log(`✅ Email d'approbation envoyé à ${email}`);
   } catch (error) {
     console.error("❌ Erreur lors de l'envoi de l'email d'approbation:", error);
+  }
+}
+
+export async function sendPatientWelcomeEmail(opts: {
+  name: string;
+  email: string;
+  setPasswordUrl?: string; // e.g. /auth/new-password?token=...
+  loginUrl?: string; // e.g. /login
+}) {
+  const { name, email, setPasswordUrl, loginUrl } = opts;
+
+  const htmlContent = await getPatientWelcomeEmailTemplate({
+    name,
+    setPasswordUrl,
+    loginUrl,
+  });
+
+  const subject = setPasswordUrl
+    ? "MITIC CARE – Créez votre mot de passe"
+    : "MITIC CARE – Bienvenue";
+
+  const mailOptions = {
+    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject,
+    html: htmlContent,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Email de bienvenue envoyé à ${email}`);
+  } catch (error) {
+    console.error("❌ Erreur lors de l'envoi de l'email de bienvenue:", error);
   }
 }

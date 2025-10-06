@@ -109,3 +109,138 @@ export async function GET(
     );
   }
 }
+
+// export async function DELETE(
+//   _request: NextRequest,
+//   { params }: { params: { id: string } }
+// ) {
+//   try {
+//     const session = await getServerSession(authOptions);
+//     if (!session || session.user.role !== "SUPER_ADMIN") {
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+//     }
+
+//     const link = await prisma.patient.findUnique({
+//       where: { id: params.id },
+//       select: { id: true, userId: true },
+//     });
+//     if (!link)
+//       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+
+//     const { userId } = link;
+
+//     await prisma.$transaction(
+//       async (tx) => {
+//         // 0) Clear M2M favorites to be extra safe
+//         await tx.user.update({
+//           where: { id: userId },
+//           data: {
+//             favoriteDoctors: { set: [] },
+//             favoriteHospitals: { set: [] },
+//           },
+//         });
+
+//         // 1) Children of medical records
+//         await tx.medicalRecordAttachment.deleteMany({
+//           where: { medicalRecord: { patientId: params.id } },
+//         });
+//         await tx.prescription.deleteMany({
+//           where: { medicalRecord: { patientId: params.id } },
+//         });
+//         await tx.prescriptionOrder.deleteMany({
+//           where: { medicalRecord: { patientId: params.id } },
+//         });
+
+//         // 2) Direct children of patient
+//         await tx.prescription.deleteMany({ where: { patientId: params.id } });
+//         await tx.prescriptionOrder.deleteMany({
+//           where: { patientId: params.id },
+//         });
+//         await tx.vitalSign.deleteMany({ where: { patientId: params.id } });
+//         await tx.medicalHistory.deleteMany({
+//           where: { OR: [{ patientId: params.id }, { createdBy: userId }] }, // ← also authored by this user
+//         });
+//         await tx.appointment.deleteMany({ where: { patientId: params.id } });
+
+//         // 3) Medical records
+//         await tx.medicalRecord.deleteMany({ where: { patientId: params.id } });
+
+//         // 4) Rows keyed by userId
+//         await tx.review.deleteMany({ where: { authorId: userId } });
+//         await tx.session.deleteMany({ where: { userId } });
+//         await tx.account.deleteMany({ where: { userId } });
+//         await tx.verificationToken
+//           .deleteMany({ where: { identifier: userId } })
+//           .catch(() => {});
+
+//         // 5) Parent rows
+//         await tx.patient.delete({ where: { id: params.id } });
+//         await tx.user.delete({ where: { id: userId } });
+//       },
+//       { timeout: 20_000, maxWait: 10_000 }
+//     );
+
+//     return NextResponse.json({ success: true });
+//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//   } catch (err: any) {
+//     console.error("Error deleting patient:", err);
+//     return NextResponse.json(
+//       { error: err?.message ?? "Failed to delete patient" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    console.log({ id: params.id });
+
+    // Resolve userId + email (email is needed to clear verification tokens)
+    const link = await prisma.patient.findUnique({
+      where: { id: params.id },
+      select: {
+        userId: true,
+        user: { select: { email: true } },
+      },
+    });
+    if (!link) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+    }
+
+    const userId = link.userId;
+    const email = link.user?.email ?? null;
+
+    // 1) Clean the few non-cascading references in a single batched transaction
+    await prisma.$transaction([
+      // PrescriptionOrder → patient relation in your schema doesn't have onDelete: Cascade
+      prisma.prescriptionOrder.deleteMany({ where: { patientId: params.id } }),
+      // Review.author has no onDelete: Cascade in your schema
+      prisma.review.deleteMany({ where: { authorId: userId } }),
+      // VerificationToken is keyed by "identifier" (email in your app),
+      // fall back to userId if you stored it that way at some point.
+      prisma.verificationToken.deleteMany({
+        where: email ? { identifier: email } : { identifier: userId },
+      }),
+    ]);
+
+    // 2) Delete the user (this cascades to patient and most patient children)
+    await prisma.user.delete({ where: { id: userId } });
+
+    return NextResponse.json({ success: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    console.error("Error deleting patient:", err);
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to delete patient" },
+      { status: 500 }
+    );
+  }
+}

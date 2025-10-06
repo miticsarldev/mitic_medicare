@@ -7,6 +7,9 @@ import prisma from "@/lib/prisma";
 import { BloodType, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { Patient } from "@/types/patient";
+import crypto from "crypto";
+import { addHours } from "date-fns";
+import { sendPatientWelcomeEmail } from "@/lib/email";
 
 type GetPatientsOptions = {
   search?: string;
@@ -228,33 +231,29 @@ export async function getPatientAnalytics() {
 export async function createPatient(formData: FormData) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated and is a SUPER_ADMIN
-    if (!session || session.user.role !== "SUPER_ADMIN") {
+    if (!session || session.user.role !== "SUPER_ADMIN")
       return { error: "Unauthorized" };
-    }
 
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const phone = formData.get("phone") as string;
-    const password = formData.get("password") as string;
-    const dateOfBirth = formData.get("dateOfBirth") as string;
-    const gender = formData.get("gender") as string;
-    const address = formData.get("address") as string;
-    const city = formData.get("city") as string;
-    const state = formData.get("state") as string;
-    const zipCode = formData.get("zipCode") as string;
-    const country = formData.get("country") as string;
-    const bloodType = formData.get("bloodType") as string;
-    const allergies = formData.get("allergies") as string;
-    const emergencyContact = formData.get("emergencyContact") as string;
-    const emergencyPhone = formData.get("emergencyPhone") as string;
-    const insuranceProvider = formData.get("insuranceProvider") as string;
-    const insuranceNumber = formData.get("insuranceNumber") as string;
+    const name = String(formData.get("name") ?? "");
+    const email = String(formData.get("email") ?? "");
+    const phone = String(formData.get("phone") ?? "");
+    const rawPassword = (formData.get("password") as string) || ""; // allow empty → invite flow
+    const dateOfBirth = String(formData.get("dateOfBirth") ?? "");
+    const gender = String(formData.get("gender") ?? "MALE");
+    const address = String(formData.get("address") ?? "");
+    const city = String(formData.get("city") ?? "");
+    const state = String(formData.get("state") ?? "");
+    const zipCode = String(formData.get("zipCode") ?? "");
+    const country = String(formData.get("country") ?? "");
+    const bloodType = String(formData.get("bloodType") ?? "");
+    const allergies = String(formData.get("allergies") ?? "");
+    const emergencyContact = String(formData.get("emergencyContact") ?? "");
+    const emergencyPhone = String(formData.get("emergencyPhone") ?? "");
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = rawPassword
+      ? await bcrypt.hash(rawPassword, 10)
+      : await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10);
 
-    // Create user
     const user = await prisma.user.create({
       data: {
         name,
@@ -263,7 +262,7 @@ export async function createPatient(formData: FormData) {
         password: hashedPassword,
         dateOfBirth: new Date(dateOfBirth),
         role: "PATIENT",
-        isActive: true,
+        isActive: false,
         emailVerified: new Date(),
         isApproved: true,
         profile: {
@@ -273,13 +272,17 @@ export async function createPatient(formData: FormData) {
             state,
             zipCode,
             country,
-            genre: gender === "Homme" ? "MALE" : "FEMALE",
+            genre:
+              gender === "MALE" || gender === "FEMALE"
+                ? gender
+                : gender === "Homme"
+                  ? "MALE"
+                  : "FEMALE",
           },
         },
       },
     });
 
-    // Create patient record
     await prisma.patient.create({
       data: {
         userId: user.id,
@@ -287,10 +290,29 @@ export async function createPatient(formData: FormData) {
         allergies,
         emergencyContact,
         emergencyPhone,
-        insuranceProvider,
-        insuranceNumber,
       },
     });
+
+    // If admin did NOT set a password → send Set-Password invite
+    if (!rawPassword) {
+      const token = crypto.randomBytes(32).toString("hex");
+      await prisma.verificationToken.create({
+        data: {
+          identifier: email,
+          token,
+          expires: addHours(new Date(), 24),
+        },
+      });
+      const url = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/new-password?token=${token}`;
+      await sendPatientWelcomeEmail({ name, email, setPasswordUrl: url });
+    } else {
+      // Optional: send a "Compte créé" email without exposing the password
+      await sendPatientWelcomeEmail({
+        name,
+        email,
+        loginUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/auth`,
+      });
+    }
 
     revalidatePath("/patients");
     return { success: true, patientId: user.id };

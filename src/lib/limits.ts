@@ -2,7 +2,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, addMonths } from "date-fns";
 import { SubscriptionPlan, SubscriptionStatus, UserRole } from "@prisma/client";
 
 export type LimitKey =
@@ -21,32 +21,41 @@ export type LimitSummary = {
   anyExceeded: boolean;
 };
 
+// ✅ helper to do half-open month window [start, end)
+function monthWindow(date = new Date()) {
+  const start = startOfMonth(date);
+  const end = addMonths(start, 1);
+  return { start, end };
+}
+
 function isUnlimited(v: number | null | undefined) {
   return v === null || v === undefined;
 }
 
-// Resolve tenant from session
-export async function resolveTenantFromSession() {
+// ✅ Return null instead of throwing for unsupported roles
+export async function resolveTenantFromSession(): Promise<{
+  scope: "DOCTOR" | "HOSPITAL";
+  scopeId: string;
+} | null> {
   const session = await getServerSession(authOptions);
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) return null;
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: { doctor: { include: { hospital: true } }, hospital: true },
   });
-  if (!user) throw new Error("Unauthorized");
+  if (!user) return null;
 
+  // Only these two roles participate in limits
   if (user.role === UserRole.INDEPENDENT_DOCTOR && user.doctor?.isIndependent) {
-    return { scope: "DOCTOR" as const, scopeId: user.doctor.id };
+    return { scope: "DOCTOR", scopeId: user.doctor.id };
   }
   if (user.role === UserRole.HOSPITAL_ADMIN && user.hospital) {
-    return { scope: "HOSPITAL" as const, scopeId: user.hospital.id };
-  }
-  if (user.role === UserRole.HOSPITAL_DOCTOR && user.doctor?.hospitalId) {
-    return { scope: "HOSPITAL" as const, scopeId: user.doctor.hospitalId };
+    return { scope: "HOSPITAL", scopeId: user.hospital.id };
   }
 
-  throw new Error("No subscription scope for this user");
+  // Ignore (no limits banner) for PATIENT, SUPER_ADMIN, HOSPITAL_DOCTOR
+  return null;
 }
 
 export async function getActiveSubscription(
@@ -65,25 +74,22 @@ export async function getActiveSubscription(
   return sub ?? null;
 }
 
-// Map PlanLimits -> banner keys
 export async function getPlanLimits(plan: string) {
   const cfg = await prisma.planConfig.findUnique({
     where: { code: plan as SubscriptionPlan },
     include: { limits: true },
   });
 
-  const dict: Record<LimitKey, number | null> = {
+  // If no config, treat as unlimited (safer than crashing)
+  return {
     appointmentsPerMonth: cfg?.limits?.maxAppointments ?? null,
     patientsPerMonth: cfg?.limits?.maxPatients ?? null,
     doctorsPerHospital: cfg?.limits?.maxDoctorsPerHospital ?? null,
-  };
-  return dict;
+  } as Record<LimitKey, number | null>;
 }
 
-// Compute usage for current month
 export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
-  const monthStart = startOfMonth(new Date());
-  const monthEnd = endOfMonth(new Date());
+  const { start, end } = monthWindow();
 
   const usage: Record<LimitKey, number> = {
     appointmentsPerMonth: 0,
@@ -93,16 +99,10 @@ export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
 
   if (scope === "DOCTOR") {
     usage.appointmentsPerMonth = await prisma.appointment.count({
-      where: {
-        doctorId: scopeId,
-        scheduledAt: { gte: monthStart, lte: monthEnd },
-      },
+      where: { doctorId: scopeId, scheduledAt: { gte: start, lt: end } },
     });
     const patientAgg = await prisma.appointment.findMany({
-      where: {
-        doctorId: scopeId,
-        scheduledAt: { gte: monthStart, lte: monthEnd },
-      },
+      where: { doctorId: scopeId, scheduledAt: { gte: start, lt: end } },
       select: { patientId: true },
       distinct: ["patientId"],
     });
@@ -111,13 +111,13 @@ export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
     usage.appointmentsPerMonth = await prisma.appointment.count({
       where: {
         OR: [{ hospitalId: scopeId }, { doctor: { hospitalId: scopeId } }],
-        scheduledAt: { gte: monthStart, lte: monthEnd },
+        scheduledAt: { gte: start, lt: end },
       },
     });
     const patientAgg = await prisma.appointment.findMany({
       where: {
         OR: [{ hospitalId: scopeId }, { doctor: { hospitalId: scopeId } }],
-        scheduledAt: { gte: monthStart, lte: monthEnd },
+        scheduledAt: { gte: start, lt: end },
       },
       select: { patientId: true },
       distinct: ["patientId"],
@@ -132,8 +132,13 @@ export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
   return usage;
 }
 
-export async function getLimitSummaryForCurrentUser(): Promise<LimitSummary> {
-  const { scope, scopeId } = await resolveTenantFromSession();
+export async function getLimitSummaryForCurrentUser(): Promise<LimitSummary | null> {
+  const resolved = await resolveTenantFromSession();
+
+  // ✅ No tenant → no banner
+  if (!resolved) return null;
+
+  const { scope, scopeId } = resolved;
   const sub = await getActiveSubscription(scope, scopeId);
 
   const plan = (sub?.plan ?? "FREE") as SubscriptionPlan | "FREE";
@@ -164,30 +169,4 @@ export async function getLimitSummaryForCurrentUser(): Promise<LimitSummary> {
     exceeded,
     anyExceeded: Object.values(exceeded).some(Boolean),
   };
-}
-
-// Optional: throw when blocked
-export class PlanLimitExceededError extends Error {
-  code = "PLAN_LIMIT_EXCEEDED";
-  limitKey: LimitKey;
-  constructor(message: string, limitKey: LimitKey) {
-    super(message);
-    this.limitKey = limitKey;
-    Object.setPrototypeOf(this, PlanLimitExceededError.prototype);
-  }
-}
-
-export async function assertWithinLimit(
-  key: LimitKey,
-  opts?: { message?: string }
-) {
-  const summary = await getLimitSummaryForCurrentUser();
-  if (summary.exceeded[key]) {
-    throw new PlanLimitExceededError(
-      opts?.message ??
-        "Votre limite de forfait est atteinte. Veuillez mettre à niveau votre plan pour continuer.",
-      key
-    );
-  }
-  return summary;
 }

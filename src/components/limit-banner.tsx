@@ -1,4 +1,4 @@
-// components/billing/limit-banner.tsx
+// components/LimitBanner.tsx (or wherever)
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,18 +6,16 @@ import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// === keep this client-side type in sync with the API payload ===
 type LimitKey =
   | "appointmentsPerMonth"
   | "patientsPerMonth"
   | "doctorsPerHospital";
-
 type LimitSummary = {
   scope: "DOCTOR" | "HOSPITAL";
   scopeId: string;
   plan: string;
   status: "ACTIVE" | "TRIAL" | "INACTIVE" | "EXPIRED";
-  limits: Record<LimitKey, number | null>; // null = unlimited
+  limits: Record<LimitKey, number | null>;
   usage: Record<LimitKey, number>;
   exceeded: Record<LimitKey, boolean>;
   anyExceeded: boolean;
@@ -34,12 +32,16 @@ export default function LimitBanner() {
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/limits/summary", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
+    (async () => {
+      try {
+        const r = await fetch("/api/limits/summary", { cache: "no-store" });
+        if (!r.ok) return; // 401/400 -> hide banner silently
+        const d = (await r.json()) as LimitSummary;
         if (mounted) setSummary(d?.anyExceeded ? d : null);
-      })
-      .catch(() => {});
+      } catch {
+        // ignore; hide banner
+      }
+    })();
     return () => {
       mounted = false;
     };
@@ -70,7 +72,7 @@ export default function LimitBanner() {
           {summary.status.toLowerCase()})
         </div>
         <div className="text-sm">
-          Vous avez atteint&nbsp;:{" "}
+          Vous avez atteint&nbsp;
           {exceededKeys.map((k, i) => (
             <span key={k} className="font-medium">
               {i > 0 ? ", " : " "}

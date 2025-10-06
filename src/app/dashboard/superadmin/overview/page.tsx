@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic"; // pour App Router
+export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
 import {

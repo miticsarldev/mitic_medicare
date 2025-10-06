@@ -10,310 +10,211 @@ import type {
   SubscriptionStats,
   SubscriptionPaymentWithRelations,
   PlanStat,
-  UserGrowthDataPoint,
-  RevenueDataPoint,
   DistributionDataPoint,
   StatisticsData,
   StatisticsDataPoint,
 } from "./types";
 import { sendApprovingEmail } from "@/lib/email";
 
+// actions.ts (server)
+import { Prisma } from "@prisma/client";
+
+type Bucket = {
+  bucket: string;
+  patients?: number;
+  doctors?: number;
+  hospitals?: number;
+  subscriptions?: Prisma.Decimal;
+};
+
+function bucketFormat(range: string) {
+  // month buckets for large ranges; day buckets for ≤30d
+  if (["all", "6m", "1y", "90d"].includes(range)) return "month";
+  return "day";
+}
+
+function dateRangeFor(range: string) {
+  const now = new Date();
+  switch (range) {
+    case "24h":
+      return { start: subDays(now, 1), end: now };
+    case "7d":
+      return { start: subDays(now, 7), end: now };
+    case "30d":
+      return { start: subDays(now, 30), end: now };
+    case "90d":
+      return { start: subDays(now, 90), end: now };
+    case "6m":
+      return { start: subMonths(now, 6), end: now };
+    case "1y":
+      return { start: subMonths(now, 12), end: now };
+    case "all":
+    default:
+      return { start: new Date("2024-01-01"), end: now };
+  }
+}
+
+async function usersGrowthBuckets(range: string) {
+  const { start, end } = dateRangeFor(range);
+  const grain = bucketFormat(range) === "month" ? "month" : "day";
+
+  // Patients
+  const patients = await prisma.$queryRaw<Bucket[]>`
+    SELECT to_char(date_trunc(${grain}, "createdAt"), ${grain === "month" ? "FMMon YYYY" : "DD/MM"}) AS bucket,
+           COUNT(*)::int AS patients
+    FROM "User"
+    WHERE "role" = 'PATIENT' AND "createdAt" >= ${start} AND "createdAt" < ${end}
+    GROUP BY 1
+    ORDER BY MIN(date_trunc(${grain}, "createdAt"))
+  `;
+  // Doctors (both types)
+  const doctors = await prisma.$queryRaw<Bucket[]>`
+    SELECT to_char(date_trunc(${grain}, "createdAt"), ${grain === "month" ? "FMMon YYYY" : "DD/MM"}) AS bucket,
+           COUNT(*)::int AS doctors
+    FROM "User"
+    WHERE "role" IN ('INDEPENDENT_DOCTOR','HOSPITAL_DOCTOR')
+      AND "createdAt" >= ${start} AND "createdAt" < ${end}
+    GROUP BY 1
+    ORDER BY MIN(date_trunc(${grain}, "createdAt"))
+  `;
+  // Hospitals (created)
+  const hospitals = await prisma.$queryRaw<Bucket[]>`
+    SELECT to_char(date_trunc(${grain}, "createdAt"), ${grain === "month" ? "FMMon YYYY" : "DD/MM"}) AS bucket,
+           COUNT(*)::int AS hospitals
+    FROM "Hospital"
+    WHERE "createdAt" >= ${start} AND "createdAt" < ${end}
+    GROUP BY 1
+    ORDER BY MIN(date_trunc(${grain}, "createdAt"))
+  `;
+
+  // merge buckets
+  const map = new Map<
+    string,
+    { month: string; patients: number; doctors: number; hospitals: number }
+  >();
+  const ensure = (b: string) => {
+    if (!map.has(b))
+      map.set(b, { month: b, patients: 0, doctors: 0, hospitals: 0 });
+    return map.get(b)!;
+  };
+  patients.forEach((r) => {
+    ensure(r.bucket).patients = r.patients ?? 0;
+  });
+  doctors.forEach((r) => {
+    ensure(r.bucket).doctors = r.doctors ?? 0;
+  });
+  hospitals.forEach((r) => {
+    ensure(r.bucket).hospitals = r.hospitals ?? 0;
+  });
+
+  return Array.from(map.values());
+}
+
+async function revenueBuckets(range: string) {
+  const { start, end } = dateRangeFor(range);
+  const grain = bucketFormat(range) === "month" ? "month" : "day";
+
+  const rows = await prisma.$queryRaw<Bucket[]>`
+    SELECT to_char(date_trunc(${grain}, "paymentDate"), ${grain === "month" ? "FMMon YYYY" : "DD/MM"}) AS bucket,
+           COALESCE(SUM("amount"), 0) AS subscriptions
+    FROM "SubscriptionPayment"
+    WHERE "status" = 'COMPLETED' AND "paymentDate" >= ${start} AND "paymentDate" < ${end}
+    GROUP BY 1
+    ORDER BY MIN(date_trunc(${grain}, "paymentDate"))
+  `;
+
+  return rows.map((r) => ({
+    date: r.bucket,
+    subscriptions: Number(r.subscriptions ?? 0),
+    total: Number(r.subscriptions ?? 0),
+  }));
+}
+
 export async function getDashboardStats(
-  timeRange: string = "all"
+  timeRange = "all"
 ): Promise<DashboardStats> {
   try {
-    // Calculate percentage changes (mock data for now)
-    let periodDays = 30;
-    switch (timeRange) {
-      case "all":
-        const p = new Date("2024-01-01");
-        const newDate = new Date();
-        const milliDate = newDate.getTime() - p.getTime();
-        const oneDayInMilliseconds = 1000 * 60 * 60 * 24;
-        periodDays = Math.floor(milliDate / oneDayInMilliseconds);
-        break;
-      case "24h":
-        periodDays = 1;
-        break;
-      case "7d":
-        periodDays = 7;
-        break;
-      case "30d":
-        periodDays = 30;
-        break;
-      case "90d":
-        periodDays = 90;
-        break;
-      case "6m":
-        periodDays = 180;
-        break;
-      case "1y":
-        periodDays = 365;
-        break;
-    }
+    const { start: periodStart, end: now } = dateRangeFor(timeRange);
 
-    const now = new Date();
-    const periodStart = subDays(now, periodDays);
+    const [
+      totalUsers,
+      newPatients,
+      newDoctors,
+      totalAppointments,
+      userGrowthData,
+      revenueData,
+      totalPatients,
+      totalDoctorsUsers,
+      totalHospAdmins,
+    ] = await Promise.all([
+      prisma.user.count(), // TRUE total
+      prisma.user.count({
+        where: { role: "PATIENT", createdAt: { gte: periodStart, lt: now } },
+      }),
+      prisma.user.count({
+        where: {
+          role: { in: ["INDEPENDENT_DOCTOR", "HOSPITAL_DOCTOR"] },
+          createdAt: { gte: periodStart, lt: now },
+        },
+      }),
+      prisma.appointment.count({
+        where: { createdAt: { gte: periodStart, lt: now } },
+      }),
+      generateUserGrowthData(timeRange),
+      generateRevenueData(timeRange),
+      prisma.user.count({ where: { role: "PATIENT" } }),
+      prisma.user.count({
+        where: { role: { in: ["INDEPENDENT_DOCTOR", "HOSPITAL_DOCTOR"] } },
+      }),
+      prisma.user.count({ where: { role: "HOSPITAL_ADMIN" } }),
+    ]);
 
-    // ➤ Count for previous period
-    const currentNewDoctors = await prisma.user.count({
-      where: {
-        createdAt: { gte: periodStart, lt: now },
-        OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
-      },
-    });
-
-    // Get appointment counts
-    const totalAppointments = await prisma.appointment.count({
-      where: {
-        createdAt: { gte: periodStart, lt: now },
-      },
-    });
-
-    const userGrowthData = await generateUserGrowthData(timeRange);
-
-    const revenueData = await generateRevenueData(timeRange);
-
-    // Generate user distribution data
-    const totalPatients = await prisma.user.count({
-      where: { role: "PATIENT" },
-    });
-    const totalDoctors = await prisma.user.count({
-      where: {
-        OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
-      },
-    });
-    const totalHospitals = await prisma.user.count({
-      where: { role: "HOSPITAL_ADMIN" },
-    });
-
-    const userDistributionData = [
-      { name: "Patients", value: totalPatients },
-      { name: "Médecins", value: totalDoctors },
-      { name: "Hôpitaux", value: totalHospitals },
-    ];
-
-    // Overview stats
     const overviewStats = [
       {
         title: "Utilisateurs Totaux",
-        value: await prisma.user
-          .count({
-            where: { createdAt: { gte: periodStart } },
-          })
-          .then((v) => v.toString()),
+        value: String(totalUsers),
         icon: "Users",
         color: "blue",
       },
       {
         title: "Nouveaux patients",
-        value: await prisma.user
-          .count({
-            where: { role: "PATIENT", createdAt: { gte: periodStart } },
-          })
-          .then((v) => v.toString()),
+        value: String(newPatients),
         icon: "User",
         color: "green",
       },
       {
         title: "Nouveaux médecins",
-        value: currentNewDoctors.toString(),
+        value: String(newDoctors),
         icon: "Activity",
         color: "purple",
       },
       {
         title: "Rendez-vous",
-        value: totalAppointments.toString(),
+        value: String(totalAppointments),
         icon: "Calendar",
         color: "amber",
       },
     ];
 
-    return {
-      overviewStats,
-      userGrowthData,
-      revenueData,
-      userDistributionData,
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
+    const userDistributionData = [
+      { name: "Patients", value: totalPatients },
+      { name: "Médecins", value: totalDoctorsUsers },
+      { name: "Hôpitaux", value: totalHospAdmins },
+    ];
+
+    return { overviewStats, userGrowthData, revenueData, userDistributionData };
+  } catch (e) {
+    console.error(e);
     throw new Error("Failed to fetch dashboard statistics");
   }
 }
 
-async function generateUserGrowthData(
-  timeRange: string
-): Promise<UserGrowthDataPoint[]> {
-  const now = new Date();
-  let startDate: Date;
-  let intervalDays: number;
-  let labelFormat: string;
-
-  switch (timeRange) {
-    case "all":
-      const p = new Date("2023-07-01");
-      const newDate = new Date();
-      const diffInMonths =
-        (newDate.getFullYear() - p.getFullYear()) * 12 +
-        (newDate.getMonth() - p.getMonth());
-      startDate = subMonths(now, diffInMonths);
-      console.log({ startDate });
-      intervalDays = 30;
-      labelFormat = "MMM";
-      break;
-    case "24h":
-      startDate = subDays(now, 1);
-      intervalDays = 1;
-      labelFormat = "HH:mm";
-      break;
-    case "7d":
-      startDate = subDays(now, 7);
-      intervalDays = 1;
-      labelFormat = "dd/MM";
-      break;
-    case "30d":
-      startDate = subDays(now, 30);
-      intervalDays = 2;
-      labelFormat = "dd/MM";
-      break;
-    case "90d":
-      startDate = subDays(now, 90);
-      intervalDays = 7;
-      labelFormat = "dd/MM";
-      break;
-    case "6m":
-      startDate = subMonths(now, 6);
-      intervalDays = 30;
-      labelFormat = "MMM";
-      break;
-    case "1y":
-      startDate = subMonths(now, 12);
-      intervalDays = 30;
-      labelFormat = "MMM";
-      break;
-    default:
-      startDate = subDays(now, 30);
-      intervalDays = 2;
-      labelFormat = "dd/MM";
-      break;
-  }
-
-  const data: UserGrowthDataPoint[] = [];
-  const steps = Math.ceil(
-    (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * intervalDays)
-  );
-
-  for (let i = 0; i < steps; i++) {
-    const from = subDays(now, intervalDays * (steps - i));
-    const to = subDays(now, intervalDays * (steps - i - 1));
-
-    const [patients, doctors, hospitals] = await Promise.all([
-      prisma.user.count({
-        where: { role: "PATIENT", createdAt: { gte: from, lt: to } },
-      }),
-      prisma.user.count({
-        where: {
-          OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
-          createdAt: { gte: from, lt: to },
-        },
-      }),
-      prisma.hospital.count({
-        where: { createdAt: { gte: from, lt: to } },
-      }),
-    ]);
-
-    data.push({
-      month: format(from, labelFormat, { locale: fr }),
-      patients,
-      doctors,
-      hospitals,
-    });
-  }
-
-  return data;
+async function generateUserGrowthData(timeRange: string) {
+  return usersGrowthBuckets(timeRange); // already in chart shape
 }
 
-async function generateRevenueData(range: string): Promise<RevenueDataPoint[]> {
-  const now = new Date();
-  let startDate: Date;
-  let interval = 1;
-  let labelFormat = "dd/MM";
-
-  switch (range) {
-    case "all":
-      const p = new Date("2023-07-01");
-      const newDate = new Date();
-      const diffInMonths =
-        (newDate.getFullYear() - p.getFullYear()) * 12 +
-        (newDate.getMonth() - p.getMonth());
-      startDate = subMonths(now, diffInMonths);
-      console.log({ startDate });
-      interval = 30;
-      labelFormat = "MMM";
-      break;
-    case "24h":
-      startDate = subDays(now, 1);
-      interval = 1;
-      labelFormat = "HH:mm";
-      break;
-    case "7d":
-      startDate = subDays(now, 7);
-      interval = 1;
-      break;
-    case "30d":
-      startDate = subDays(now, 30);
-      interval = 2;
-      break;
-    case "90d":
-      startDate = subDays(now, 90);
-      interval = 7;
-      break;
-    case "6m":
-      startDate = subMonths(now, 6);
-      interval = 30;
-      labelFormat = "MMM";
-      break;
-    case "1y":
-      startDate = subMonths(now, 12);
-      interval = 30;
-      labelFormat = "MMM";
-      break;
-    default:
-      startDate = subDays(now, 30);
-      interval = 2;
-      break;
-  }
-
-  const data: RevenueDataPoint[] = [];
-  const steps = Math.ceil(
-    (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * interval)
-  );
-
-  for (let i = 0; i < steps; i++) {
-    const from = subDays(now, interval * (steps - i));
-    const to = subDays(now, interval * (steps - i - 1));
-
-    const subscriptionRevenue = await prisma.subscriptionPayment.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: "COMPLETED",
-        paymentDate: {
-          gte: from,
-          lt: to,
-        },
-      },
-    });
-
-    const subscriptions = subscriptionRevenue._sum.amount?.toNumber() || 0;
-
-    data.push({
-      date: format(from, labelFormat, { locale: fr }),
-      subscriptions,
-      total: subscriptions,
-    });
-  }
-
-  return data;
+async function generateRevenueData(range: string) {
+  return revenueBuckets(range);
 }
 
 export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {

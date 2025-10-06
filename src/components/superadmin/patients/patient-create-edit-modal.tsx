@@ -25,6 +25,7 @@ import { createPatient } from "@/app/actions/patient-actions";
 import { Patient } from "@/types/patient";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BloodType } from "@prisma/client";
+import { EyeOff, Eye } from "lucide-react";
 
 interface PatientCreateEditModalProps {
   isOpen: boolean;
@@ -61,6 +62,7 @@ export default function PatientCreateEditModal({
   onSuccess,
 }: PatientCreateEditModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState<FormState>({
     name: "",
@@ -130,6 +132,32 @@ export default function PatientCreateEditModal({
     }
   }, [patient, mode, isOpen]);
 
+  const calculateBoundaryDates = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1; // Month is 0-indexed
+    const day = today.getDate();
+
+    // Helper to format as YYYY-MM-DD
+    const formatDate = (d: Date) => {
+      return d.toISOString().split("T")[0];
+    };
+
+    // 1. Max Date (Minimum Age of 14)
+    // The birth date must be 14 years ago or earlier.
+    const maxAgeDate = new Date(year - 14, month - 1, day);
+    const maxDate = formatDate(maxAgeDate);
+
+    // 2. Min Date (Maximum Age of 150)
+    // The birth date must be no earlier than 150 years ago.
+    const minAgeDate = new Date(year - 150, month - 1, day);
+    const minDate = formatDate(minAgeDate);
+
+    return { maxDate, minDate };
+  };
+
+  const { maxDate, minDate } = calculateBoundaryDates();
+
   // Inputs
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -156,7 +184,6 @@ export default function PatientCreateEditModal({
 
   const validateRequired = () => {
     if (!formData.name || !formData.email || !formData.phone) return false;
-    if (mode === "create" && !formData.password) return false;
     return true;
   };
 
@@ -165,8 +192,7 @@ export default function PatientCreateEditModal({
     if (!validateRequired()) {
       toast({
         title: "Champs requis",
-        description:
-          "Nom, email, téléphone (et mot de passe à la création) sont requis.",
+        description: "Nom, email, téléphone (à la création) sont requis.",
         variant: "destructive",
       });
       return;
@@ -199,7 +225,6 @@ export default function PatientCreateEditModal({
           onClose();
         }
       } else if (mode === "edit" && patient) {
-        console.log({ patient: patient.id });
         // Update existing patient
         const response = await fetch(`/api/superadmin/patients/${patient.id}`, {
           method: "PUT",
@@ -254,10 +279,14 @@ export default function PatientCreateEditModal({
             {mode === "create"
               ? "Créez un nouveau compte patient en remplissant le formulaire ci-dessous"
               : `Modifiez les informations du patient ${patient?.user.name}`}
-            <div className="text-xs text-muted-foreground mt-1">
+            {/* ✅ FIX: Change <div> to <span>.
+      You might need to adjust CSS if the original div relied on block behavior,
+      but for simple text, <span> is semantically correct here. */}
+            <span className="text-xs text-muted-foreground mt-1 block">
+              {/* Adding 'block' class if the layout requires it to act like a block on a new line */}
               Les champs marqués d&lsquo;un{" "}
               <span className="text-red-500">*</span> sont obligatoires
-            </div>
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -309,18 +338,40 @@ export default function PatientCreateEditModal({
 
                 {mode === "create" && (
                   <div className="space-y-2">
-                    <Label htmlFor="password">
-                      Mot de passe <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      required
-                      aria-required="true"
-                    />
+                    <Label htmlFor="password">Mot de passe</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Définir un mot de passe ou laisser vide pour que le
+                      patient puisse le définir lui-même (lien via email)
+                    </p>
+                    <div className="relative">
+                      {/* Use a relative container for positioning */}
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        aria-required="true"
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                      >
+                        {/* 👇 DYNAMIC ICON */}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <div className="space-y-2">
@@ -334,6 +385,8 @@ export default function PatientCreateEditModal({
                     value={formData.dateOfBirth}
                     onChange={handleInputChange}
                     required
+                    max={maxDate}
+                    min={minDate}
                   />
                 </div>
                 <div className="space-y-2">

@@ -84,7 +84,8 @@ export async function GET(request: NextRequest) {
     // Get patients with pagination, sorting, and filtering
     const patients = await prisma.patient.findMany({
       where,
-      include: {
+      select: {
+        id: true,
         user: {
           select: {
             id: true,
@@ -113,16 +114,9 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        appointments: {
-          select: {
-            id: true,
-          },
-        },
-        medicalRecords: {
-          select: {
-            id: true,
-          },
-        },
+        allergies: true,
+        medicalNotes: true,
+        _count: { select: { appointments: true, medicalRecords: true } }, // ← only counts
       },
       skip,
       take: limit,
@@ -130,14 +124,12 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      patients: patients.map((patient) => ({
-        ...patient,
-        appointmentsCount: patient.appointments.length,
-        medicalRecordsCount: patient.medicalRecords.length,
-        allergies: patient.allergies ? patient.allergies.split(",") : [],
-        chronicConditions: patient.medicalNotes
-          ? patient.medicalNotes.split(",")
-          : [],
+      patients: patients.map((p) => ({
+        ...p,
+        appointmentsCount: p._count.appointments,
+        medicalRecordsCount: p._count.medicalRecords,
+        allergies: p.allergies ? p.allergies.split(",") : [],
+        chronicConditions: p.medicalNotes ? p.medicalNotes.split(",") : [],
       })),
       pagination: {
         total: totalPatients,

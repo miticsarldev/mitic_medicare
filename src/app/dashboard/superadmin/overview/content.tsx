@@ -73,6 +73,14 @@ import {
 // Colors for charts
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
+const colorClass: Record<string, string> = {
+  blue: "bg-blue-500",
+  green: "bg-green-500",
+  purple: "bg-purple-500",
+  amber: "bg-amber-500",
+  emerald: "bg-emerald-500",
+};
+
 interface DashboardContentProps {
   dashboardStats: DashboardStats;
   pendingApprovals: PendingApprovalUser[];
@@ -254,7 +262,7 @@ export function DashboardContent({
                 {stat.title}
               </CardTitle>
               <div
-                className={`bg-${stat.color}-500 rounded-full p-2 text-white`}
+                className={`${colorClass[stat.color] ?? "bg-gray-500"} rounded-full p-2 text-white`}
               >
                 {stat.icon === "Users" && <Users className="h-4 w-4" />}
                 {stat.icon === "User" && <User className="h-4 w-4" />}

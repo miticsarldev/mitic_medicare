@@ -7,6 +7,7 @@ import VerificationEmailHospital from "../../emails/verification-email-hospital"
 import PasswordResetEmail from "../../emails/password-reset-email";
 import PasswordResetSuccessEmail from "../../emails/password-reset-sucess-email";
 import ApprovalEmail from "../../emails/approval-email";
+import PatientWelcomeEmail from "../../emails/patient-welcome-email";
 
 export async function getVerificationEmailTemplate(
   userName: string,
@@ -79,6 +80,27 @@ export async function getApprovalEmailTemplate(
       name,
       hospitalName,
       userRole,
+    })
+  );
+}
+
+/**
+ * Returns the HTML for the patient welcome / invite email.
+ * If setPasswordUrl is provided => invite to set password.
+ * Otherwise => generic welcome with login button.
+ */
+export async function getPatientWelcomeEmailTemplate(opts: {
+  name: string;
+  setPasswordUrl?: string;
+  loginUrl?: string;
+}) {
+  const { name, setPasswordUrl, loginUrl } = opts;
+
+  return await render(
+    React.createElement(PatientWelcomeEmail, {
+      name,
+      setPasswordUrl,
+      loginUrl,
     })
   );
 }
