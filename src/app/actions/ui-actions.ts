@@ -874,7 +874,6 @@ export async function getHospitalById(
       address: hospital.address,
       city: hospital.city,
       state: hospital.state,
-      zipCode: hospital.zipCode,
       country: hospital.country,
       phone: hospital.phone,
       email: hospital.email,

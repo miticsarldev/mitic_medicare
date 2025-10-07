@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 export const metadata: Metadata = {
-  title: "Conditions d'utilisation | MITIC Care",
-  description: "Conditions générales d'utilisation de la plateforme MITIC Care",
+  title: "Conditions d'utilisation | MITICCARE",
+  description: "Conditions générales d'utilisation de la plateforme MITICCARE",
 };
 
 export default function TermsPage() {
@@ -45,7 +45,7 @@ export default function TermsPage() {
           <div className="prose prose-gray dark:prose-invert max-w-none">
             <h2>1. Introduction</h2>
             <p>
-              Bienvenue sur MITIC Care. Les présentes Conditions
+              Bienvenue sur MITICCARE. Les présentes Conditions
               d&apos;utilisation régissent votre utilisation de notre
               plateforme, accessible via notre site web et notre application
               mobile. En utilisant notre service, vous acceptez d&apos;être lié
@@ -170,31 +170,31 @@ export default function TermsPage() {
             <h2>7. Propriété intellectuelle</h2>
             <p>
               Le Service et son contenu original, ses fonctionnalités et sa
-              fonctionnalité sont la propriété de MITIC et sont protégés par les
-              lois internationales sur le droit d&apos;auteur, les marques, les
-              brevets, les secrets commerciaux et autres lois sur la propriété
-              intellectuelle.
+              fonctionnalité sont la propriété de MITICCAREet sont protégés par
+              les lois internationales sur le droit d&apos;auteur, les marques,
+              les brevets, les secrets commerciaux et autres lois sur la
+              propriété intellectuelle.
             </p>
 
             <h2>8. Limitation de responsabilité</h2>
             <p>
-              Dans toute la mesure permise par la loi, MITIC ne sera pas
+              Dans toute la mesure permise par la loi, MITICCAREne sera pas
               responsable des dommages indirects, accessoires, spéciaux,
               consécutifs ou punitifs, ou de toute perte de profits ou de
               revenus, que ces dommages soient prévisibles ou non, et même si
-              MITIC a été informé de la possibilité de tels dommages.
+              MITICCAREa été informé de la possibilité de tels dommages.
             </p>
 
             <h2>9. Indemnisation</h2>
             <p>
-              Vous acceptez de défendre, d&apos;indemniser et de tenir MITIC et
-              ses dirigeants, administrateurs, employés et agents indemnes de
-              toute réclamation, responsabilité, dommage, perte et dépense, y
-              compris, sans limitation, les frais juridiques et comptables
-              raisonnables, découlant de ou liés de quelque manière que ce soit
-              à votre accès ou utilisation du Service, à votre violation des
-              présentes Conditions, ou à votre violation des droits d&apos;un
-              tiers.
+              Vous acceptez de défendre, d&apos;indemniser et de tenir
+              MITICCAREet ses dirigeants, administrateurs, employés et agents
+              indemnes de toute réclamation, responsabilité, dommage, perte et
+              dépense, y compris, sans limitation, les frais juridiques et
+              comptables raisonnables, découlant de ou liés de quelque manière
+              que ce soit à votre accès ou utilisation du Service, à votre
+              violation des présentes Conditions, ou à votre violation des
+              droits d&apos;un tiers.
             </p>
 
             <h2>10. Modifications des conditions</h2>

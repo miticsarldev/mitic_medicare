@@ -161,7 +161,7 @@ export function ServicesSection() {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.7, delay: 0.2 }}
           >
-            MITIC Care offre une suite complète d&apos;outils pour optimiser la
+            MITICCARE offre une suite complète d&apos;outils pour optimiser la
             gestion hospitalière, améliorer les soins aux patients et simplifier
             les opérations administratives
           </motion.p>

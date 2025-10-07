@@ -81,7 +81,6 @@ const hospitalAdminSchema = z.object({
   institutionAddress: z.string().min(5, "L'adresse de l'hôpital est requise"),
   institutionCity: z.string().min(2, "La ville est requise"),
   institutionState: z.string().min(2, "L'état ou la région est requis."),
-  institutionZipCode: z.string().min(2, "Le code postal est requis"),
   institutionCountry: z.string().min(2, "Le pays est requis"),
   terms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les conditions d'utilisation",
@@ -115,7 +114,6 @@ const HospitalAdminRegisterForm = () => {
       institutionAddress: "",
       institutionCity: "",
       institutionState: "",
-      institutionZipCode: "",
       institutionCountry: "",
       terms: false,
     },
@@ -373,23 +371,6 @@ const HospitalAdminRegisterForm = () => {
               {errors.institutionState && (
                 <p className="text-red-500 text-xs mt-0.5">
                   {errors.institutionState.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="institutionZipCode">
-                Code postal de l&apos;hôpital
-              </Label>
-              <div className="relative">
-                <Input
-                  id="institutionZipCode"
-                  {...register("institutionZipCode")}
-                />
-                <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              </div>
-              {errors.institutionZipCode && (
-                <p className="text-red-500 text-xs mt-0.5">
-                  {errors.institutionZipCode.message}
                 </p>
               )}
             </div>

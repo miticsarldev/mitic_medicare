@@ -30,7 +30,7 @@ export const PasswordResetSuccessEmail = ({
     <Html>
       <Head />
       <Preview>
-        Votre mot de passe MITIC CARE a été réinitialisé avec succès
+        Votre mot de passe MITICCARE a été réinitialisé avec succès
       </Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans text-gray-800 leading-relaxed">
@@ -43,7 +43,7 @@ export const PasswordResetSuccessEmail = ({
                     src={`${baseUrl}/logos/logo_mitic_dark.png`}
                     width="160"
                     height="34"
-                    alt="MITIC CARE"
+                    alt="MITICCARE"
                   />
                 </Column>
                 <Column>
@@ -76,7 +76,7 @@ export const PasswordResetSuccessEmail = ({
                 <strong>{userName}</strong>
               </Text>
               <Text className="text-sm text-gray-600 mb-4 px-2">
-                Votre mot de passe MITIC CARE a été réinitialisé avec succès le{" "}
+                Votre mot de passe MITICCARE a été réinitialisé avec succès le{" "}
                 {resetTime}.
               </Text>
 
@@ -108,7 +108,7 @@ export const PasswordResetSuccessEmail = ({
                   • Ne partagez jamais votre mot de passe
                 </Text>
                 <Text className="text-sm text-gray-600 m-0 mb-1">
-                  • Utilisez un mot de passe unique pour MITIC CARE
+                  • Utilisez un mot de passe unique pour MITICCARE
                 </Text>
                 <Text className="text-sm text-gray-600 m-0 mb-1">
                   • Activez l&apos;authentification à deux facteurs si
@@ -132,10 +132,10 @@ export const PasswordResetSuccessEmail = ({
                 </Link>
               </Text>
               <Text className="text-sm text-gray-500 mb-3">
-                &copy; 2024 MITIC CARE. Tous droits réservés.
+                &copy; 2024 MITICCARE. Tous droits réservés.
               </Text>
               <Text className="text-xs text-gray-400 mt-5">
-                MITIC CARE SARL
+                MITICCARE
                 <br />
                 Hamdallaye ACI 2000, Bamako, MALI
               </Text>

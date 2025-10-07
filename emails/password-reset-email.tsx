@@ -31,7 +31,7 @@ export const PasswordResetEmail = ({
   return (
     <Html>
       <Head />
-      <Preview>Réinitialisation de votre mot de passe MITIC CARE</Preview>
+      <Preview>Réinitialisation de votre mot de passe MITICCARE</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans text-gray-800 leading-relaxed">
           <Container className="max-w-[600px] mx-auto bg-gray-50 px-2">
@@ -43,7 +43,7 @@ export const PasswordResetEmail = ({
                     src={`${baseUrl}/logos/logo_mitic_dark.png`}
                     width="160"
                     height="34"
-                    alt="MITIC CARE"
+                    alt="MITICCARE"
                   />
                 </Column>
                 <Column>
@@ -77,7 +77,7 @@ export const PasswordResetEmail = ({
               </Text>
               <Text className="text-sm text-gray-600 mb-2 px-2">
                 Vous avez demandé la réinitialisation de votre mot de passe sur
-                MITIC CARE. Utilisez le code de vérification ci-dessous pour
+                MITICCARE. Utilisez le code de vérification ci-dessous pour
                 procéder à la réinitialisation.
               </Text>
 
@@ -133,7 +133,7 @@ export const PasswordResetEmail = ({
                   <strong className="text-red-700">
                     Information de sécurité :
                   </strong>{" "}
-                  MITIC CARE ne vous demandera jamais votre mot de passe par
+                  MITICCARE ne vous demandera jamais votre mot de passe par
                   email. Ne partagez jamais ce code avec qui que ce soit. Si
                   vous recevez un email suspect, contactez-nous immédiatement.
                 </Text>
@@ -153,10 +153,10 @@ export const PasswordResetEmail = ({
                 </Link>
               </Text>
               <Text className="text-sm text-gray-500 mb-3">
-                &copy; 2024 MITIC CARE. Tous droits réservés.
+                &copy; 2024 MITICCARE. Tous droits réservés.
               </Text>
               <Text className="text-xs text-gray-400 mt-5">
-                MITIC CARE SARL
+                MITICCARE
                 <br />
                 Hamdallaye ACI 2000, Bamako, MALI
               </Text>

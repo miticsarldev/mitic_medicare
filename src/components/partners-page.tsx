@@ -131,7 +131,7 @@ export default function PartnersPageComponent() {
               variants={fadeInUp}
               className="text-xl text-muted-foreground"
             >
-              MITIC Care collabore avec des partenaires de premier plan pour
+              MITICCARE collabore avec des partenaires de premier plan pour
               améliorer l&apos;accès aux soins de santé au Mali
             </motion.p>
           </motion.div>
@@ -672,7 +672,7 @@ export default function PartnersPageComponent() {
               variants={fadeInUp}
               className="text-xl text-muted-foreground"
             >
-              Découvrez les avantages de rejoindre l&apos;écosystème MITIC Care
+              Découvrez les avantages de rejoindre l&apos;écosystème MITICCARE
             </motion.p>
           </motion.div>
 
@@ -815,7 +815,7 @@ export default function PartnersPageComponent() {
             {[
               {
                 quote:
-                  "Grâce à MITIC Care, nous avons pu optimiser la gestion de nos rendez-vous et améliorer considérablement l'expérience de nos patients. La plateforme est intuitive et le support technique est excellent.",
+                  "Grâce à MITICCARE, nous avons pu optimiser la gestion de nos rendez-vous et améliorer considérablement l'expérience de nos patients. La plateforme est intuitive et le support technique est excellent.",
                 author: "Dr. Aminata Diallo",
                 role: "Directrice, Hôpital du Mali",
                 avatar:
@@ -823,7 +823,7 @@ export default function PartnersPageComponent() {
               },
               {
                 quote:
-                  "Notre partenariat avec MITIC Care nous a permis d'étendre notre portée et d'offrir des soins de qualité à davantage de patients. La technologie qu'ils proposent est vraiment adaptée aux réalités du terrain.",
+                  "Notre partenariat avec MITICCARE nous a permis d'étendre notre portée et d'offrir des soins de qualité à davantage de patients. La technologie qu'ils proposent est vraiment adaptée aux réalités du terrain.",
                 author: "Ibrahim Coulibaly",
                 role: "Directeur Général, Clinique Pasteur",
                 avatar:
@@ -831,7 +831,7 @@ export default function PartnersPageComponent() {
               },
               {
                 quote:
-                  "En tant qu'ONG, nous cherchions une solution pour suivre efficacement nos programmes de santé. MITIC Care nous a fourni les outils nécessaires pour collecter des données précises et améliorer nos interventions.",
+                  "En tant qu'ONG, nous cherchions une solution pour suivre efficacement nos programmes de santé. MITICCARE nous a fourni les outils nécessaires pour collecter des données précises et améliorer nos interventions.",
                 author: "Sophie Martin",
                 role: "Coordinatrice, Médecins Sans Frontières",
                 avatar:

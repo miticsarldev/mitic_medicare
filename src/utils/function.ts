@@ -36,6 +36,7 @@ export function formatTime(minutes: number): string {
 }
 
 import { FILTERS_BY_TYPE } from "@/config/filters.config";
+import { specialities } from "@/constant";
 
 type AnySortKey =
   | (typeof FILTERS_BY_TYPE)["doctor"]["sortBy"][number]
@@ -75,4 +76,16 @@ export function labelForSort(key: AnySortKey | string): string {
     .replace(/(^\w|\s\w)/g, (m) => m.toUpperCase());
 
   return humanized;
+}
+
+export type SpecializationCode = (typeof specialities)[number]["value"];
+
+export const SPECIALIZATION_LABEL_FR: Record<SpecializationCode, string> =
+  Object.fromEntries(specialities.map((s) => [s.value, s.label])) as Record<
+    SpecializationCode,
+    string
+  >;
+
+export function getSpecializationLabel(code: string) {
+  return (SPECIALIZATION_LABEL_FR as Record<string, string>)[code] ?? code;
 }

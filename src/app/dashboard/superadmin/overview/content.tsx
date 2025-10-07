@@ -105,9 +105,10 @@ export function DashboardContent({
     null
   );
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
-  const [stats, setStats] = useState<DashboardStats>(dashboardStats);
-  const [approvals, setApprovals] =
-    useState<PendingApprovalUser[]>(pendingApprovals);
+  const [stats, setStats] = useState<DashboardStats>(dashboardStats ?? []);
+  const [approvals, setApprovals] = useState<PendingApprovalUser[]>(
+    pendingApprovals ?? []
+  );
   const [subStats, setSubStats] =
     useState<SubscriptionStats>(subscriptionStats);
 

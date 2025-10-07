@@ -55,7 +55,6 @@ export default function HospitalCreateEditModal({
     address: "",
     city: "",
     state: "",
-    zipCode: "",
     country: "",
     website: "",
     description: "",
@@ -74,7 +73,6 @@ export default function HospitalCreateEditModal({
         address: hospital.address || "",
         city: hospital.city || "",
         state: hospital.state || "",
-        zipCode: hospital.zipCode || "",
         country: hospital.country || "",
         website: hospital.website || "",
         description: hospital.description || "",
@@ -91,7 +89,6 @@ export default function HospitalCreateEditModal({
         address: "",
         city: "",
         state: "",
-        zipCode: "",
         country: "",
         website: "",
         description: "",
@@ -163,7 +160,6 @@ export default function HospitalCreateEditModal({
               address: formData.address,
               city: formData.city,
               state: formData.state,
-              zipCode: formData.zipCode,
               country: formData.country,
               website: formData.website,
               description: formData.description,
@@ -287,16 +283,6 @@ export default function HospitalCreateEditModal({
                     name="state"
                     placeholder="Île-de-France"
                     value={formData.state}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zipCode">Code postal</Label>
-                  <Input
-                    id="zipCode"
-                    name="zipCode"
-                    placeholder="75001"
-                    value={formData.zipCode}
                     onChange={handleInputChange}
                   />
                 </div>

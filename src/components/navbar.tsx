@@ -24,21 +24,21 @@ export default async function Navbar() {
       <div className="flex h-16 items-center justify-between mx-auto px-4">
         {/* Logo and brand */}
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center space-x-0.5">
-            <div className="h-6 w-auto rounded-full flex items-center justify-center">
+          <Link
+            href="/"
+            className="flex items-center justify-center space-x-0.5"
+          >
+            <div className="h-10 w-auto rounded-full flex items-center justify-center">
               <Image
                 src="/logos/logo_mitic_dark.png"
                 alt="Logo"
-                className="h-6 w-auto object-cover"
+                className="h-10 w-auto object-cover"
                 width={40}
                 height={40}
                 priority
                 unoptimized
               />
             </div>
-            <span className="font-semibold text-4xl hidden sm:inline-block">
-              <span className="text-foreground">care</span>
-            </span>
           </Link>
         </div>
 

@@ -235,7 +235,7 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                                 <MapPin className="h-4 w-4 text-muted-foreground" />
                                 <span>
                                   {hospital.address}, {hospital.city},{" "}
-                                  {hospital.state}, {hospital.zipCode}
+                                  {hospital.state}
                                 </span>
                               </div>
                               {status === "authenticated" && (
@@ -802,8 +802,7 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                     <div>
                       <h3 className="font-medium">Adresse</h3>
                       <p className="text-sm text-muted-foreground">
-                        {hospital.address}, {hospital.city}, {hospital.state},{" "}
-                        {hospital.zipCode}
+                        {hospital.address}, {hospital.city}, {hospital.state}
                       </p>
                     </div>
                   </div>

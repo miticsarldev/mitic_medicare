@@ -121,7 +121,6 @@ export default async function AppointmentDetailPage({
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {hospital.address}, {hospital.city}, {hospital.state}{" "}
-                      {hospital.zipCode}
                     </p>
                   </div>
                 </div>

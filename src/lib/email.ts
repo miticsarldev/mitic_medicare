@@ -42,9 +42,9 @@ export async function sendVerificationEmail(
   }
 
   const mailOptions = {
-    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    from: `"MITICCARE" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: "MITIC CARE - Confirmation d'Email",
+    subject: "MITICCARE - Confirmation d'Email",
     html: htmlContent,
   };
 
@@ -68,9 +68,9 @@ export async function sendPasswordResetEmail(
   );
 
   const mailOptions = {
-    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    from: `"MITICCARE" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: "MITIC CARE - Code de réinitialisation de mot de passe",
+    subject: "MITICCARE - Code de réinitialisation de mot de passe",
     html: htmlContent,
   };
 
@@ -89,9 +89,9 @@ export async function sendPasswordResetSuccessEmail(
   const htmlContent = await getPasswordResetSuccessEmailTemplate(name);
 
   const mailOptions = {
-    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    from: `"MITICCARE" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: "MITIC CARE – Votre mot de passe a été réinitialisé avec succès",
+    subject: "MITICCARE – Votre mot de passe a été réinitialisé avec succès",
     html: htmlContent,
   };
 
@@ -109,7 +109,7 @@ export async function sendApprovingEmail(
   userRole: UserRole = "INDEPENDENT_DOCTOR",
   hospitalName: string
 ) {
-  const subject = "MITIC CARE – Compte approuvé";
+  const subject = "MITICCARE – Compte approuvé";
   let htmlContent: string;
   if (userRole === "INDEPENDENT_DOCTOR") {
     htmlContent = await getApprovalEmailTemplate(
@@ -128,7 +128,7 @@ export async function sendApprovingEmail(
   }
 
   const mailOptions = {
-    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    from: `"MITICCARE" <${process.env.EMAIL_USER}>`,
     to: email,
     subject,
     html: htmlContent,
@@ -157,11 +157,11 @@ export async function sendPatientWelcomeEmail(opts: {
   });
 
   const subject = setPasswordUrl
-    ? "MITIC CARE – Créez votre mot de passe"
-    : "MITIC CARE – Bienvenue";
+    ? "MITICCARE – Créez votre mot de passe"
+    : "MITICCARE – Bienvenue";
 
   const mailOptions = {
-    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    from: `"MITICCARE" <${process.env.EMAIL_USER}>`,
     to: email,
     subject,
     html: htmlContent,

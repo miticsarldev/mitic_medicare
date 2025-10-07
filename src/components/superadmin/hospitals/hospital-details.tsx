@@ -198,8 +198,8 @@ export default function HospitalDetails({
                   Adresse complète
                 </Label>
                 <p className="text-sm">
-                  {hospital.address}, {hospital.zipCode} {hospital.city},{" "}
-                  {hospital.state}, {hospital.country}
+                  {hospital.address}, {hospital.city}, {hospital.state},{" "}
+                  {hospital.country}
                 </p>
               </div>
 

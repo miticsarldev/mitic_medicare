@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   });
 
   await transporter.sendMail({
-    from: `"MITIC CARE Contact" <${process.env.EMAIL_USER}>`,
+    from: `"MITICCARE Contact" <${process.env.EMAIL_USER}>`,
     to: "contact@miticsarl.com",
     subject: `Message de contact - ${subject}`,
     html,

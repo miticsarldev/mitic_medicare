@@ -131,16 +131,13 @@ export default async function AuthPage() {
                         <Image
                           src="/logos/logo_mitic_dark.png"
                           alt="Logo"
-                          className="h-6 w-auto object-cover"
+                          className="h-10 w-auto object-cover"
                           width={40}
                           height={40}
                           priority
                           unoptimized
                         />
                       </div>
-                      <span className="font-semibold text-4xl hidden sm:inline-block">
-                        <span className="text-foreground">care</span>
-                      </span>
                     </div>
                   </div>
 
@@ -158,18 +155,24 @@ export default async function AuthPage() {
               <div className="mt-8 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   En vous inscrivant, vous acceptez nos{" "}
-                  <Link href="#" className="text-primary hover:underline">
+                  <Link
+                    href="/conditions-utilisation"
+                    className="text-primary hover:underline"
+                  >
                     Conditions d&apos;utilisation
                   </Link>{" "}
                   et notre{" "}
-                  <Link href="#" className="text-primary hover:underline">
+                  <Link
+                    href="/politique-confidentialite"
+                    className="text-primary hover:underline"
+                  >
                     Politique de confidentialité
                   </Link>
                 </p>
 
                 <div className="mt-6 flex justify-center">
                   <Link
-                    href="#"
+                    href="/offres-professionnels"
                     className="text-sm text-primary hover:underline flex items-center"
                   >
                     Découvrir nos offres pour les professionnels de santé

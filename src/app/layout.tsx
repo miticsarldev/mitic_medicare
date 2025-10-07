@@ -19,42 +19,42 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "MiticCare - Plateforme de gestion médicale",
+  title: "MITICCARE - Plateforme de gestion médicale",
   description:
-    "Optimisez la gestion de votre hôpital ou cabinet médical avec MiticCare, la solution tout-en-un.",
+    "Optimisez la gestion de votre hôpital ou cabinet médical avec MITICCARE, la solution tout-en-un.",
   keywords: [
     "SaaS médical",
     "gestion hospitalière",
-    "MiticCare",
+    "MITICCARE",
     "plateforme médicale",
     "gestion de rendez-vous",
     "gestion de patients",
   ],
-  authors: [{ name: "MiticCare", url: "https://miticcare.com" }],
+  authors: [{ name: "MITICCARE", url: "https://miticcare.com" }],
   openGraph: {
     type: "website",
     url: "https://miticcare.com",
-    title: "MiticCare - Plateforme de gestion médicale",
+    title: "MITICCARE - Plateforme de gestion médicale",
     description:
-      "Optimisez la gestion de votre hôpital ou cabinet médical avec MiticCare, la solution SaaS tout-en-un.",
-    siteName: "MiticCare",
+      "Optimisez la gestion de votre hôpital ou cabinet médical avec MITICCARE, la solution SaaS tout-en-un.",
+    siteName: "MITICCARE",
     images: [
       {
         url: "https://miticcare.com/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "MiticCare - Plateforme de gestion médicale",
+        alt: "MITICCARE - Plateforme de gestion médicale",
       },
     ],
     locale: "fr_FR",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MiticCare - Plateforme de gestion médicale",
+    title: "MITICCARE - Plateforme de gestion médicale",
     description:
-      "Optimisez la gestion de votre hôpital ou cabinet médical avec MiticCare, la solution SaaS tout-en-un.",
+      "Optimisez la gestion de votre hôpital ou cabinet médical avec MITICCARE, la solution SaaS tout-en-un.",
     images: ["https://miticcare.com/og-image.jpg"],
-    site: "@MiticCare",
+    site: "@MITICCARE",
   },
 };
 

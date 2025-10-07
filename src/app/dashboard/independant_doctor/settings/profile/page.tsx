@@ -276,6 +276,7 @@ export default function ProfilePage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
 
       await update({
+        name: data.name,
         userProfile: { avatarUrl: effective },
       });
 

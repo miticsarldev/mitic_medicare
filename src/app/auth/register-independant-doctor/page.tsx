@@ -136,16 +136,13 @@ export default function IndependentDoctorRegister() {
                         <Image
                           src="/logos/logo_mitic_dark.png"
                           alt="Logo"
-                          className="h-6 w-auto object-cover"
+                          className="h-10 w-auto object-cover"
                           width={40}
                           height={40}
                           priority
                           unoptimized
                         />
                       </div>
-                      <span className="font-semibold text-4xl hidden sm:inline-block">
-                        <span className="text-foreground">care</span>
-                      </span>
                     </div>
                   </div>
 

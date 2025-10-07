@@ -296,6 +296,7 @@ export default function ProfilePage() {
 
       // Update session immediately so UI (navbar etc.) reflects new avatar/name
       await update({
+        name: data.name,
         userProfile: { avatarUrl: effectiveAvatarUrl },
       });
 

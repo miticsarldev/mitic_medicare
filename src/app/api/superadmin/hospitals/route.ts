@@ -218,7 +218,6 @@ export async function POST(request: NextRequest) {
         address: data.address,
         city: data.city,
         state: data.state,
-        zipCode: data.zipCode,
         country: data.country,
         phone: data.phone,
         email: data.email,

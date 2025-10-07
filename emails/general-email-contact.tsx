@@ -42,7 +42,7 @@ export const GeneralContactEmailTemplate = ({
           <Container className="mx-auto max-w-[600px] rounded-lg overflow-hidden">
             <Section className="bg-[#4361ee] py-5 px-5 text-center">
               <Heading className="text-white text-2xl m-0">
-                MITIC CARE - Formulaire de contact
+                MITICCARE - Formulaire de contact
               </Heading>
             </Section>
 
@@ -116,10 +116,10 @@ export const GeneralContactEmailTemplate = ({
 
             <Section className="bg-gray-100 py-5 px-5 text-center text-gray-500">
               <Text className="text-sm mb-2">
-                Ce message a été généré automatiquement par le site MITIC CARE.
+                Ce message a été généré automatiquement par le site MITICCARE.
               </Text>
               <Text className="text-sm m-0">
-                © {new Date().getFullYear()} MITIC SARL. Tous droits réservés.
+                © {new Date().getFullYear()} MITICCARE. Tous droits réservés.
               </Text>
             </Section>
           </Container>

@@ -67,6 +67,17 @@ const roles: UserRole[] = [
   "PATIENT",
 ];
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  SUPER_ADMIN: "Super administrateur",
+  HOSPITAL_ADMIN: "Administrateur d’hôpital",
+  INDEPENDENT_DOCTOR: "Médecin indépendant",
+  HOSPITAL_DOCTOR: "Médecin hospitalier",
+  PATIENT: "Patient",
+};
+
+const getRoleLabel = (role: UserRole | null | undefined) =>
+  role ? (ROLE_LABELS[role] ?? role) : "—";
+
 const FormSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères."),
   email: z.string().email("Email invalide."),
@@ -317,7 +328,7 @@ export default function SuperAdminProfileClient() {
                 <div className="mt-2 flex flex-wrap gap-3 text-sm">
                   <span className="inline-flex items-center gap-1">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    {watchAll.role}
+                    {getRoleLabel(watchAll.role as UserRole)}
                   </span>
 
                   {watchAll.city && watchAll.country && (
@@ -392,6 +403,7 @@ export default function SuperAdminProfileClient() {
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
+                          disabled
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Sélectionner" />
@@ -399,7 +411,7 @@ export default function SuperAdminProfileClient() {
                           <SelectContent>
                             {roles.map((r) => (
                               <SelectItem key={r} value={r}>
-                                {r}
+                                {ROLE_LABELS[r]}
                               </SelectItem>
                             ))}
                           </SelectContent>

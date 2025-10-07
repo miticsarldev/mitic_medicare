@@ -286,9 +286,9 @@ export default function HelpCenterComponent() {
                   <Accordion type="single" collapsible className="w-full">
                     {[
                       {
-                        question: "Qu'est-ce que MITIC Care ?",
+                        question: "Qu'est-ce que MITICCARE ?",
                         answer:
-                          "MITIC Care est une plateforme de gestion hospitalière et de santé qui connecte les patients, médecins et établissements de santé. Elle permet de prendre rendez-vous en ligne, de gérer les dossiers médicaux et d'optimiser le parcours de soins.",
+                          "MITICCARE est une plateforme de gestion hospitalière et de santé qui connecte les patients, médecins et établissements de santé. Elle permet de prendre rendez-vous en ligne, de gérer les dossiers médicaux et d'optimiser le parcours de soins.",
                       },
                       {
                         question: "Comment fonctionne la plateforme ?",
@@ -298,7 +298,7 @@ export default function HelpCenterComponent() {
                       {
                         question: "La plateforme est-elle sécurisée ?",
                         answer:
-                          "Oui, MITIC Care respecte les normes les plus strictes en matière de sécurité des données de santé. Nous sommes conformes au RGPD et nos serveurs sont certifiés pour l'hébergement de données de santé (HDS). Toutes les données sont chiffrées et protégées.",
+                          "Oui, MITICCARE respecte les normes les plus strictes en matière de sécurité des données de santé. Nous sommes conformes au RGPD et nos serveurs sont certifiés pour l'hébergement de données de santé (HDS). Toutes les données sont chiffrées et protégées.",
                       },
                       {
                         question: "Quels sont les frais d'utilisation ?",
@@ -309,7 +309,7 @@ export default function HelpCenterComponent() {
                         question:
                           "Dans quelles régions le service est-il disponible ?",
                         answer:
-                          "Actuellement, MITIC Care est disponible au Mali et prévoit de s'étendre à d'autres pays d'Afrique de l'Ouest dans les prochains mois.",
+                          "Actuellement, MITICCARE est disponible au Mali et prévoit de s'étendre à d'autres pays d'Afrique de l'Ouest dans les prochains mois.",
                       },
                     ].map((item, index) => (
                       <motion.div

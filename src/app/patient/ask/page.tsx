@@ -62,7 +62,7 @@ export default function AskQuestionForm() {
         <Navbar />
 
         {/* Main Content */}
-        <main className="container mx-auto px-4 py-8 bg-white dark:bg-gray-900 flex flex-col items-center py-3">
+        <main className="container mx-auto px-4 bg-white dark:bg-gray-900 flex flex-col items-center py-3">
           <div className="w-full max-w-md mb-6">
             <h2 className="text-xl text-center font-bold mb-4">
               Posez votre question

@@ -11,15 +11,15 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
   if (!hospital) {
     return {
-      title: "Hôpital non trouvé | MITIC Care",
+      title: "Hôpital non trouvé | MITICCARE",
       description:
         "L'hôpital que vous recherchez n'existe pas ou a été supprimé.",
     };
   }
 
   return {
-    title: `${hospital.name} | MITIC Care`,
-    description: `Découvrez les informations sur ${hospital.name}, ses départements et ses médecins. Prenez rendez-vous en ligne avec MITIC Care.`,
+    title: `${hospital.name} | MITICCARE`,
+    description: `Découvrez les informations sur ${hospital.name}, ses départements et ses médecins. Prenez rendez-vous en ligne avec MITICCARE.`,
   };
 }
 

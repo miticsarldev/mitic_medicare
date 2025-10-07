@@ -50,9 +50,9 @@ export async function POST(req: NextRequest) {
   });
 
   await transporter.sendMail({
-    from: `"MITIC CARE" <${process.env.EMAIL_USER}>`,
+    from: `"MITICCARE" <${process.env.EMAIL_USER}>`,
     to: "imran.toure@miticsarl.com",
-    subject: `Support MITIC CARE - ${subject}`,
+    subject: `Support MITICCARE - ${subject}`,
     html,
     replyTo: session?.user?.email,
     attachments,

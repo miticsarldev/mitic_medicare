@@ -3,6 +3,7 @@ import { hashPassword } from "@/utils/hash";
 import prisma from "@/lib/prisma";
 import { generateVerificationToken } from "@/lib/token";
 import { sendVerificationEmail } from "@/lib/email";
+import { SpecializationCode } from "@/utils/function";
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +20,6 @@ export async function POST(req: Request) {
       institutionAddress,
       institutionCity,
       institutionState,
-      institutionZipCode,
       institutionCountry,
     } = await req.json();
 
@@ -36,7 +36,6 @@ export async function POST(req: Request) {
       !institutionAddress ||
       !institutionCity ||
       !institutionState ||
-      !institutionZipCode ||
       !institutionCountry
     ) {
       return NextResponse.json(
@@ -134,7 +133,6 @@ export async function POST(req: Request) {
           address: institutionAddress,
           city: institutionCity,
           state: institutionState,
-          zipCode: institutionZipCode,
           country: institutionCountry,
         },
       });
@@ -144,7 +142,7 @@ export async function POST(req: Request) {
           userId: user.id,
           isIndependent: false,
           hospitalId: hospital.id,
-          specialization: "General",
+          specialization: "generaliste" as SpecializationCode,
           licenseNumber: "N/A",
         },
       });

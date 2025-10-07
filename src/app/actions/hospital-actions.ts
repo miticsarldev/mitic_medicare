@@ -22,7 +22,6 @@ export async function createHospital(formData: FormData) {
     const address = formData.get("address") as string;
     const city = formData.get("city") as string;
     const state = formData.get("state") as string;
-    const zipCode = formData.get("zipCode") as string;
     const country = formData.get("country") as string;
     const status = formData.get("status") as HospitalStatus;
     const verified = formData.get("verified") === "on";
@@ -37,7 +36,6 @@ export async function createHospital(formData: FormData) {
         address,
         city,
         state,
-        zipCode,
         country,
         status,
         isVerified: verified,

@@ -217,7 +217,6 @@ model Hospital {
     address     String
     city        String
     state       String
-    zipCode     String
     country     String
     phone       String
     email       String

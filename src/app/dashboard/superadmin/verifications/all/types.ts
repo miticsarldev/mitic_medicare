@@ -39,7 +39,6 @@ export interface Hospital {
   address: string;
   city: string;
   state: string;
-  zipCode: string;
   country: string;
   phone: string;
   email: string;

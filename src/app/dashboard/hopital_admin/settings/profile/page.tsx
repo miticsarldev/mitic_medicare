@@ -198,6 +198,7 @@ export default function ProfilePage() {
       const effectiveAvatar = newUrl ?? originalAvatarUrl ?? null;
 
       await update({
+        name: formattedData.name,
         userProfile: { avatarUrl: effectiveAvatar },
       });
 

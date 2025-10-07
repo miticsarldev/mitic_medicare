@@ -12,7 +12,6 @@ export interface Hospital {
   address: string;
   city: string;
   state: string;
-  zipCode: string;
   country: string;
   phone: string;
   email: string;
@@ -116,7 +115,6 @@ export interface ExportHospital {
   address: string;
   city: string;
   state: string;
-  zipCode: string;
   country: string;
   status: HospitalStatus;
   verified: string; // "true" or "false" instead of boolean

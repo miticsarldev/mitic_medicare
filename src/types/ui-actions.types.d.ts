@@ -48,7 +48,6 @@ export type HospitalWithDetails = {
   name: string;
   city: string;
   state?: string;
-  zipCode?: string;
   country: string;
   website?: string;
   isVerified: boolean;
@@ -173,7 +172,6 @@ export interface DepartmentWithDetails {
     address: string;
     city: string;
     state: string;
-    zipCode: string;
     country: string;
     phone: string;
     email: string;

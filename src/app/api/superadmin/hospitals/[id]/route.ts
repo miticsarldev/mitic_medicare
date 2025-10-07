@@ -107,7 +107,6 @@ export async function PUT(
         address: data.address,
         city: data.city,
         state: data.state,
-        zipCode: data.zipCode,
         country: data.country,
         status: data.status,
         isVerified: data.isVerified ?? data.verified, // accept either key

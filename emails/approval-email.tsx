@@ -39,12 +39,12 @@ export const ApprovalEmail = ({
 
   const body = isHospitalAdmin
     ? `Vous pouvez dès à présent accéder à votre espace administrateur pour gérer ${hospitalName}.`
-    : `Vous pouvez maintenant accéder à votre espace médecin et commencer à utiliser MITIC CARE.`;
+    : `Vous pouvez maintenant accéder à votre espace médecin et commencer à utiliser MITICCARE.`;
 
   return (
     <Html>
       <Head />
-      <Preview>Approbation de votre compte MITIC CARE</Preview>
+      <Preview>Approbation de votre compte MITICCARE</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans text-gray-800 leading-relaxed">
           <Container className="max-w-[600px] mx-auto bg-white px-4 rounded-md">
@@ -53,7 +53,7 @@ export const ApprovalEmail = ({
                 src={`${baseUrl}/logos/logo_mitic_dark.png`}
                 width="160"
                 height="34"
-                alt="MITIC CARE"
+                alt="MITICCARE"
                 className="mx-auto"
               />
               <Heading className="text-lg font-semibold mt-2">{title}</Heading>
@@ -95,7 +95,7 @@ export const ApprovalEmail = ({
                 </Link>
               </Text>
               <Text>
-                &copy; 2025 MITIC CARE - Hamdallaye ACI 2000, Bamako, MALI
+                &copy; 2025 MITICCARE - Hamdallaye ACI 2000, Bamako, MALI
               </Text>
             </Section>
           </Container>

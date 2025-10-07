@@ -11,15 +11,15 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
   if (!department) {
     return {
-      title: "Département non trouvé | MITIC Care",
+      title: "Département non trouvé | MITICCARE",
       description:
         "Le département que vous recherchez n'existe pas ou a été supprimé.",
     };
   }
 
   return {
-    title: `${department.name} - ${department.hospital.name} | MITIC Care`,
-    description: `Découvrez les informations sur le département ${department.name} de l'hôpital ${department.hospital.name} et ses médecins. Prenez rendez-vous en ligne avec MITIC Care.`,
+    title: `${department.name} - ${department.hospital.name} | MITICCARE`,
+    description: `Découvrez les informations sur le département ${department.name} de l'hôpital ${department.hospital.name} et ses médecins. Prenez rendez-vous en ligne avec MITICCARE.`,
   };
 }
 

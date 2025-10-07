@@ -36,7 +36,7 @@ export const VerificationEmailHospital = ({
       <Head />
       <Preview>
         Confirmation de votre inscription en tant qu&apos;établissement de santé
-        sur MITIC CARE
+        sur MITICCARE
       </Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans text-gray-800 leading-relaxed">
@@ -49,7 +49,7 @@ export const VerificationEmailHospital = ({
                     src={`${baseUrl}/logos/logo_mitic_dark.png`}
                     width="160"
                     height="34"
-                    alt="MITIC CARE"
+                    alt="MITICCARE"
                   />
                 </Column>
                 <Column>
@@ -72,7 +72,7 @@ export const VerificationEmailHospital = ({
               />
 
               <Heading className="text-lg font-semibold text-gray-800 !my-1">
-                Bienvenue sur MITIC CARE !
+                Bienvenue sur MITICCARE !
               </Heading>
 
               <Text className="text-sm font-medium text-gray-700 !my-0">
@@ -152,7 +152,7 @@ export const VerificationEmailHospital = ({
                   <strong className="text-gray-800">
                     Information de sécurité :
                   </strong>{" "}
-                  MITIC CARE ne vous demandera jamais vos informations
+                  MITICCARE ne vous demandera jamais vos informations
                   confidentielles par email. Si vous recevez un email suspect,
                   veuillez nous contacter immédiatement.
                 </Text>
@@ -201,11 +201,11 @@ export const VerificationEmailHospital = ({
               </Row>
 
               <Text className="text-sm text-gray-500 mb-3">
-                &copy; 2024 MITIC CARE. Tous droits réservés.
+                &copy; 2024 MITICCARE. Tous droits réservés.
               </Text>
 
               <Text className="text-xs text-gray-400 mt-5">
-                MITIC CARE SARL
+                MITICCARE
                 <br />
                 Hamdallaye ACI 2000, Bamako, MALI
               </Text>

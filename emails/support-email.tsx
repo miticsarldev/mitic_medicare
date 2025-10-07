@@ -71,7 +71,7 @@ export const SupportEmailTemplate = ({
           <Container className="mx-auto max-w-[600px] rounded-lg overflow-hidden">
             <Section className="bg-[#4361ee] py-5 px-5 text-center">
               <Heading className="text-white text-2xl m-0">
-                MITIC CARE - Support Client
+                MITICCARE - Support Client
               </Heading>
             </Section>
 
@@ -167,10 +167,10 @@ export const SupportEmailTemplate = ({
             <Section className="bg-gray-100 py-5 px-5 text-center text-gray-500">
               <Text className="text-sm mb-2">
                 Ce message a été généré automatiquement par le système de
-                support MITIC CARE.
+                support MITICCARE.
               </Text>
               <Text className="text-sm m-0">
-                © {new Date().getFullYear()} MITIC SARL. Tous droits réservés.
+                © {new Date().getFullYear()} MITICCARE. Tous droits réservés.
               </Text>
             </Section>
           </Container>

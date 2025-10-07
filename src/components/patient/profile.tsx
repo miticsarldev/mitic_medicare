@@ -323,6 +323,7 @@ export default function ProfilePage() {
       }
 
       await update({
+        name: data.name,
         userProfile: { avatarUrl: effectiveAvatarUrl },
       });
 

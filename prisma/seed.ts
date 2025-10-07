@@ -664,7 +664,6 @@ async function main() {
         address: `${randomInt(1, 999)} Avenue ${randomItem(["de la Liberté", "de l'Indépendance", "de la République", "de la Paix", "du Progrès"])}`,
         city: city,
         state: city === "Bamako" ? "District de Bamako" : "Région de " + city,
-        zipCode: "999",
         country: "Mali",
         phone: generateMalianPhoneNumber(),
         email: `contact@${hospital.name.toLowerCase().replace(/[^\w]/g, "")}.ml`,

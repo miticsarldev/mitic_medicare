@@ -39,6 +39,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { type PendingApprovalUser } from "./types";
 import { approveUser, rejectUser } from "./actions";
+import { getSpecializationLabel } from "@/utils/function";
 
 export function VerificationDashboard({
   initialApprovals,
@@ -325,12 +326,14 @@ export function VerificationDashboard({
                     {selectedUser.role === "INDEPENDENT_DOCTOR" &&
                       selectedUser.doctor && (
                         <>
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">
                               Spécialisation
                             </span>
-                            <span className="font-medium">
-                              {selectedUser.doctor.specialization}
+                            <span className="font-medium p-2">
+                              {getSpecializationLabel(
+                                selectedUser.doctor.specialization
+                              )}
                             </span>
                           </div>
                           <div className="flex justify-between">

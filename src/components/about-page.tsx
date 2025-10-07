@@ -143,7 +143,7 @@ export default function AboutPageComponent() {
                 variants={fadeInUp}
                 className="text-xl text-muted-foreground mb-6"
               >
-                MITIC Care est une plateforme innovante qui connecte patients,
+                MITICCARE est une plateforme innovante qui connecte patients,
                 médecins et établissements de santé pour un parcours de soins
                 optimisé et personnalisé.
               </motion.p>
@@ -162,7 +162,7 @@ export default function AboutPageComponent() {
               >
                 <Image
                   src="/african-healthcare-unity.png"
-                  alt="L'équipe MITIC Care"
+                  alt="L'équipe MITICCARE"
                   width={600}
                   height={400}
                   className="rounded-2xl shadow-xl"
@@ -220,7 +220,7 @@ export default function AboutPageComponent() {
                 variants={slideInLeft}
                 className="text-muted-foreground mb-6"
               >
-                MITIC Care a pour mission de transformer le système de santé au
+                MITICCARE a pour mission de transformer le système de santé au
                 Mali en connectant patients, médecins et établissements de santé
                 sur une plateforme numérique innovante. Nous visons à améliorer
                 l&apos;accès aux soins, optimiser la gestion des établissements

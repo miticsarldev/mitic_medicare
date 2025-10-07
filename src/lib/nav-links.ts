@@ -13,6 +13,7 @@ import {
   MessageSquare,
   UserCheck,
   Stethoscope,
+  Star,
 } from "lucide-react";
 
 // Super Admin Navigation
@@ -90,6 +91,18 @@ export const superAdminNavItems = [
       {
         title: "Sécurité & Confidentialité",
         url: "/dashboard/superadmin/settings/security",
+      },
+    ],
+  },
+  {
+    title: "Gestion des Avis",
+    icon: Star,
+    url: "/dashboard/superadmin/reviews",
+    items: [
+      { title: "Tous les avis", url: "/dashboard/superadmin/reviews/all" },
+      {
+        title: "Avis en attente",
+        url: "/dashboard/superadmin/reviews/pending",
       },
     ],
   },

@@ -35,8 +35,8 @@ const PatientWelcomeEmail = ({
       <Head />
       <Preview>
         {hasInvite
-          ? "Bienvenue sur MITIC CARE – Créez votre mot de passe"
-          : "Bienvenue sur MITIC CARE"}
+          ? "Bienvenue sur MITICCARE – Créez votre mot de passe"
+          : "Bienvenue sur MITICCARE"}
       </Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans text-gray-800 leading-relaxed">
@@ -49,7 +49,7 @@ const PatientWelcomeEmail = ({
                     src={`${baseUrl}/logos/logo_mitic_dark.png`}
                     width="160"
                     height="34"
-                    alt="MITIC CARE"
+                    alt="MITICCARE"
                   />
                 </Column>
                 <Column>
@@ -59,7 +59,7 @@ const PatientWelcomeEmail = ({
               <Heading className="text-black text-lg font-semibold m-0">
                 {hasInvite
                   ? "Bienvenue — Créez votre mot de passe"
-                  : "Bienvenue sur MITIC CARE"}
+                  : "Bienvenue sur MITICCARE"}
               </Heading>
             </Section>
 
@@ -128,11 +128,11 @@ const PatientWelcomeEmail = ({
             {/* Footer */}
             <Section className="bg-gray-50 p-2 text-center border-t border-gray-200 rounded-b-lg">
               <Text className="text-sm text-gray-500 mb-3">
-                &copy; {new Date().getFullYear()} MITIC CARE. Tous droits
+                &copy; {new Date().getFullYear()} MITICCARE. Tous droits
                 réservés.
               </Text>
               <Text className="text-xs text-gray-400 mt-5">
-                MITIC CARE SARL
+                MITICCARE
                 <br />
                 Hamdallaye ACI 2000, Bamako, MALI
               </Text>
