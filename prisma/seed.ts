@@ -11,139 +11,38 @@ import {
   ReviewTargetType,
   HospitalStatus,
   BillingInterval,
+  PaymentStatus,
   PaymentMethod,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
 
-const prisma = new PrismaClient();
-
-// Helper function to generate a random date within a range
-function randomDate(start: Date, end: Date): Date {
-  return new Date(
-    start.getTime() + Math.random() * (end.getTime() - start.getTime())
-  );
-}
-
-// Helper function to generate a random integer within a range
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-// Helper function to pick a random item from an array
-function randomItem<T>(array: T[]): T {
-  return array[Math.floor(Math.random() * array.length)];
-}
-
-// Helper function to generate a random boolean with a given probability
-function randomBoolean(probability = 0.5): boolean {
-  return Math.random() < probability;
-}
-
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
-}
-
-// ---------- TIME HELPERS (no hard-coded 2024) ----------
-const NOW = new Date();
-
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-}
-
-function endOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-}
-
-function subMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() - months);
-  return d;
-}
-
-function randomDateInRange(start: Date, end: Date): Date {
-  return new Date(
-    start.getTime() + Math.random() * (end.getTime() - start.getTime())
-  );
-}
-
-function randomPaymentDateAround(periodStart: Date): Date {
-  // payment between 3 days before period start and 7 days after
-  const from = new Date(periodStart.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const to = new Date(periodStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-  return randomDateInRange(from, to);
-}
-
-// ---------- PLAN PRICES (per subscriber type) ----------
-const PLAN_PRICE_XOF: Record<
-  "DOCTOR" | "HOSPITAL",
-  Record<"FREE" | "STANDARD" | "PREMIUM", number>
-> = {
-  DOCTOR: { FREE: 0, STANDARD: 15_000, PREMIUM: 30_000 },
-  HOSPITAL: { FREE: 0, STANDARD: 50_000, PREMIUM: 100_000 },
+// Type definitions for better TypeScript support
+type HospitalWithAdmin = {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  adminId: string;
 };
 
-function priceFor(
-  plan: SubscriptionPlan,
-  subscriberType: "DOCTOR" | "HOSPITAL"
-) {
-  const amount = PLAN_PRICE_XOF[subscriberType][plan];
-  return { amount: new Prisma.Decimal(amount), currency: "XOF" as const };
-}
+type DoctorWithUser = {
+  id: string;
+  userId: string;
+  hospitalId: string | null;
+};
 
-// Helper function to generate a random phone number in Mali format
-function generateMalianPhoneNumber(): string {
-  const prefixes = [
-    "65",
-    "66",
-    "67",
-    "68",
-    "69",
-    "70",
-    "71",
-    "72",
-    "73",
-    "74",
-    "75",
-    "76",
-    "77",
-    "78",
-    "79",
-  ];
-  const prefix = randomItem(prefixes);
-  const suffix = Math.floor(Math.random() * 10000000)
-    .toString()
-    .padStart(7, "0");
-  return `+223${prefix}${suffix}`;
-}
+type PatientWithUser = {
+  id: string;
+  userId: string;
+};
 
-// Helper function to generate a random email
-function generateEmail(
-  firstName: string,
-  lastName: string,
-  domain: string
-): string {
-  // Remove accents and special characters
-  const normalizedFirstName = firstName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  const normalizedLastName = lastName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+type Subscriber = { type: SubscriberType; id: string };
+// type PaidPlan = Exclude<SubscriptionPlan, "FREE">;
 
-  const options = [
-    `${normalizedFirstName}.${normalizedLastName}@${domain}`,
-    `${normalizedFirstName}${randomInt(1, 99)}@${domain}`,
-    `${normalizedFirstName[0]}${normalizedLastName}@${domain}`,
-    `${normalizedFirstName}@${domain}`,
-  ];
+const prisma = new PrismaClient();
 
-  return randomItem(options);
-}
+const NOW = new Date();
 
 // Malian data
 const malianFirstNames = {
@@ -280,7 +179,7 @@ const malianHospitals = [
   },
 ];
 
-export const departments = [
+const departments = [
   {
     name: "Cardiologie",
     description: "Traitement des maladies du cœur et des vaisseaux sanguins",
@@ -304,16 +203,66 @@ export const departments = [
   },
 ];
 
-const specializations = [
-  "Cardiologie",
-  "Pédiatrie",
-  "Chirurgie Générale",
-  "Médecine Interne",
-  "Psychiatrie",
-  "Radiologie",
-  "Médecine d'urgence",
-  "Médecine de famille",
-];
+const specialities = [
+  {
+    value: "generaliste",
+    label: "Médecin Généraliste",
+    synonyms: ["généraliste", "médecine générale"],
+  },
+  { value: "pediatre", label: "Pédiatre" },
+  {
+    value: "gyneco_obstetrique",
+    label: "Gynécologie-Obstétrique",
+    synonyms: ["gynécologue", "obstétricien"],
+  },
+  { value: "cardiologie", label: "Cardiologue" },
+  {
+    value: "dermatologie",
+    label: "Dermatologue / Vénérologue",
+    synonyms: ["dermato", "vénérologie"],
+  },
+  { value: "ophtalmologie", label: "Ophtalmologue", synonyms: ["ophtalmo"] },
+  { value: "orl", label: "ORL (Oto-Rhino-Laryngologie)" },
+  {
+    value: "chirurgie_generale",
+    label: "Chirurgie générale",
+    synonyms: ["chirurgien"],
+  },
+  { value: "ortho_traumato", label: "Orthopédie - Traumatologie" },
+  {
+    value: "anesthesie_rea",
+    label: "Anesthésie - Réanimation",
+    synonyms: ["anesthésiste"],
+  },
+  { value: "neurologie", label: "Neurologue" },
+  { value: "psychiatrie", label: "Psychiatre" },
+  {
+    value: "radiologie",
+    label: "Radiologie & Imagerie",
+    synonyms: ["radiologue", "imagerie"],
+  },
+  { value: "gastro_hepato", label: "Gastro-entérologie & Hépatologie" },
+  { value: "pneumologie", label: "Pneumologue" },
+  { value: "nephrologie", label: "Néphrologue" },
+  { value: "endocrino_diabeto", label: "Endocrinologie - Diabétologie" },
+  { value: "rhumatologie", label: "Rhumatologie" },
+  { value: "hematologie", label: "Hématologie" },
+  { value: "oncologie", label: "Oncologie médicale" },
+  {
+    value: "infectiologie",
+    label: "Infectiologie / Médecine Tropicale",
+    synonyms: ["médecine tropicale", "paludisme", "tb"],
+  },
+  { value: "sante_publique", label: "Santé Publique / Communautaire" },
+  { value: "medecine_interne", label: "Médecine Interne" },
+  {
+    value: "biologie_medicale",
+    label: "Biologie Médicale / Laboratoire",
+    synonyms: ["médecin de labo"],
+  },
+  { value: "odontostomatologie", label: "Odonto-stomatologie (Dentiste)" },
+  { value: "urologie", label: "Urologue" },
+] as const;
 
 const medicalConditions = [
   "Hypertension artérielle",
@@ -364,32 +313,104 @@ const medications = [
   { name: "Diazépam", dosage: "5mg", frequency: "Au besoin" },
 ];
 
-const paymentMethods: PaymentMethod[] = [
-  PaymentMethod.MOBILE_MONEY,
-  PaymentMethod.CREDIT_CARD,
-  PaymentMethod.BANK_TRANSFER,
-  PaymentMethod.CASH,
-];
+// Helper function to generate a random date within a range
+function randomDate(start: Date, end: Date): Date {
+  return new Date(
+    start.getTime() + Math.random() * (end.getTime() - start.getTime())
+  );
+}
 
-// Type definitions for better TypeScript support
-type HospitalWithAdmin = {
-  id: string;
-  name: string;
-  city: string;
-  state: string;
-  adminId: string;
-};
+// Helper function to generate a random integer within a range
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-type DoctorWithUser = {
-  id: string;
-  userId: string;
-  hospitalId: string | null;
-};
+// Helper function to pick a random item from an array
+function randomItem<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
 
-type PatientWithUser = {
-  id: string;
-  userId: string;
-};
+// Helper function to pick a random speciality
+function randomSpeciality<T>(array: readonly T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+// Helper function to generate a random boolean with a given probability
+function randomBoolean(probability = 0.5): boolean {
+  return Math.random() < probability;
+}
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+// ---------- TIME HELPERS (no hard-coded 2024) ----------
+
+function subMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() - months);
+  return d;
+}
+
+function randomDateInRange(start: Date, end: Date): Date {
+  return new Date(
+    start.getTime() + Math.random() * (end.getTime() - start.getTime())
+  );
+}
+
+// Helper function to generate a random phone number in Mali format
+function generateMalianPhoneNumber(): string {
+  const prefixes = [
+    "65",
+    "66",
+    "67",
+    "68",
+    "69",
+    "70",
+    "71",
+    "72",
+    "73",
+    "74",
+    "75",
+    "76",
+    "77",
+    "78",
+    "79",
+  ];
+  const prefix = randomItem(prefixes);
+  const suffix = Math.floor(Math.random() * 1000000)
+    .toString()
+    .padStart(6, "0");
+  return `+223${prefix}${suffix}`;
+}
+
+// Helper function to generate a random email
+function generateEmail(
+  firstName: string,
+  lastName: string,
+  domain: string
+): string {
+  // Remove accents and special characters
+  const normalizedFirstName = firstName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const normalizedLastName = lastName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  const options = [
+    `${normalizedFirstName}.${normalizedLastName}@${domain}`,
+    `${normalizedFirstName}${randomInt(1, 99)}@${domain}`,
+    `${normalizedFirstName[0]}${normalizedLastName}@${domain}`,
+    `${normalizedFirstName}@${domain}`,
+  ];
+
+  return randomItem(options);
+}
 
 async function upsertPlanWithPrices(
   code: SubscriptionPlan,
@@ -462,6 +483,356 @@ async function upsertPlanWithPrices(
   }
 }
 
+/////?????
+// Current month window (Africa/Bamako Oct 2025)
+const CURRENT_MONTH_START = new Date(
+  NOW.getFullYear(),
+  NOW.getMonth(),
+  1,
+  0,
+  0,
+  0,
+  0
+); // 2025-10-01
+
+function sameMonth(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function monthStart(y: number, m0: number) {
+  return new Date(y, m0, 1, 0, 0, 0, 0);
+}
+function monthEnd(y: number, m0: number) {
+  return new Date(y, m0 + 1, 0, 23, 59, 59, 999);
+}
+
+function yyyymm(d: Date) {
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Pull price from PlanPrice for robustness
+async function priceForFromDB(
+  plan: SubscriptionPlan,
+  subscriberType: SubscriberType,
+  currency = "XOF" as const
+) {
+  const cfg = await prisma.planConfig.findUnique({
+    where: { code: plan },
+    include: { prices: true },
+  });
+  const match = cfg?.prices.find(
+    (p) =>
+      p.subscriberType === subscriberType &&
+      p.interval === "MONTH" &&
+      p.currency === currency
+  );
+  if (!match)
+    throw new Error(
+      `Missing PlanPrice for ${plan}/${subscriberType}/${currency}`
+    );
+  return { amount: match.amount, currency: match.currency as "XOF" };
+}
+
+function finalStatusForCycle(
+  periodEnd: Date,
+  lastPayment: PaymentStatus | null
+) {
+  if (periodEnd < NOW) return SubscriptionStatus.EXPIRED;
+  if (lastPayment === "FAILED" || lastPayment === "PENDING")
+    return SubscriptionStatus.INACTIVE;
+  return SubscriptionStatus.ACTIVE;
+}
+
+/**
+ * Always end in the CURRENT month (Oct-2025).
+ * Months count is either 3 or 4. First month is FREE (TRIAL).
+ * Example (3 months): Aug(FREE) -> Sep(paid) -> Oct(paid [ACTIVE/INACTIVE])
+ * Example (4 months): Jul(FREE) -> Aug(paid) -> Sep(paid) -> Oct(paid [ACTIVE/INACTIVE])
+ * A single Subscription row is kept and updated to the last cycle (Oct).
+ * All paid months are written to SubscriptionPayment (FREE month has no payment).
+ */
+async function seedAnchoredTimelineToCurrentMonth(subscriber: Subscriber) {
+  // decide 3 or 4 months total
+  const totalMonths = Math.random() < 0.5 ? 3 : 4;
+
+  const y = CURRENT_MONTH_START.getFullYear();
+  const m0 = CURRENT_MONTH_START.getMonth(); // 9 for October
+
+  // Build the exact months from oldest -> newest, always ending in October
+  // For 3: [Aug, Sep, Oct]; For 4: [Jul, Aug, Sep, Oct]
+  const months: { start: Date; end: Date }[] = [];
+  for (let back = totalMonths - 1; back >= 0; back--) {
+    const ms = monthStart(y, m0 - back);
+    const me = monthEnd(y, m0 - back);
+    months.push({ start: ms, end: me });
+  }
+
+  // First month is FREE (TRIAL)
+  const freeStart = months[0].start;
+  const freeEnd = months[0].end;
+
+  // Ensure single subscription row for this subscriber
+  const sub = await prisma.subscription.upsert({
+    where:
+      subscriber.type === "DOCTOR"
+        ? { doctorId: subscriber.id }
+        : { hospitalId: subscriber.id },
+    create: {
+      subscriberType: subscriber.type,
+      doctorId: subscriber.type === "DOCTOR" ? subscriber.id : null,
+      hospitalId: subscriber.type === "HOSPITAL" ? subscriber.id : null,
+      plan: SubscriptionPlan.FREE,
+      status: SubscriptionStatus.TRIAL,
+      startDate: freeStart,
+      endDate: freeEnd,
+      amount: new Prisma.Decimal(0),
+      currency: "XOF",
+      autoRenew: true,
+    },
+    update: {
+      plan: SubscriptionPlan.FREE,
+      status: SubscriptionStatus.TRIAL,
+      startDate: freeStart,
+      endDate: freeEnd,
+      amount: new Prisma.Decimal(0),
+      currency: "XOF",
+      autoRenew: true,
+    },
+  });
+
+  // Remaining months are paid (STANDARD or PREMIUM)
+  // Past months: always COMPLETED; Current month: 60% COMPLETED, 40% FAILED/PENDING
+  let lastOutcome: PaymentStatus | null = null;
+  for (let i = 1; i < months.length; i++) {
+    const { start, end } = months[i];
+    const isCurrent = sameMonth(start, CURRENT_MONTH_START);
+
+    const plan =
+      Math.random() < 0.65
+        ? SubscriptionPlan.STANDARD
+        : SubscriptionPlan.PREMIUM;
+
+    const { amount, currency } = await priceForFromDB(plan, subscriber.type);
+
+    const outcome: PaymentStatus = isCurrent
+      ? Math.random() < 0.6
+        ? "COMPLETED"
+        : Math.random() < 0.7
+          ? "FAILED"
+          : "PENDING"
+      : "COMPLETED";
+
+    await prisma.subscriptionPayment.create({
+      data: {
+        subscriptionId: sub.id,
+        amount,
+        currency,
+        paymentMethod: PaymentMethod.MOBILE_MONEY,
+        transactionId:
+          outcome === "COMPLETED"
+            ? `OM-${yyyymm(start)}-${randomInt(100000, 999999)}`
+            : null,
+        status: outcome,
+        paymentDate: randomDateInRange(
+          new Date(start.getTime() - 3 * 86400000),
+          new Date(start.getTime() + 7 * 86400000)
+        ),
+        months: 1,
+        changePlanTo: plan,
+        externalOrderId: `REN-${sub.id}-${yyyymm(start)}-${randomInt(1000, 9999)}`,
+        payToken:
+          outcome !== "FAILED" ? `tok_${randomInt(100000, 999999)}` : null,
+        provider: "ORANGE_MONEY",
+        periodStart: start,
+        periodEnd: end,
+      },
+    });
+
+    // Move the single Subscription row to this new cycle window
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data: {
+        plan,
+        startDate: start,
+        endDate: end,
+        amount,
+        currency,
+        status: finalStatusForCycle(end, outcome),
+      },
+    });
+
+    lastOutcome = outcome;
+  }
+
+  // Rare ops override: keep ACTIVE even if Oct failed (5%)
+  if (lastOutcome && lastOutcome !== "COMPLETED" && Math.random() < 0.05) {
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data: { status: SubscriptionStatus.ACTIVE },
+    });
+  }
+}
+
+// async function seedRealisticSubscriptionTimeline(subscriber: Subscriber) {
+//   // 1) Signup 4–12 months ago (trial = FREE, TRIAL status)
+//   const signupOffset = randomInt(4, 12);
+//   const signupStart = startOfMonth(subMonths(NOW, signupOffset));
+//   const signupEnd = endOfMonth(signupStart);
+
+//   const trial = await prisma.subscription.upsert({
+//     where:
+//       subscriber.type === "DOCTOR"
+//         ? { doctorId: subscriber.id }
+//         : { hospitalId: subscriber.id },
+//     create: {
+//       subscriberType: subscriber.type,
+//       doctorId: subscriber.type === "DOCTOR" ? subscriber.id : null,
+//       hospitalId: subscriber.type === "HOSPITAL" ? subscriber.id : null,
+//       plan: SubscriptionPlan.FREE,
+//       status: SubscriptionStatus.TRIAL,
+//       startDate: signupStart,
+//       endDate: signupEnd,
+//       amount: new Prisma.Decimal(0),
+//       currency: "XOF",
+//       autoRenew: true,
+//     },
+//     update: {
+//       plan: SubscriptionPlan.FREE,
+//       status: SubscriptionStatus.TRIAL,
+//       startDate: signupStart,
+//       endDate: signupEnd,
+//       amount: new Prisma.Decimal(0),
+//       currency: "XOF",
+//       autoRenew: true,
+//     },
+//   });
+
+//   // ~20% never upgrade after free
+//   if (Math.random() < 0.2) {
+//     await prisma.subscription.update({
+//       where: { id: trial.id },
+//       data: {
+//         status:
+//           signupEnd < NOW
+//             ? SubscriptionStatus.EXPIRED
+//             : SubscriptionStatus.TRIAL,
+//       },
+//     });
+//     return;
+//   }
+
+//   // 2) Paid months: 3–7, starting the month after trial; never beyond Oct-2025
+//   const firstPaidStart = startOfMonth(addMonths(signupStart, 1));
+//   const paidCount = randomInt(3, 7);
+//   const months = clampMonthsUpToCurrent(firstPaidStart, paidCount);
+
+//   // Variant: some subscribers stopped paying **before** current month (so they’re EXPIRED now)
+//   // 30% chance to stop 1–3 months ago (only if we have enough months)
+//   let stopEarly = false;
+//   if (months.length > 0 && Math.random() < 0.3) {
+//     const cut = Math.max(
+//       0,
+//       months.length - randomInt(1, Math.min(3, months.length))
+//     );
+//     months.splice(cut); // drop the tail, so last month < current month → EXPIRED
+//     stopEarly = true;
+//   }
+
+//   // If months is empty (trial was recently), keep the trial row; update status:
+//   if (months.length === 0) {
+//     await prisma.subscription.update({
+//       where: { id: trial.id },
+//       data: {
+//         status:
+//           signupEnd < NOW
+//             ? SubscriptionStatus.EXPIRED
+//             : SubscriptionStatus.TRIAL,
+//       },
+//     });
+//     return;
+//   }
+
+//   // Should the *current month* be paid & active? Only applicable if last month == current month.
+//   const currentMonthIncluded = sameMonth(months[months.length - 1], NOW);
+//   const markActiveThisMonth =
+//     currentMonthIncluded && !stopEarly && Math.random() < 0.6;
+
+//   let lastPaymentOutcome: PaymentStatus | null = null;
+
+//   for (const mStart of months) {
+//     const mEnd = endOfMonth(mStart);
+//     const { start, end } = capToCurrentMonthWindow(mStart, mEnd); // safety
+
+//     const plan =
+//       Math.random() < 0.7
+//         ? SubscriptionPlan.STANDARD
+//         : SubscriptionPlan.PREMIUM;
+//     const { amount, currency } = await priceForFromDB(plan, subscriber.type);
+
+//     const isCurrent = sameMonth(start, NOW);
+//     const outcome: PaymentStatus = isCurrent
+//       ? markActiveThisMonth
+//         ? "COMPLETED"
+//         : Math.random() < 0.7
+//           ? "FAILED"
+//           : "PENDING"
+//       : Math.random() < 0.9
+//         ? "COMPLETED"
+//         : "FAILED";
+
+//     await prisma.subscriptionPayment.create({
+//       data: {
+//         subscriptionId: trial.id,
+//         amount,
+//         currency,
+//         paymentMethod: PaymentMethod.MOBILE_MONEY,
+//         transactionId:
+//           outcome === "COMPLETED"
+//             ? `OM-${yyyymm(start)}-${randomInt(100000, 999999)}`
+//             : null,
+//         status: outcome,
+//         paymentDate: randomDateInRange(
+//           new Date(start.getTime() - 3 * 86400000),
+//           new Date(start.getTime() + 7 * 86400000)
+//         ),
+//         months: 1,
+//         changePlanTo: plan,
+//         externalOrderId: `REN-${trial.id}-${yyyymm(start)}-${randomInt(1000, 9999)}`,
+//         payToken:
+//           outcome !== "FAILED" ? `tok_${randomInt(100000, 999999)}` : null,
+//         provider: "ORANGE_MONEY",
+//       },
+//     });
+
+//     // Keep the single subscription row in-step with the *latest* cycle
+//     await prisma.subscription.update({
+//       where: { id: trial.id },
+//       data: {
+//         plan,
+//         startDate: start,
+//         endDate: end,
+//         amount,
+//         currency,
+//         status: finalStatusForCycle({ periodEnd: end, lastPayment: outcome }),
+//       },
+//     });
+
+//     lastPaymentOutcome = outcome;
+//   }
+
+//   // Tiny edge: allow a rare manual override that keeps ACTIVE despite a fail (OPS scenario)
+//   if (
+//     currentMonthIncluded &&
+//     lastPaymentOutcome !== "COMPLETED" &&
+//     Math.random() < 0.05
+//   ) {
+//     await prisma.subscription.update({
+//       where: { id: trial.id },
+//       data: { status: SubscriptionStatus.ACTIVE },
+//     });
+//   }
+// }
+
 async function main() {
   console.log("Starting database seeding...");
   const usedEmails = new Set<string>();
@@ -498,12 +869,12 @@ async function main() {
   await upsertPlanWithPrices(
     "FREE",
     "Free",
-    "Offre gratuite (1 mois d’essai)",
+    "Offre gratuite",
     {
-      maxAppointments: 20,
+      maxAppointments: 50,
       maxPatients: 50,
       storageGb: 1,
-      maxDoctorsPerHospital: null,
+      maxDoctorsPerHospital: 5,
     },
     [
       {
@@ -526,7 +897,7 @@ async function main() {
     "Standard",
     "Pour les pros individuels / petites structures",
     {
-      maxAppointments: 300,
+      maxAppointments: 1000,
       maxPatients: 1000,
       storageGb: 10,
       maxDoctorsPerHospital: 10,
@@ -536,13 +907,13 @@ async function main() {
         subscriberType: "DOCTOR",
         interval: "MONTH",
         currency: "XOF",
-        amount: 50_000,
+        amount: 10_000,
       },
       {
         subscriberType: "HOSPITAL",
         interval: "MONTH",
         currency: "XOF",
-        amount: 250_000,
+        amount: 50_000,
       },
     ]
   );
@@ -552,23 +923,23 @@ async function main() {
     "Premium",
     "Pour les structures exigeantes",
     {
-      maxAppointments: 2000,
-      maxPatients: 5000,
-      storageGb: 50,
-      maxDoctorsPerHospital: 50,
+      maxAppointments: null,
+      maxPatients: null,
+      storageGb: null,
+      maxDoctorsPerHospital: null,
     },
     [
       {
         subscriberType: "DOCTOR",
         interval: "MONTH",
         currency: "XOF",
-        amount: 100_000,
+        amount: 25_000,
       },
       {
         subscriberType: "HOSPITAL",
         interval: "MONTH",
         currency: "XOF",
-        amount: 500_000,
+        amount: 100_000,
       },
     ]
   );
@@ -583,7 +954,7 @@ async function main() {
     data: {
       name: "Admin Système",
       email: superAdminEmail,
-      phone: "+22370123456",
+      phone: "+22370000001",
       password: superAdminPassword,
       role: UserRole.SUPER_ADMIN,
       emailVerified: new Date(),
@@ -644,6 +1015,7 @@ async function main() {
         isActive: true,
         profile: {
           create: {
+            avatarUrl: "https://avatar.iran.liara.run/public",
             address: `${randomInt(1, 999)} Rue ${randomInt(100, 999)}`,
             city: city,
             state:
@@ -671,9 +1043,7 @@ async function main() {
           ? `https://www.${hospital.name.toLowerCase().replace(/[^\w]/g, "")}.ml`
           : null,
         description: `${hospital.name} est un établissement de santé ${hospital.type === "public" ? "public" : "privé"} situé à ${city}, offrant des soins médicaux de qualité à la population.`,
-        logoUrl: randomBoolean(0.6)
-          ? `https://example.com/logos/${hospital.name.toLowerCase().replace(/[^\w]/g, "")}.png`
-          : null,
+        logoUrl: `https://avatar.iran.liara.run/username?username=${hospital.name.toUpperCase().split(" ").join("+")}`,
         isVerified: true,
         status: HospitalStatus.ACTIVE,
       },
@@ -688,79 +1058,20 @@ async function main() {
     });
 
     // Create subscription for hospital
-    // Create subscription for hospital (dynamic start, monthly cycles)
-    const cycles = randomInt(3, 9); // number of months covered
-    const startOffset = randomInt(4, 18); // start X months ago
-    const firstPeriodStart = startOfMonth(subMonths(NOW, startOffset));
-
-    let currentPlan: SubscriptionPlan = SubscriptionPlan.STANDARD;
-    let periodStart = new Date(firstPeriodStart);
-    let periodEnd = endOfMonth(periodStart);
-
-    // Create the Subscription row once
-    const hospitalSub = await prisma.subscription.create({
-      data: {
-        subscriberType: SubscriberType.HOSPITAL,
-        hospitalId: createdHospital.id,
-        plan: currentPlan,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: periodStart,
-        endDate: periodEnd,
-        ...priceFor(currentPlan, "HOSPITAL"),
-        autoRenew: true,
-      },
-    });
-
-    // Loop over each monthly period and create payments
-    for (let m = 0; m < cycles; m++) {
-      // Occasionally upgrade/downgrade between STANDARD/PREMIUM
-      if (m > 0 && Math.random() < 0.25) {
-        currentPlan = randomItem([
-          SubscriptionPlan.STANDARD,
-          SubscriptionPlan.PREMIUM,
-        ]);
-      }
-
-      const { amount, currency } = priceFor(currentPlan, "HOSPITAL");
-
-      // every hospital month is paid
-      await prisma.subscriptionPayment.create({
-        data: {
-          subscriptionId: hospitalSub.id,
-          amount,
-          currency,
-          paymentMethod: randomItem(paymentMethods), // your existing string list
-          transactionId: `TRANS-${randomInt(10000, 99999)}`,
-          status: "COMPLETED",
-          paymentDate: randomPaymentDateAround(periodStart),
-        },
-      });
-
-      // update sub to reflect the latest cycle
-      await prisma.subscription.update({
-        where: { id: hospitalSub.id },
-        data: {
-          plan: currentPlan,
-          endDate: periodEnd,
-          amount,
-          currency,
-        },
-      });
-
-      // advance to next month
-      periodStart = startOfMonth(addMonths(periodStart, 1));
-      periodEnd = endOfMonth(periodStart);
-    }
-
-    // final status
-    await prisma.subscription.update({
-      where: { id: hospitalSub.id },
-      data: {
-        status:
-          hospitalSub.endDate < NOW
-            ? SubscriptionStatus.EXPIRED
-            : SubscriptionStatus.ACTIVE,
-      },
+    // ====== Hospital subscription lifecycle (TRIAL -> upgrade or INACTIVE) ======
+    // const cyclesStartOffset = randomInt(4, 18); // when their trial started
+    // const hospitalStart = subMonths(NOW, cyclesStartOffset);
+    // await seedSubscriptionLifecycle(
+    //   { type: SubscriberType.HOSPITAL, id: createdHospital.id },
+    //   hospitalStart
+    // );
+    // await createFreeSignupMonthForCurrentPeriod({
+    //   type: SubscriberType.HOSPITAL,
+    //   id: createdHospital.id,
+    // });
+    await seedAnchoredTimelineToCurrentMonth({
+      type: SubscriberType.HOSPITAL,
+      id: createdHospital.id,
     });
 
     // Create departments for each hospital
@@ -807,8 +1118,8 @@ async function main() {
       where: { hospitalId: hospital.id },
     });
 
-    // Create 3 doctors for this hospital
-    for (let i = 0; i < 3; i++) {
+    // Create 5 doctors for this hospital
+    for (let i = 0; i < 5; i++) {
       const gender = randomBoolean() ? "male" : "female";
       const firstName = randomItem(malianFirstNames[gender]);
       const lastName = randomItem(malianLastNames);
@@ -849,7 +1160,7 @@ async function main() {
               state: hospital.state,
               zipCode: "999",
               country: "Mali",
-              bio: `Médecin hospitalier spécialisé en ${randomItem(specializations)}.`,
+              bio: `Médecin hospitalier spécialisé en ${randomSpeciality(specialities).label}.`,
               genre: gender === "male" ? UserGenre.MALE : UserGenre.FEMALE,
             },
           },
@@ -861,10 +1172,10 @@ async function main() {
           userId: doctorUser.id,
           hospitalId: hospital.id,
           departmentId: department.id,
-          specialization: randomItem(specializations),
+          specialization: randomSpeciality(specialities).value,
           licenseNumber: `ML-DOC-${randomInt(10000, 99999)}`,
           education: `Doctorat en Médecine, Université de ${randomItem(["Bamako", "Ségou", "Sikasso", "Dakar", "Abidjan", "Rabat"])}`,
-          experience: `${randomInt(1, 25)} ans d'expérience en ${randomItem(specializations)}`,
+          experience: `${randomInt(1, 25)} ans d'expérience en ${randomSpeciality(specialities).label}`,
           isVerified: true,
           isIndependent: false,
           availableForChat: randomBoolean(0.7),
@@ -941,7 +1252,7 @@ async function main() {
               city === "Bamako" ? "District de Bamako" : `Région de ${city}`,
             zipCode: "999",
             country: "Mali",
-            bio: `Médecin indépendant spécialisé en ${randomItem(specializations)}.`,
+            bio: `Médecin indépendant spécialisé en ${randomSpeciality(specialities).label}.`,
             genre: gender === "male" ? UserGenre.MALE : UserGenre.FEMALE,
           },
         },
@@ -953,10 +1264,10 @@ async function main() {
         userId: doctorUser.id,
         hospitalId: null,
         departmentId: null,
-        specialization: randomItem(specializations),
+        specialization: randomSpeciality(specialities).value,
         licenseNumber: `ML-DOC-${randomInt(10000, 99999)}`,
         education: `Doctorat en Médecine, Université de ${randomItem(["Bamako", "Ségou", "Sikasso", "Dakar", "Abidjan", "Rabat"])}`,
-        experience: `${randomInt(1, 25)} ans d'expérience en ${randomItem(specializations)}`,
+        experience: `${randomInt(1, 25)} ans d'expérience en ${randomSpeciality(specialities).label}`,
         isVerified: true,
         isIndependent: true,
         availableForChat: randomBoolean(0.7),
@@ -990,90 +1301,106 @@ async function main() {
       });
     }
 
-    // Doctor subscription: exactly 1 FREE month, then paid months
-    const docCyclesPaid = randomInt(1, 6); // paid months after FREE
-    const docStartOffset = randomInt(2, 10); // start a few months ago
-    let docPeriodStart = startOfMonth(subMonths(NOW, docStartOffset));
-    let docPeriodEnd = endOfMonth(docPeriodStart);
-
-    // create sub starting on FREE (first month)
-    let docPlan: SubscriptionPlan = SubscriptionPlan.FREE;
-
-    const docSub = await prisma.subscription.create({
-      data: {
-        subscriberType: SubscriberType.DOCTOR,
-        doctorId: doctor.id,
-        plan: docPlan,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: docPeriodStart,
-        endDate: docPeriodEnd,
-        ...priceFor(SubscriptionPlan.FREE, "DOCTOR"),
-        currency: "XOF",
-        autoRenew: true,
-      },
+    // ====== Doctor subscription lifecycle (TRIAL -> upgrade or INACTIVE) ======
+    // const docStartOffset = randomInt(2, 10);
+    // const doctorStart = subMonths(NOW, docStartOffset);
+    // await seedSubscriptionLifecycle(
+    //   { type: SubscriberType.DOCTOR, id: doctor.id },
+    //   doctorStart
+    // );
+    // await createFreeSignupMonthForCurrentPeriod({
+    //   type: SubscriberType.DOCTOR,
+    //   id: doctor.id,
+    // });
+    await seedAnchoredTimelineToCurrentMonth({
+      type: SubscriberType.DOCTOR,
+      id: doctor.id,
     });
 
-    // 1) FREE month (no payment)
-    await prisma.subscription.update({
-      where: { id: docSub.id },
-      data: {
-        plan: SubscriptionPlan.FREE,
-        endDate: docPeriodEnd,
-        ...priceFor(SubscriptionPlan.FREE, "DOCTOR"),
-      },
-    });
+    // // Doctor subscription: exactly 1 FREE month, then paid months
+    // const docCyclesPaid = randomInt(1, 6); // paid months after FREE
+    // const docStartOffset = randomInt(2, 10); // start a few months ago
+    // let docPeriodStart = startOfMonth(subMonths(NOW, docStartOffset));
+    // let docPeriodEnd = endOfMonth(docPeriodStart);
 
-    // advance to next month
-    docPeriodStart = startOfMonth(addMonths(docPeriodStart, 1));
-    docPeriodEnd = endOfMonth(docPeriodStart);
+    // // create sub starting on FREE (first month)
+    // let docPlan: SubscriptionPlan = SubscriptionPlan.FREE;
 
-    // 2) Paid months (STANDARD or PREMIUM)
-    for (let m = 0; m < docCyclesPaid; m++) {
-      docPlan =
-        Math.random() < 0.7
-          ? SubscriptionPlan.STANDARD
-          : SubscriptionPlan.PREMIUM;
-      const { amount, currency } = priceFor(docPlan, "DOCTOR");
+    // const docSub = await prisma.subscription.create({
+    //   data: {
+    //     subscriberType: SubscriberType.DOCTOR,
+    //     doctorId: doctor.id,
+    //     plan: docPlan,
+    //     status: SubscriptionStatus.ACTIVE,
+    //     startDate: docPeriodStart,
+    //     endDate: docPeriodEnd,
+    //     ...priceFor(SubscriptionPlan.FREE, "DOCTOR"),
+    //     currency: "XOF",
+    //     autoRenew: true,
+    //   },
+    // });
 
-      await prisma.subscriptionPayment.create({
-        data: {
-          subscriptionId: docSub.id,
-          amount,
-          currency,
-          paymentMethod: randomItem(paymentMethods),
-          transactionId: `TRANS-${randomInt(10000, 99999)}`,
-          status: "COMPLETED",
-          paymentDate: randomPaymentDateAround(docPeriodStart),
-        },
-      });
+    // // 1) FREE month (no payment)
+    // await prisma.subscription.update({
+    //   where: { id: docSub.id },
+    //   data: {
+    //     plan: SubscriptionPlan.FREE,
+    //     endDate: docPeriodEnd,
+    //     ...priceFor(SubscriptionPlan.FREE, "DOCTOR"),
+    //   },
+    // });
 
-      await prisma.subscription.update({
-        where: { id: docSub.id },
-        data: {
-          plan: docPlan,
-          endDate: docPeriodEnd,
-          amount,
-          currency,
-        },
-      });
+    // // advance to next month
+    // docPeriodStart = startOfMonth(addMonths(docPeriodStart, 1));
+    // docPeriodEnd = endOfMonth(docPeriodStart);
 
-      docPeriodStart = startOfMonth(addMonths(docPeriodStart, 1));
-      docPeriodEnd = endOfMonth(docPeriodStart);
-    }
+    // // 2) Paid months (STANDARD or PREMIUM)
+    // for (let m = 0; m < docCyclesPaid; m++) {
+    //   docPlan =
+    //     Math.random() < 0.7
+    //       ? SubscriptionPlan.STANDARD
+    //       : SubscriptionPlan.PREMIUM;
+    //   const { amount, currency } = priceFor(docPlan, "DOCTOR");
 
-    // Set final status based on endDate vs NOW
-    const currentDocSub = await prisma.subscription.findUnique({
-      where: { id: docSub.id },
-    });
-    await prisma.subscription.update({
-      where: { id: docSub.id },
-      data: {
-        status:
-          (currentDocSub?.endDate ?? NOW) < NOW
-            ? SubscriptionStatus.EXPIRED
-            : SubscriptionStatus.ACTIVE,
-      },
-    });
+    //   await prisma.subscriptionPayment.create({
+    //     data: {
+    //       subscriptionId: docSub.id,
+    //       amount,
+    //       currency,
+    //       paymentMethod: randomItem(paymentMethods),
+    //       transactionId: `TRANS-${randomInt(10000, 99999)}`,
+    //       status: "COMPLETED",
+    //       paymentDate: randomPaymentDateAround(docPeriodStart),
+    //     },
+    //   });
+
+    //   await prisma.subscription.update({
+    //     where: { id: docSub.id },
+    //     data: {
+    //       plan: docPlan,
+    //       endDate: docPeriodEnd,
+    //       amount,
+    //       currency,
+    //     },
+    //   });
+
+    //   docPeriodStart = startOfMonth(addMonths(docPeriodStart, 1));
+    //   docPeriodEnd = endOfMonth(docPeriodStart);
+    // }
+
+    // // Set final status based on endDate vs NOW
+    // const currentDocSub = await prisma.subscription.findUnique({
+    //   where: { id: docSub.id },
+    // });
+    // await prisma.subscription.update({
+    //   where: { id: docSub.id },
+    //   data: {
+    //     status:
+    //       (currentDocSub?.endDate ?? NOW) < NOW
+    //         ? SubscriptionStatus.EXPIRED
+    //         : SubscriptionStatus.ACTIVE,
+    //   },
+    // });
   }
 
   console.log(`Created ${createdDoctors.length} doctors`);
@@ -1198,7 +1525,7 @@ async function main() {
             doctorId: doctor.id,
             title: `Antécédent de ${condition}`,
             condition: condition,
-            diagnosedDate: randomDate(new Date(2010, 0, 1), new Date()),
+            diagnosedDate: randomDate(new Date(2023, 0, 1), new Date()),
             status: randomItem(["ACTIVE", "RESOLVED", "CHRONIC"]),
             details: `Patient diagnostiqué avec ${condition}. ${randomBoolean() ? "Traitement en cours." : "Condition sous contrôle."}`,
             createdBy: doctor.userId,
@@ -1252,7 +1579,7 @@ async function main() {
   // Create appointments for each patient
   for (const patient of createdPatients) {
     // Each patient has 3-5 appointments
-    const numAppointments = randomInt(3, 5);
+    const numAppointments = randomInt(5, 10);
 
     for (let i = 0; i < numAppointments; i++) {
       const doctor = randomItem(createdDoctors);

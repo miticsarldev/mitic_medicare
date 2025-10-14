@@ -49,9 +49,6 @@ export const VerificationEmail = ({
                     alt="MITICCARE"
                   />
                 </Column>
-                <Column>
-                  <Text className="font-bold text-4xl my-0">CARE</Text>
-                </Column>
               </Row>
               <Heading className="text-black text-lg font-semibold m-0">
                 Vérification de votre compte

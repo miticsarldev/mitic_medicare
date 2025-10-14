@@ -46,11 +46,6 @@ export const PasswordResetSuccessEmail = ({
                     alt="MITICCARE"
                   />
                 </Column>
-                <Column>
-                  <Text className="font-bold text-4xl my-0 text-white">
-                    CARE
-                  </Text>
-                </Column>
               </Row>
               <Heading className="text-white text-lg font-semibold m-0">
                 Mot de passe réinitialisé

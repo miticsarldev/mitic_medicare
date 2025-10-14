@@ -10,7 +10,6 @@ export async function createHospital(formData: FormData) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
@@ -27,7 +26,6 @@ export async function createHospital(formData: FormData) {
     const verified = formData.get("verified") === "on";
     const description = formData.get("description") as string;
 
-    // Create hospital
     const hospital = await prisma.hospital.create({
       data: {
         name,
@@ -153,7 +151,6 @@ export async function assignDoctorToHospital(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
@@ -179,7 +176,6 @@ export async function removeDoctorFromHospital(doctorId: string) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }

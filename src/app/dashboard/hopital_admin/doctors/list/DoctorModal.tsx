@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,38 +22,30 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { specialities } from "@/constant";
 
-interface Department {
-  id: string;
-  name: string;
-}
+type Department = { id: string; name: string; description?: string };
 
-interface SubscriptionInfo {
-  plan: string;
-  currentDoctors: number;
-  maxDoctors: number | string;
-}
-
-interface DoctorModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDoctorCreated?: () => void;
-  departments?: Department[];
-}
-
-export default function DoctorModal({
+/********************
+ * Create Doctor Modal
+ *******************/
+export function DoctorModal({
   open,
   onOpenChange,
   onDoctorCreated,
-  departments: initialDepartments,
-}: DoctorModalProps) {
-  const [departments, setDepartments] = useState<Department[]>(
-    initialDepartments || []
-  );
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onDoctorCreated?: () => void;
+}) {
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [subscriptionInfo, setSubscriptionInfo] =
-    useState<SubscriptionInfo | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<null | {
+    plan: string;
+    currentDoctors: number;
+    maxDoctors: number | string;
+  }>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -72,91 +65,63 @@ export default function DoctorModal({
     bio: "",
     genre: "",
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
-      // Réinitialiser les erreurs à l'ouverture
       setErrors({});
-
-      // Charger les départements si non fournis
-      if (!initialDepartments) {
-        fetchDepartments();
-      }
-
-      // Charger les infos d'abonnement
-      fetchSubscriptionInfo();
+      (async () => {
+        try {
+          setLoading(true);
+          const [depRes, subRes] = await Promise.all([
+            fetch("/api/hospital_admin/department"),
+            fetch("/api/hospital_admin/subscription/getSuscriptionInfos"),
+          ]);
+          const dep = await depRes.json();
+          const sub = await subRes.json();
+          setDepartments(dep?.departments ?? []);
+          if (subRes.ok) {
+            setSubscriptionInfo({
+              plan: sub.plan,
+              currentDoctors: sub.currentDoctors,
+              maxDoctors:
+                sub.maxDoctors === Infinity ? "Illimité" : sub.maxDoctors,
+            });
+          }
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (e) {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les données",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
-  }, [open, initialDepartments]);
-
-  const fetchDepartments = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/hospital_admin/department");
-      const data = await res.json();
-      setDepartments(data.departments || []);
-    } catch (error) {
-      console.error("Erreur chargement départements :", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les départements",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSubscriptionInfo = async () => {
-    try {
-      const res = await fetch(
-        "/api/hospital_admin/subscription/getSuscriptionInfos"
-      );
-      const data = await res.json();
-
-      if (res.ok) {
-        setSubscriptionInfo({
-          plan: data.plan,
-          currentDoctors: data.currentDoctors,
-          maxDoctors:
-            data.maxDoctors === Infinity ? "Illimité" : data.maxDoctors,
-        });
-      } else {
-        toast({
-          title: "Avertissement",
-          description: data.error || "Impossible de vérifier votre abonnement",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Erreur chargement abonnement :", error);
-    }
-  };
+  }, [open]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-
-    // Effacer l'erreur quand l'utilisateur corrige
+    setForm((p) => ({ ...p, [name]: value }));
     if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+      const { [name]: _, ...rest } = errors;
+      setErrors(rest);
+    }
+  };
+  const handleSelect = (name: string, value: string) => {
+    setForm((p) => ({ ...p, [name]: value }));
+    if (errors[name]) {
+      const { [name]: _, ...rest } = errors;
+      setErrors(rest);
     }
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    const requiredFields = [
+  const validate = () => {
+    const req = [
       "name",
       "email",
       "phone",
@@ -165,71 +130,42 @@ export default function DoctorModal({
       "licenseNumber",
       "genre",
     ];
-
-    requiredFields.forEach((field) => {
-      if (!form[field as keyof typeof form]) {
-        newErrors[field] = "Ce champ est obligatoire";
-      }
+    const n: Record<string, string> = {};
+    req.forEach((f) => {
+      if (!(form as any)[f]) n[f] = "Ce champ est obligatoire";
     });
-
-    // Validation email
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      newErrors.email = "Email invalide";
-    }
-
-    // Validation téléphone
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      n.email = "Email invalide";
     if (
       form.phone &&
       !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(form.phone)
-    ) {
-      newErrors.phone = "Numéro de téléphone invalide";
-    }
-
-    // Validation mot de passe
-    if (form.password && form.password.length < 6) {
-      newErrors.password =
-        "Le mot de passe doit contenir au moins 6 caractères";
-    }
-
-    // Validation N° Ordre des Médecins
-    if (form.licenseNumber && !/^[A-Za-z0-9-]+$/.test(form.licenseNumber)) {
-      newErrors.licenseNumber = "Format de N° Ordre du Médecins invalide";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    )
+      n.phone = "Numéro de téléphone invalide";
+    if (form.password && form.password.length < 6)
+      n.password = "Le mot de passe doit contenir au moins 6 caractères";
+    if (form.licenseNumber && !/^[A-Za-z0-9-]+$/.test(form.licenseNumber))
+      n.licenseNumber = "Format de N° Ordre du Médecins invalide";
+    setErrors(n);
+    return Object.keys(n).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validate()) return;
     setSubmitLoading(true);
-
     try {
       const res = await fetch("/api/hospital_admin/doctors/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-        }),
+        body: JSON.stringify(form),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Erreur lors de la création du médecin");
-      }
-
+      if (!res.ok)
+        throw new Error(data?.error || "Erreur lors de la création du médecin");
       toast({
         title: "Succès",
         description: "Le médecin a été créé avec succès",
       });
-
-      // Réinitialiser le formulaire
       setForm({
         name: "",
         email: "",
@@ -248,17 +184,12 @@ export default function DoctorModal({
         bio: "",
         genre: "",
       });
-
       onOpenChange(false);
-      if (onDoctorCreated) onDoctorCreated();
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Une erreur inattendue est survenue";
+      onDoctorCreated?.();
+    } catch (e: any) {
       toast({
         title: "Erreur",
-        description: errorMessage,
+        description: e?.message || "Une erreur inattendue est survenue",
         variant: "destructive",
       });
     } finally {
@@ -268,13 +199,13 @@ export default function DoctorModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-800">
+          <DialogTitle className="text-xl font-semibold">
             Ajouter un nouveau médecin
           </DialogTitle>
           {subscriptionInfo && (
-            <DialogDescription className="text-sm text-gray-600">
+            <DialogDescription className="text-sm">
               Votre abonnement:{" "}
               <span className="font-medium">{subscriptionInfo.plan}</span> •
               Médecins:{" "}
@@ -284,10 +215,8 @@ export default function DoctorModal({
             </DialogDescription>
           )}
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Colonne 1 - Informations de base */}
+        <form onSubmit={submit} className="space-y-5 pt-1">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">
@@ -301,10 +230,9 @@ export default function DoctorModal({
                   className={errors.name ? "border-red-500" : ""}
                 />
                 {errors.name && (
-                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.name}</p>
                 )}
               </div>
-
               <div>
                 <Label htmlFor="email">
                   Email <span className="text-red-500">*</span>
@@ -318,10 +246,9 @@ export default function DoctorModal({
                   className={errors.email ? "border-red-500" : ""}
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.email}</p>
                 )}
               </div>
-
               <div>
                 <Label htmlFor="phone">
                   Téléphone <span className="text-red-500">*</span>
@@ -335,10 +262,9 @@ export default function DoctorModal({
                   className={errors.phone ? "border-red-500" : ""}
                 />
                 {errors.phone && (
-                  <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
                 )}
               </div>
-
               <div>
                 <Label htmlFor="password">
                   Mot de passe <span className="text-red-500">*</span>
@@ -352,34 +278,41 @@ export default function DoctorModal({
                   className={errors.password ? "border-red-500" : ""}
                 />
                 {errors.password && (
-                  <p className="text-sm text-red-500 mt-1">{errors.password}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.password}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Minimum 6 caractères
                 </p>
               </div>
             </div>
-
-            {/* Colonne 2 - Informations professionnelles */}
             <div className="space-y-4">
               <div>
                 <Label htmlFor="specialization">
                   Spécialisation <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="specialization"
-                  name="specialization"
+                <Select
                   value={form.specialization}
-                  onChange={handleChange}
-                  className={errors.specialization ? "border-red-500" : ""}
-                />
+                  onValueChange={(v) => handleSelect("specialization", v)}
+                >
+                  <SelectTrigger
+                    className={errors.specialization ? "border-red-500" : ""}
+                  >
+                    <SelectValue placeholder="Sélectionnez votre spécialisation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {specialities.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.specialization && (
-                  <p className="text-sm text-red-500 mt-1">
+                  <p className="mt-1 text-sm text-red-500">
                     {errors.specialization}
                   </p>
                 )}
               </div>
-
               <div>
                 <Label htmlFor="licenseNumber">
                   N° Ordre des Médecins <span className="text-red-500">*</span>
@@ -392,19 +325,18 @@ export default function DoctorModal({
                   className={errors.licenseNumber ? "border-red-500" : ""}
                 />
                 {errors.licenseNumber && (
-                  <p className="text-sm text-red-500 mt-1">
+                  <p className="mt-1 text-sm text-red-500">
                     {errors.licenseNumber}
                   </p>
                 )}
               </div>
-
               <div>
-                <Label htmlFor="genre">
+                <Label>
                   Genre <span className="text-red-500">*</span>
                 </Label>
                 <Select
-                  onValueChange={(value) => handleSelectChange("genre", value)}
                   value={form.genre}
+                  onValueChange={(v) => handleSelect("genre", v)}
                 >
                   <SelectTrigger
                     className={errors.genre ? "border-red-500" : ""}
@@ -417,21 +349,18 @@ export default function DoctorModal({
                   </SelectContent>
                 </Select>
                 {errors.genre && (
-                  <p className="text-sm text-red-500 mt-1">{errors.genre}</p>
+                  <p className="mt-1 text-sm text-red-500">{errors.genre}</p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Deuxième ligne - Département et localisation */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <Label htmlFor="departmentId">Département</Label>
+              <Label>Département</Label>
               <Select
-                onValueChange={(value) =>
-                  handleSelectChange("departmentId", value)
-                }
                 value={form.departmentId}
+                onValueChange={(v) => handleSelect("departmentId", v)}
                 disabled={loading}
               >
                 <SelectTrigger>
@@ -442,15 +371,14 @@ export default function DoctorModal({
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="city">Ville</Label>
@@ -473,7 +401,6 @@ export default function DoctorModal({
             </div>
           </div>
 
-          {/* Adresse complète */}
           <div>
             <Label htmlFor="address">Adresse</Label>
             <Input
@@ -484,8 +411,7 @@ export default function DoctorModal({
             />
           </div>
 
-          {/* État et code postal */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="md:col-span-2">
               <Label htmlFor="state">État/Région</Label>
               <Input
@@ -506,47 +432,47 @@ export default function DoctorModal({
             </div>
           </div>
 
-          {/* Éducation et expérience */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <Label htmlFor="education">Formation</Label>
-              <Textarea
+              <textarea
                 id="education"
                 name="education"
                 value={form.education}
-                onChange={handleChange}
+                onChange={handleChange as any}
                 rows={3}
+                className="w-full rounded-md border bg-background p-2 text-sm"
                 placeholder="Diplômes, universités..."
               />
             </div>
             <div>
               <Label htmlFor="experience">Expérience professionnelle</Label>
-              <Textarea
+              <textarea
                 id="experience"
                 name="experience"
                 value={form.experience}
-                onChange={handleChange}
+                onChange={handleChange as any}
                 rows={3}
+                className="w-full rounded-md border bg-background p-2 text-sm"
                 placeholder="Postes précédents, années d'expérience..."
               />
             </div>
           </div>
 
-          {/* Bio et avatar */}
           <div>
             <Label htmlFor="bio">Biographie</Label>
-            <Textarea
+            <textarea
               id="bio"
               name="bio"
               value={form.bio}
-              onChange={handleChange}
+              onChange={handleChange as any}
               rows={3}
+              className="w-full rounded-md border bg-background p-2 text-sm"
               placeholder="Présentation du médecin..."
             />
           </div>
 
-          {/* Boutons de soumission */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+          <div className="flex justify-end gap-3 border-t pt-5">
             <Button
               type="button"
               variant="outline"
@@ -559,7 +485,7 @@ export default function DoctorModal({
             <Button
               type="submit"
               disabled={submitLoading}
-              className="min-w-[100px] bg-blue-600 hover:bg-blue-700"
+              className="min-w-[120px]"
             >
               {submitLoading ? (
                 <>

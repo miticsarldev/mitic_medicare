@@ -19,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Doctor } from "@/types/doctor";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface DoctorDetailsProps {
   isOpen: boolean;
@@ -104,7 +105,7 @@ export default function DoctorDetails({
                       Spécialité
                     </Label>
                     <p className="text-sm font-medium">
-                      {doctor.specialization}
+                      {getSpecializationLabel(doctor.specialization)}
                     </p>
                   </div>
                   <div>

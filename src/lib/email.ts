@@ -1,5 +1,6 @@
 import transporter from "@/lib/transporter";
 import {
+  getAdminIndependantWelcomeEmailTemplate,
   getApprovalEmailTemplate,
   getPasswordResetCodeEmailTemplate,
   getPasswordResetSuccessEmailTemplate,
@@ -172,5 +173,41 @@ export async function sendPatientWelcomeEmail(opts: {
     console.log(`✅ Email de bienvenue envoyé à ${email}`);
   } catch (error) {
     console.error("❌ Erreur lors de l'envoi de l'email de bienvenue:", error);
+  }
+}
+
+export async function sendVerificationPendingEmail(opts: {
+  name: string;
+  email: string;
+  role: "HOSPITAL_ADMIN" | "INDEPENDENT_DOCTOR";
+  helpUrl?: string; // optional: /support or /contact
+  statusUrl?: string; // optional: e.g. /dashboard/account/status
+}) {
+  const { name, email, role, helpUrl, statusUrl } = opts;
+
+  const htmlContent = await getAdminIndependantWelcomeEmailTemplate({
+    name,
+    role,
+    helpUrl,
+    statusUrl,
+  });
+
+  const subject =
+    role === "HOSPITAL_ADMIN"
+      ? "MITICCARE – Votre demande d'inscription hôpital est en vérification"
+      : "MITICCARE – Votre demande d'inscription médecin est en vérification";
+
+  const mailOptions = {
+    from: `"MITICCARE" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject,
+    html: htmlContent,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Email 'verification pending' envoyé à ${email}`);
+  } catch (error) {
+    console.error("❌ Erreur envoi 'verification pending':", error);
   }
 }

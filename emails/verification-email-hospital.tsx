@@ -52,9 +52,6 @@ export const VerificationEmailHospital = ({
                     alt="MITICCARE"
                   />
                 </Column>
-                <Column>
-                  <Text className="font-bold text-4xl my-0">CARE</Text>
-                </Column>
               </Row>
               <Heading className="text-black text-lg font-semibold m-0">
                 Vérification de votre compte établissement
@@ -166,10 +163,10 @@ export const VerificationEmailHospital = ({
                 pour accélérer la procédure, veuillez contacter notre équipe
                 dédiée aux établissements à{" "}
                 <Link
-                  href="mailto:etablissements@miticcare.com"
+                  href="mailto:contact@miticsarlml.com"
                   className="text-purple-600"
                 >
-                  etablissements@miticcare.com
+                  contact@miticsarlml.com
                 </Link>
               </Text>
 

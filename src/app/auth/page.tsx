@@ -11,6 +11,7 @@ import { ClientAnimationWrapper } from "@/components/client-animation-wrapper";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { Footer } from "@/components/footer";
 
 const AuthTabs = () => {
   return (
@@ -183,6 +184,8 @@ export default async function AuthPage() {
             </ClientAnimationWrapper>
           </div>
         </main>
+
+        <Footer />
       </div>
     </div>
   );

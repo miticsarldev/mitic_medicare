@@ -22,7 +22,6 @@ export async function createDoctor(formData: FormData) {
       return { error: "Unauthorized" };
     }
 
-    // Base fields
     const name = (formData.get("name") as string)?.trim();
     const email = (formData.get("email") as string)?.trim();
     const phone = (formData.get("phone") as string)?.trim();
@@ -39,11 +38,9 @@ export async function createDoctor(formData: FormData) {
       "hospital") as "independent" | "hospital";
     const isIndependent = doctorType === "independent";
 
-    // Optional independent-only
     const subscriptionPlanStr = (formData.get("subscription") as string) || "";
     const subscriptionPlan = subscriptionPlanStr as SubscriptionPlan | "";
 
-    // Validate required
     if (!name || !email || !specialty || !location) {
       return { error: "Missing required fields." };
     }
@@ -61,12 +58,10 @@ export async function createDoctor(formData: FormData) {
 
     const hashedPassword = await bcrypt.hash(passwordRaw, 10);
 
-    // Role by type
     const role: UserRole = isIndependent
       ? UserRole.INDEPENDENT_DOCTOR
       : UserRole.HOSPITAL_DOCTOR;
 
-    // Create user
     const user = await prisma.user.create({
       data: {
         name,
@@ -76,7 +71,7 @@ export async function createDoctor(formData: FormData) {
         role,
         isActive: status === "active",
         emailVerified: new Date(),
-        isApproved: verified, // or true if you want auto-approval
+        isApproved: verified,
         profile: {
           create: {
             city: location,
@@ -85,7 +80,6 @@ export async function createDoctor(formData: FormData) {
       },
     });
 
-    // Create doctor
     const doctor = await prisma.doctor.create({
       data: {
         userId: user.id,
@@ -97,7 +91,6 @@ export async function createDoctor(formData: FormData) {
       },
     });
 
-    // Independent → create doctor-level subscription
     if (isIndependent) {
       await prisma.subscription.create({
         data: {
@@ -115,8 +108,6 @@ export async function createDoctor(formData: FormData) {
         },
       });
     }
-
-    // (Optional) send invite email if you kept `sendEmail` in the form
 
     revalidatePath("/doctors");
     return { success: true, doctorId: doctor.id };
@@ -173,7 +164,6 @@ export async function updateDoctorStatus(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
@@ -224,7 +214,7 @@ export async function updateDoctorVerification(
     });
   }
 
-  revalidatePath("/dasboard/superadmin/users/doctors"); // adjust to your page route
+  revalidatePath("/dasboard/superadmin/users/doctors");
   return { success: true };
 }
 
@@ -232,12 +222,10 @@ export async function bulkDeleteDoctors(doctorIds: string[]) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
 
-    // Delete users (will cascade to doctor records)
     await prisma.user.deleteMany({
       where: {
         id: {
@@ -258,12 +246,10 @@ export async function bulkExportDoctors(doctorIds: string[]) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
 
-    // Get doctor data for export
     const doctors = await prisma.doctor.findMany({
       where: {
         user: {
@@ -310,7 +296,6 @@ export async function bulkExportDoctors(doctorIds: string[]) {
       },
     });
 
-    // Format data for export
     const exportData = doctors.map((doctor) => ({
       id: doctor.user.id,
       name: doctor.user.name,
@@ -339,7 +324,6 @@ export async function assignDoctorToHospital(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated and is a SUPER_ADMIN
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return { error: "Unauthorized" };
     }
@@ -403,7 +387,6 @@ function formatAvailabilities(availabilities: Availability[]) {
 
 export async function getDoctorDetailsById(id: string) {
   try {
-    // Récupérer le médecin à partir de l'ID
     const doctor = await prisma.doctor.findUnique({
       where: { id },
       select: {
@@ -485,7 +468,6 @@ export async function getDoctorDetailsById(id: string) {
       throw new Error("Doctor not found");
     }
 
-    // Récupérer les disponibilités du médecin
     const availabilities = await prisma.doctorAvailability.findMany({
       where: { doctorId: doctor.id, isActive: true },
       select: {
@@ -496,7 +478,6 @@ export async function getDoctorDetailsById(id: string) {
       },
     });
 
-    // Calculer la note moyenne
     const totalRatings = doctor.reviews.reduce((sum, r) => sum + r.rating, 0);
     const averageRating = doctor.reviews.length
       ? totalRatings / doctor.reviews.length
@@ -504,7 +485,6 @@ export async function getDoctorDetailsById(id: string) {
 
     const formattedSchedule = formatAvailabilities(availabilities);
 
-    // Retourner les détails complets du médecin
     return {
       id: doctor.id,
       name: doctor.user.name,

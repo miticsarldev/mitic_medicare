@@ -19,6 +19,8 @@ export type LimitSummary = {
   usage: Record<LimitKey, number>;
   exceeded: Record<LimitKey, boolean>;
   anyExceeded: boolean;
+  endDate?: Date;
+  startDate?: Date;
 };
 
 // ✅ helper to do half-open month window [start, end)
@@ -71,6 +73,7 @@ export async function getActiveSubscription(
     },
     orderBy: { updatedAt: "desc" },
   });
+
   return sub ?? null;
 }
 
@@ -125,7 +128,7 @@ export async function getUsage(scope: "DOCTOR" | "HOSPITAL", scopeId: string) {
     usage.patientsPerMonth = patientAgg.length;
 
     usage.doctorsPerHospital = await prisma.doctor.count({
-      where: { hospitalId: scopeId },
+      where: { hospitalId: scopeId, user: { role: "HOSPITAL_DOCTOR" } },
     });
   }
 
@@ -167,6 +170,8 @@ export async function getLimitSummaryForCurrentUser(): Promise<LimitSummary | nu
     limits,
     usage,
     exceeded,
+    endDate: sub?.endDate,
+    startDate: sub?.startDate,
     anyExceeded: Object.values(exceeded).some(Boolean),
   };
 }

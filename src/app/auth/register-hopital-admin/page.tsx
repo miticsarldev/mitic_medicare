@@ -17,6 +17,7 @@ import Navbar from "@/components/navbar";
 import { ClientAnimationWrapper } from "@/components/client-animation-wrapper";
 import { Badge } from "@/components/ui/badge";
 import HospitalAdminRegisterForm from "@/components/hospital-admin-register";
+import { Footer } from "@/components/footer";
 
 export default function HospitalAdminRegister() {
   return (
@@ -205,6 +206,8 @@ export default function HospitalAdminRegister() {
             </ClientAnimationWrapper>
           </div>
         </main>
+
+        <Footer />
       </div>
     </div>
   );

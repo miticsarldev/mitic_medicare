@@ -52,9 +52,6 @@ const PatientWelcomeEmail = ({
                     alt="MITICCARE"
                   />
                 </Column>
-                <Column>
-                  <Text className="font-bold text-4xl my-0">CARE</Text>
-                </Column>
               </Row>
               <Heading className="text-black text-lg font-semibold m-0">
                 {hasInvite
@@ -118,9 +115,9 @@ const PatientWelcomeEmail = ({
 
               <Section className="bg-gray-50 border-l-4 border-blue-600 p-4 text-left rounded-md">
                 <Text className="text-sm text-gray-600 m-0">
-                  <strong className="text-gray-800">Sécurité :</strong> MITIC
-                  CARE ne demandera jamais vos identifiants par email. Si vous
-                  recevez un message suspect, contactez-nous.
+                  <strong className="text-gray-800">Sécurité :</strong>{" "}
+                  MITICCARE ne demandera jamais vos identifiants par email. Si
+                  vous recevez un message suspect, contactez-nous.
                 </Text>
               </Section>
             </Section>

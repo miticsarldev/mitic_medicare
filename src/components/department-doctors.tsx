@@ -37,6 +37,7 @@ import {
   PaginationLink,
 } from "@/components/ui/pagination";
 import { useSession } from "next-auth/react";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface DepartmentDoctorsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,7 +214,7 @@ export default function DepartmentDoctors({
                     <SelectItem value="all">Toutes les spécialités</SelectItem>
                     {specializations.map((specialization) => (
                       <SelectItem key={specialization} value={specialization}>
-                        {specialization}
+                        {getSpecializationLabel(specialization)}
                       </SelectItem>
                     ))}
                   </SelectContent>

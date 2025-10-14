@@ -41,7 +41,7 @@ const hospitalAdminSchema = z.object({
     .string()
     .regex(
       /^\+?[0-9]{9,15}$/,
-      "Numéro de téléphone invalide. Ex: +223123456789"
+      "Numéro de téléphone invalide. Ex: +223 77 77 77 77"
     ),
   email: z
     .string()
@@ -72,7 +72,7 @@ const hospitalAdminSchema = z.object({
     .string()
     .regex(
       /^\+?[0-9]{9,15}$/,
-      "Le numéro de téléphone de l'hôpital doit avoir au moins 8 chiffres"
+      "Numéro de téléphone invalide. Ex: +223 77 77 77 77"
     ),
   institutionEmail: z
     .string()

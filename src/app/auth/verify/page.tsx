@@ -340,7 +340,7 @@ const VerifyEmail = () => {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Besoin d&apos;aide ?{" "}
-            <Link href="/contact" className="text-primary hover:underline">
+            <Link href="/help" className="text-primary hover:underline">
               Contactez notre support
             </Link>
           </p>

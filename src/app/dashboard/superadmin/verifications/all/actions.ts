@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { PendingApprovalUser } from "./types";
 import { sendApprovingEmail } from "@/lib/email";
+import { addMonths } from "date-fns";
+import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 
 export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {
   try {
@@ -83,6 +85,64 @@ export async function approveUser(user: PendingApprovalUser): Promise<void> {
       data: { isApproved: true },
     });
 
+    const now = new Date();
+    const periodStart = now;
+    const periodEnd = addMonths(now, 1);
+
+    // should check for role
+    // Assign Free Subscription to Patient (If not already assigned)
+    if (user.role === "INDEPENDENT_DOCTOR") {
+      const doctor = await prisma.doctor.findUnique({
+        where: { userId: user?.id },
+      });
+
+      const existingSubscription = await prisma.subscription.findFirst({
+        where: { doctorId: doctor?.id, subscriberType: "DOCTOR" },
+      });
+
+      if (!existingSubscription && doctor) {
+        await prisma.subscription.create({
+          data: {
+            doctorId: doctor?.id,
+            subscriberType: "DOCTOR",
+            plan: SubscriptionPlan.FREE,
+            status: SubscriptionStatus.ACTIVE,
+            amount: 0,
+            startDate: periodStart,
+            endDate: periodEnd,
+          },
+        });
+      }
+    } else if (user.role === "HOSPITAL_ADMIN") {
+      // Find the hospital associated with this admin
+      const hospital = await prisma.hospital.findUnique({
+        where: { adminId: user.id },
+      });
+
+      if (hospital) {
+        const existingSubscription = await prisma.subscription.findFirst({
+          where: {
+            hospitalId: hospital.id,
+            subscriberType: "HOSPITAL",
+          },
+        });
+
+        if (!existingSubscription) {
+          await prisma.subscription.create({
+            data: {
+              hospitalId: hospital.id,
+              subscriberType: "HOSPITAL",
+              plan: SubscriptionPlan.FREE,
+              status: SubscriptionStatus.ACTIVE,
+              amount: 0,
+              startDate: periodStart,
+              endDate: periodEnd,
+            },
+          });
+        }
+      }
+    }
+
     await sendApprovingEmail(
       user.name,
       user.email,
@@ -91,6 +151,7 @@ export async function approveUser(user: PendingApprovalUser): Promise<void> {
     );
 
     revalidatePath("/dashboard/superadmin/verifications/all");
+    revalidatePath("/dashboard/superadmin/overview");
   } catch (error) {
     console.error("Error approving user:", error);
     throw new Error("Failed to approve user");

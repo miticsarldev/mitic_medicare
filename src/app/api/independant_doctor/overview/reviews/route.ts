@@ -38,9 +38,6 @@ export async function POST(req: Request) {
       where: { id: reviewId },
     });
 
-    console.log("DoctorReview trouvé:", doctorReview);
-    console.log("ID Médecin:", doctor.id);
-
     if (!doctorReview || doctorReview.doctorId !== doctor.id) {
       return NextResponse.json(
         { message: "Avis non trouvé ou non autorisé" },

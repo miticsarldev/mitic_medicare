@@ -1,8 +1,7 @@
-// app/auth/new-password/page.tsx
 import { Suspense } from "react";
-import NewPasswordScreen from "./content"; // <- move your "use client" code into this file
+import NewPasswordScreen from "./content";
 
-export const dynamic = "force-dynamic"; // avoids static prerender for this route
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function Fallback() {

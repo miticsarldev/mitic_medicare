@@ -8,6 +8,7 @@ import PasswordResetEmail from "../../emails/password-reset-email";
 import PasswordResetSuccessEmail from "../../emails/password-reset-sucess-email";
 import ApprovalEmail from "../../emails/approval-email";
 import PatientWelcomeEmail from "../../emails/patient-welcome-email";
+import VerificationPendingEmail from "../../emails/VerificationPendingEmail";
 
 export async function getVerificationEmailTemplate(
   userName: string,
@@ -101,6 +102,24 @@ export async function getPatientWelcomeEmailTemplate(opts: {
       name,
       setPasswordUrl,
       loginUrl,
+    })
+  );
+}
+
+export async function getAdminIndependantWelcomeEmailTemplate(opts: {
+  name: string;
+  role: "HOSPITAL_ADMIN" | "INDEPENDENT_DOCTOR";
+  helpUrl?: string;
+  statusUrl?: string;
+}) {
+  const { name, role, helpUrl, statusUrl } = opts;
+
+  return await render(
+    React.createElement(VerificationPendingEmail, {
+      name,
+      role,
+      helpUrl,
+      statusUrl,
     })
   );
 }

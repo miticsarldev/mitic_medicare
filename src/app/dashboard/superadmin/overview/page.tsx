@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { Suspense } from "react";
 import {
   getDashboardStats,
@@ -10,7 +8,6 @@ import { DashboardSkeleton } from "./skeleton";
 import { DashboardContent } from "./content";
 
 export default async function AdminDashboardPage() {
-  // Fetch all required data in parallel
   const [dashboardStats, pendingApprovals, subscriptionStats] =
     await Promise.all([
       getDashboardStats(),

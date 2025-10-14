@@ -128,6 +128,10 @@ export default function PatientList() {
     async (page: number = 1) => {
       setLoading(true);
       setError(null);
+
+      const controller = new AbortController();
+      const { signal } = controller;
+
       try {
         const url = new URL(
           "/api/hospital_admin/patients/list",
@@ -135,44 +139,37 @@ export default function PatientList() {
         );
         url.searchParams.set("page", page.toString());
         url.searchParams.set("pageSize", ITEMS_PER_PAGE.toString());
-
-        // Ajouter les paramètres de filtrage selon votre API
         if (search) url.searchParams.set("name", search);
         if (genderFilter.length > 0)
           url.searchParams.set("gender", genderFilter.join(","));
         if (minAppointments > 0)
-          url.searchParams.set("minAppointments", minAppointments.toString());
+          url.searchParams.set("minAppointments", String(minAppointments));
 
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), { signal });
         if (!res.ok) throw new Error("Failed to fetch patients");
         const data = await res.json();
 
-        // Adapter selon la structure de votre réponse API
         setPatients(data.patients);
-        if (data.pagination) {
-          setPagination({
-            currentPage: data.pagination.currentPage,
-            pageSize: data.pagination.pageSize,
-            totalItems: data.pagination.totalItems,
-            totalPages: data.pagination.totalPages,
-            hasNextPage: data.pagination.hasNextPage,
-            hasPreviousPage: data.pagination.hasPreviousPage,
+        if (data.pagination) setPagination(data.pagination);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          console.error("Error loading patients", err);
+          setError("Impossible de charger les patients");
+          toast({
+            title: "Erreur",
+            description: "Échec du chargement des patients",
+            variant: "destructive",
           });
         }
-      } catch (err) {
-        console.error("Error loading patients", err);
-        setError("Impossible de charger les patients");
-        toast({
-          title: "Erreur",
-          description: "Échec du chargement des patients",
-          variant: "destructive",
-        });
       } finally {
         setLoading(false);
       }
+
+      return () => controller.abort();
     },
     [search, genderFilter, minAppointments]
-  ); // Ajouter les dépendances
+  );
 
   // Gestion du debounce pour la recherche
   useEffect(() => {
@@ -201,43 +198,38 @@ export default function PatientList() {
     setGenderFilter([]);
     setMinAppointments(0);
   }, []);
-
-  // const filteredPatients = useMemo(() => {
-  //   return patients.filter((patient) => {
-  //     const matchesSearch = patient.name
-  //       .toLowerCase()
-  //       .includes(search.toLowerCase());
-  //     const matchesGender =
-  //       genderFilter.length === 0 || genderFilter.includes(patient.gender);
-  //     const matchesAppointments =
-  //       patient.numberOfAppointments >= minAppointments;
-  //     return matchesSearch && matchesGender && matchesAppointments;
-  //   });
-  // }, [patients, search, genderFilter, minAppointments]);
+  // inside PatientList() — keep the rest of your state as-is
 
   const FilterPanel = React.memo(function FilterPanelComponent({
     isMobile = false,
+    autoFocus = false,
     onApply,
   }: {
     isMobile?: boolean;
+    autoFocus?: boolean; // 👈 new
     onApply?: () => void;
   }) {
-    // Ajoutez une référence pour l'input
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Utilisez useEffect pour remettre le focus après chaque rendu
+    // focus only when requested (desktop first mount or when dialog opens on mobile)
     useEffect(() => {
-      if (searchInputRef.current) {
+      if (autoFocus && searchInputRef.current) {
         searchInputRef.current.focus();
+        // Optionally move caret to end:
+        const el = searchInputRef.current;
+        const val = el.value;
+        el.value = "";
+        el.value = val;
       }
-    });
+    }, [autoFocus]);
 
     return (
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg">Filtres</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Search */}
           <div className="space-y-2">
             <Label htmlFor="search">Recherche</Label>
             <div className="relative">
@@ -250,12 +242,14 @@ export default function PatientList() {
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                // shadcn already has good focus rings; keep defaults
               />
             </div>
           </div>
 
           <Separator />
 
+          {/* Gender */}
           <div className="space-y-2">
             <Label>Genre</Label>
             <div className="space-y-2">
@@ -264,7 +258,15 @@ export default function PatientList() {
                   <Checkbox
                     id={`gender-${gender.value}`}
                     checked={genderFilter.includes(gender.value)}
-                    onCheckedChange={() => toggleGender(gender.value)}
+                    // onCheckedChange in shadcn returns boolean | "indeterminate"
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setGenderFilter((prev) =>
+                        isChecked
+                          ? Array.from(new Set([...prev, gender.value]))
+                          : prev.filter((g) => g !== gender.value)
+                      );
+                    }}
                   />
                   <Label htmlFor={`gender-${gender.value}`}>
                     {gender.label}
@@ -276,22 +278,23 @@ export default function PatientList() {
 
           <Separator />
 
+          {/* Min appointments */}
           <div className="space-y-2">
             <Label htmlFor="minAppointments">Nombre min. de rendez-vous</Label>
             <Input
               id="minAppointments"
+              inputMode="numeric"
               type="number"
               min={0}
               value={minAppointments}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 0;
-                setMinAppointments(value);
-              }}
+              onChange={(e) =>
+                setMinAppointments(parseInt(e.target.value || "0", 10))
+              }
             />
           </div>
 
           {isMobile ? (
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-1">
               <Button
                 variant="outline"
                 className="flex-1"
@@ -310,9 +313,12 @@ export default function PatientList() {
               </Button>
             </div>
           ) : (
-            <Button variant="outline" className="w-full" onClick={resetFilters}>
-              Réinitialiser
-            </Button>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Button variant="outline" onClick={resetFilters}>
+                Réinitialiser
+              </Button>
+              <Button onClick={() => fetchPatients(1)}>Mettre à jour</Button>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -374,7 +380,7 @@ export default function PatientList() {
 
   const LoadingSkeleton = React.memo(function LoadingSkeletonComponent() {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
           <Card key={idx} className="h-[180px]">
             <CardContent className="p-4">
@@ -491,11 +497,14 @@ export default function PatientList() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 p-2 sm:p-4">
-      <aside className="hidden lg:block w-64 flex-shrink-0">
-        <FilterPanel />
+      <aside
+        className="hidden lg:block w-72 flex-shrink-0 lg:sticky lg:top-0 self-start
+                  max-h-[calc(100vh-7rem)] overflow-auto"
+      >
+        <FilterPanel autoFocus />
       </aside>
 
-      <div className="flex-1 space-y-4">
+      <div className="flex-1">
         <div className="lg:hidden flex justify-end">
           <Button
             variant="outline"
@@ -512,7 +521,11 @@ export default function PatientList() {
             <DialogHeader>
               <DialogTitle>Filtres</DialogTitle>
             </DialogHeader>
-            <FilterPanel isMobile onApply={() => setShowMobileFilters(false)} />
+            <FilterPanel
+              isMobile
+              autoFocus={showMobileFilters}
+              onApply={() => fetchPatients(1)}
+            />
           </DialogContent>
         </Dialog>
 
@@ -524,7 +537,7 @@ export default function PatientList() {
           <EmptyState />
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {patients.map((patient) => (
                 <PatientCard key={patient.id} patient={patient} />
               ))}

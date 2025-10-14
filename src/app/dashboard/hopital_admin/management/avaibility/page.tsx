@@ -37,6 +37,7 @@ import {
   updateAvailabilityForMultipleDoctors,
 } from "@/app/actions/doctor-actions";
 import { toast } from "@/hooks/use-toast";
+import { getSpecializationLabel } from "@/utils/function";
 
 type Doctor = {
   id: string;
@@ -478,7 +479,8 @@ export default function DoctorAvailabilityPage() {
                   <SelectContent>
                     {doctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
-                        {doctor.name} ({doctor.specialization})
+                        {doctor.name} (
+                        {getSpecializationLabel(doctor.specialization)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -839,7 +841,7 @@ export default function DoctorAvailabilityPage() {
               <MultiSelect
                 options={doctors.map((d) => ({
                   value: d.id,
-                  label: `${d.name} (${d.specialization})`,
+                  label: `${d.name} (${getSpecializationLabel(d.specialization)})`,
                 }))}
                 value={selectedDoctors}
                 onChange={setSelectedDoctors}

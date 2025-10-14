@@ -201,8 +201,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log({ id: params.id });
-
     // Resolve userId + email (email is needed to clear verification tokens)
     const link = await prisma.patient.findUnique({
       where: { id: params.id },

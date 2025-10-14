@@ -115,6 +115,14 @@ export function Footer({ className }: React.HTMLAttributes<HTMLElement>) {
                     href: "/offres-professionnels",
                     label: "Offres Professionnels",
                   },
+                  {
+                    href: "/conditions-utilisation",
+                    label: "Conditions d'utilisation",
+                  },
+                  {
+                    href: "/politique-confidentialite",
+                    label: "Politique de confidentialité",
+                  },
                 ].map((link, index) => (
                   <motion.div key={index} variants={fadeInUp}>
                     <Link

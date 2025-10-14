@@ -21,10 +21,14 @@ export async function middleware(req: NextRequest) {
   const userRole = token?.role as UserRole;
   const isApproved = token?.isApproved;
   const emailVerified = token?.emailVerified;
+  const isActive = token?.isActive as boolean;
 
   const isApprovalRequiredPath = pathname.startsWith("/auth/approval-required");
   const isVerificationRequiredPath = pathname.startsWith(
     "/auth/email-verification-required"
+  );
+  const isActivationRequiredPath = pathname.startsWith(
+    "/auth/activation-required"
   );
 
   // Rediriger si l'email n’est pas vérifié
@@ -41,6 +45,12 @@ export async function middleware(req: NextRequest) {
     !isApprovalRequiredPath
   ) {
     return NextResponse.redirect(new URL("/auth/approval-required", origin));
+  }
+
+  // 3) Activation gate (ALL roles)
+  // If the account is inactive, send to activation page (avoid loops)
+  if (isActive === false && !isActivationRequiredPath) {
+    return NextResponse.redirect(new URL("/auth/activation-required", origin));
   }
 
   const rolePaths: Record<UserRole, string> = {

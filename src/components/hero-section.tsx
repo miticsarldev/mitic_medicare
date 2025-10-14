@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { LiveSearch } from "@/components/live-search";
 import type { SearchFilters } from "@/app/actions/ui-actions";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface HeroSectionProps {
   specializations: string[];
@@ -315,7 +316,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                                   ?.filter(Boolean)
                                   .map((spec) => (
                                     <SelectItem key={spec} value={spec}>
-                                      {spec}
+                                      {getSpecializationLabel(spec)}
                                     </SelectItem>
                                   ))}
                               </SelectContent>
@@ -407,7 +408,7 @@ export function HeroSection({ specializations, cities }: HeroSectionProps) {
                           </SelectItem>
                           {specializations?.filter(Boolean).map((spec) => (
                             <SelectItem key={spec} value={spec}>
-                              {spec}
+                              {getSpecializationLabel(spec)}
                             </SelectItem>
                           ))}
                         </SelectContent>

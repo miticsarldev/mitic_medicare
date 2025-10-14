@@ -83,6 +83,7 @@ import DoctorDetails from "./doctor-details";
 import DoctorDeleteModal from "./doctor-delete-modal";
 import { Hospital } from "@/types/hospital";
 import { DoctorAnalyticsType } from "@/types";
+import { getSpecializationLabel } from "@/utils/function";
 
 export default function DoctorsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -1000,7 +1001,7 @@ export default function DoctorsPage() {
                                 className="grid grid-cols-[auto_1fr_auto] items-center gap-4"
                               >
                                 <div className="font-medium">
-                                  {specialty.specialty}
+                                  {getSpecializationLabel(specialty.specialty)}
                                 </div>
                                 <div className="w-full">
                                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -1313,7 +1314,7 @@ export default function DoctorsPage() {
                       htmlFor={`specialty-${specialty}`}
                       className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      {specialty}
+                      {getSpecializationLabel(specialty)}
                     </label>
                   </div>
                 ))}

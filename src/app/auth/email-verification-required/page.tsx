@@ -531,7 +531,7 @@ export default function EmailVerificationRequired() {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       Besoin d&apos;aide ?{" "}
                       <Link
-                        href="/contact"
+                        href="/help"
                         className={`text-${content.color.replace("bg-", "")} hover:underline font-medium`}
                       >
                         Contactez notre support

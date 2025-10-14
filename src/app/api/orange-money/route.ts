@@ -1,64 +1,56 @@
+// app/api/orange-money/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { getOrangeAccessToken } from "@/lib/orange";
 
 export async function POST(req: NextRequest) {
-  const { amount, orderId, returnUrl, cancelUrl, notifUrl } = await req.json();
-
-  const auth = Buffer.from(
-    `${process.env.ORANGE_CLIENT_ID}:${process.env.ORANGE_CLIENT_SECRET}`
-  ).toString("base64");
-
-  // 1. Obtenir un access_token
-  const tokenRes = await fetch("https://api.orange.com/oauth/v3/token", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials",
-  });
-
-  const tokenData = await tokenRes.json();
-  const accessToken = tokenData.access_token;
-
-  if (!accessToken) {
-    return NextResponse.json({ error: "Token non obtenu" }, { status: 500 });
-  }
-
-  // 2. Initialiser une session de paiement
-  const paymentRes = await fetch(
-    "https://api.orange.com/orange-money-webpay/dev/v1/webpayment",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        merchant_key: process.env.ORANGE_MERCHANT_KEY,
-        currency: "OUV", // En sandbox
-        order_id: orderId,
-        amount: amount,
-        return_url: returnUrl,
-        cancel_url: cancelUrl,
-        notif_url: notifUrl,
-        lang: "fr",
-        reference: "MyShop Orange",
-      }),
+  try {
+    const { amount, orderId, returnUrl, cancelUrl, notifUrl, referenceId } =
+      await req.json();
+    if (!amount || !orderId) {
+      return NextResponse.json(
+        { error: "amount et orderId requis" },
+        { status: 400 }
+      );
     }
-  );
 
-  const paymentData = await paymentRes.json();
-
-  if (!paymentData?.payment_url) {
-    return NextResponse.json(
-      { error: "Erreur de création du paiement", details: paymentData },
-      { status: 500 }
+    const token = await getOrangeAccessToken();
+    const res = await fetch(
+      "https://api.orange.com/orange-money-webpay/dev/v1/webpayment",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          merchant_key: process.env.MITIC_ORANGE_MONEY_API_MERCHANT_KEY,
+          currency: process.env.MITIC_ORANGE_MONEY_API_CURRENCY,
+          order_id: orderId,
+          amount: 1,
+          //   amount: Math.round(amount),
+          return_url: returnUrl,
+          cancel_url: cancelUrl,
+          notif_url: notifUrl,
+          lang: "fr",
+          reference: referenceId,
+        }),
+      }
     );
-  }
 
-  return NextResponse.json({
-    payment_url: paymentData.payment_url,
-    pay_token: paymentData.pay_token,
-  });
+    const json = await res.json();
+    if (!res.ok || !json?.payment_url || !json?.pay_token) {
+      return NextResponse.json(
+        { error: "Erreur de création du paiement Orange Money", details: json },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({
+      payment_url: json.payment_url,
+      pay_token: json.pay_token,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    return NextResponse.json({ error: "OM init error" }, { status: 500 });
+  }
 }

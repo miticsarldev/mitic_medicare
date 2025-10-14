@@ -32,6 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hospital } from "@/types/hospital";
 import { locations } from "@/constant";
 import clsx from "clsx";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface DoctorCreateEditModalProps {
   isOpen: boolean;
@@ -403,7 +404,7 @@ export default function DoctorCreateEditModal({
                     <SelectContent>
                       {specialties.map((sp) => (
                         <SelectItem key={sp} value={sp}>
-                          {sp}
+                          {getSpecializationLabel(sp)}
                         </SelectItem>
                       ))}
                     </SelectContent>

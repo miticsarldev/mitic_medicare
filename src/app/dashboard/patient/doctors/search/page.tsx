@@ -9,7 +9,6 @@ import {
   Check,
   Heart,
   MapPin,
-  Phone,
   Search,
   Star,
   ThumbsUp,
@@ -31,7 +30,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -918,7 +916,7 @@ export default function DoctorSearchPage() {
                   </TabsList>
                   <TabsContent value="profile" className="mt-4">
                     <div className="grid gap-6 md:grid-cols-3">
-                      <div className="md:col-span-2 space-y-4">
+                      <div className="md:col-span-3 space-y-4">
                         <Card>
                           <CardHeader>
                             <CardTitle>À propos</CardTitle>
@@ -1051,93 +1049,17 @@ export default function DoctorSearchPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      </div>
-
-                      <div className="space-y-4">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>Informations pratiques</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div>
-                              <h4 className="font-medium">Tarifs</h4>
-                              <div className="mt-2 flex items-center justify-between">
-                                <span>Consultation</span>
-                                <span className="font-medium">
-                                  {new Intl.NumberFormat("fr-ML", {
-                                    style: "currency",
-                                    currency: "XOF",
-                                    minimumFractionDigits: 0,
-                                  }).format(selectedDoctor.consultationFee)}
-                                </span>
-                              </div>
-                              <Separator className="my-2" />
-                              <div className="flex items-center justify-between">
-                                <span>Accepte les mutuelles</span>
-                                <span>
-                                  {selectedDoctor.acceptsInsurance
-                                    ? "Oui"
-                                    : "Non"}
-                                </span>
-                              </div>
-                              {selectedDoctor.acceptsInsurance && (
-                                <div className="mt-2">
-                                  <span className="text-sm text-muted-foreground">
-                                    Réseaux acceptés:
-                                  </span>
-                                  <div className="mt-1 flex flex-wrap gap-1">
-                                    {selectedDoctor.insuranceNetworks &&
-                                      selectedDoctor.insuranceNetworks.map(
-                                        (network: string, index: number) => (
-                                          <Badge key={index} variant="outline">
-                                            {network}
-                                          </Badge>
-                                        )
-                                      )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="font-medium">
-                                Modes de consultation
-                              </h4>
-                              <div className="mt-2 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center">
-                                    <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                                    <span>En cabinet</span>
-                                  </div>
-                                  <Check className="h-4 w-4 text-green-500" />
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className="font-medium">Contact</h4>
-                              <div className="mt-2 space-y-2">
-                                <div className="flex items-center">
-                                  <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                                  <span>
-                                    {selectedDoctor.phone || "Non disponible"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center">
-                                  <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                                  <span>{selectedDoctor.address}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <div>
-                          <Link
-                            href={`/dashboard/patient/appointments/book/${selectedDoctor.id}`}
-                            className="w-full mt-4"
-                          >
-                            <Button className="w-full" size="lg">
-                              Prendre RDV
-                            </Button>
-                          </Link>
+                        <div className="space-y-4">
+                          <div>
+                            <Link
+                              href={`/dashboard/patient/appointments/book/${selectedDoctor.id}`}
+                              className="w-full mt-4"
+                            >
+                              <Button className="w-full" size="lg">
+                                Prendre RDV
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </div>

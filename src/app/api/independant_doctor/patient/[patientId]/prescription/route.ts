@@ -19,7 +19,6 @@ export async function POST(
       where: { id: params.patientId },
     });
     if (!patient) {
-      console.log(params.patientId);
       return NextResponse.json(
         { error: "Patient introuvable" },
         { status: 404 }
@@ -30,7 +29,6 @@ export async function POST(
       where: { userId: session.user.id },
     });
     if (!doctor) {
-      console.log(session.user.id);
       return NextResponse.json(
         { error: "Médecin introuvable" },
         { status: 404 }

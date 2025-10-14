@@ -1,23 +1,19 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_noStore } from "next/cache";
 import prisma from "@/lib/prisma";
-import { format, subDays, subMonths } from "date-fns";
-import { fr } from "date-fns/locale";
+import { addMonths, subDays, subMonths } from "date-fns";
 import type {
   DashboardStats,
   PendingApprovalUser,
   SubscriptionStats,
   SubscriptionPaymentWithRelations,
   PlanStat,
-  DistributionDataPoint,
-  StatisticsData,
-  StatisticsDataPoint,
 } from "./types";
 import { sendApprovingEmail } from "@/lib/email";
 
 // actions.ts (server)
-import { Prisma } from "@prisma/client";
+import { Prisma, SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 
 type Bucket = {
   bucket: string;
@@ -133,6 +129,7 @@ async function revenueBuckets(range: string) {
 export async function getDashboardStats(
   timeRange = "all"
 ): Promise<DashboardStats> {
+  unstable_noStore();
   try {
     const { start: periodStart, end: now } = dateRangeFor(timeRange);
 
@@ -218,18 +215,15 @@ async function generateRevenueData(range: string) {
 }
 
 export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {
+  unstable_noStore();
   try {
     const users = await prisma.user.findMany({
       where: {
-        OR: [
-          // Independent doctors waiting for approval OR whose Doctor is not verified
-          {
-            role: "INDEPENDENT_DOCTOR",
-            OR: [{ isApproved: false }, { doctor: { isVerified: false } }],
-          },
-          // Hospital admins awaiting approval
-          { role: "HOSPITAL_ADMIN", isApproved: false },
-        ],
+        emailVerified: { not: null },
+        isApproved: false,
+        role: {
+          in: ["HOSPITAL_ADMIN", "INDEPENDENT_DOCTOR"],
+        },
       },
       include: {
         profile: true,
@@ -297,6 +291,8 @@ export async function getPendingApprovals(): Promise<PendingApprovalUser[]> {
 }
 
 export async function getPendingSubscriptionPayments() {
+  unstable_noStore();
+
   const payments = await prisma.subscriptionPayment.findMany({
     where: { status: "PENDING" },
     orderBy: { paymentDate: "desc" },
@@ -316,6 +312,8 @@ export async function getPendingSubscriptionPayments() {
 }
 
 export async function getSubscriptionStats(): Promise<SubscriptionStats> {
+  unstable_noStore();
+
   try {
     // ➤ Total des abonnements actifs
     const totalActiveSubscriptions = await prisma.subscription.count({
@@ -410,14 +408,73 @@ export async function approveUser(user: PendingApprovalUser): Promise<void> {
       data: { isApproved: true },
     });
 
+    const now = new Date();
+    const periodStart = now;
+    const periodEnd = addMonths(now, 1);
+
+    // should check for role
+    // Assign Free Subscription to Patient (If not already assigned)
+    if (user.role === "INDEPENDENT_DOCTOR") {
+      const doctor = await prisma.doctor.findUnique({
+        where: { userId: user?.id },
+      });
+
+      const existingSubscription = await prisma.subscription.findFirst({
+        where: { doctorId: doctor?.id, subscriberType: "DOCTOR" },
+      });
+
+      if (!existingSubscription && doctor) {
+        await prisma.subscription.create({
+          data: {
+            doctorId: doctor?.id,
+            subscriberType: "DOCTOR",
+            plan: SubscriptionPlan.FREE,
+            status: SubscriptionStatus.ACTIVE,
+            amount: 0,
+            startDate: periodStart,
+            endDate: periodEnd,
+          },
+        });
+      }
+    } else if (user.role === "HOSPITAL_ADMIN") {
+      // Find the hospital associated with this admin
+      const hospital = await prisma.hospital.findUnique({
+        where: { adminId: user.id },
+      });
+
+      if (hospital) {
+        const existingSubscription = await prisma.subscription.findFirst({
+          where: {
+            hospitalId: hospital.id,
+            subscriberType: "HOSPITAL",
+          },
+        });
+
+        if (!existingSubscription) {
+          await prisma.subscription.create({
+            data: {
+              hospitalId: hospital.id,
+              subscriberType: "HOSPITAL",
+              plan: SubscriptionPlan.FREE,
+              status: SubscriptionStatus.ACTIVE,
+              amount: 0,
+              startDate: periodStart,
+              endDate: periodEnd,
+            },
+          });
+        }
+      }
+    }
+
     await sendApprovingEmail(
       user.name,
       user.email,
       user.role,
       user.hospital?.name ?? "Hopital"
     );
-    revalidatePath("/admin/dashboard");
-    revalidatePath("/admin/verification");
+
+    revalidatePath("/dashboard/superadmin/overview");
+    revalidatePath("/dashboard/superadmin/verifications/all");
   } catch (error) {
     console.error("Error approving user:", error);
     throw new Error("Failed to approve user");
@@ -446,444 +503,26 @@ export async function refreshDashboardData(
   timeRange: string = "30d"
 ): Promise<unknown> {
   try {
+    let result: unknown;
+
     switch (dataType) {
       case "stats":
-        return await getDashboardStats(timeRange);
+        result = await getDashboardStats(timeRange);
+        break;
       case "approvals":
-        return await getPendingApprovals();
+        result = await getPendingApprovals();
+        break;
       case "subscriptions":
-        return await getSubscriptionStats();
+        result = await getSubscriptionStats();
+        break;
       default:
         throw new Error("Invalid data type");
     }
+
+    revalidatePath("/dashboard/superadmin/overview");
+    return result;
   } catch (error) {
     console.error(`Error refreshing ${dataType} data:`, error);
     throw new Error(`Failed to refresh ${dataType} data`);
   }
-}
-
-export async function getStatisticsData(): Promise<StatisticsData> {
-  try {
-    // Get user counts
-    const totalUsers = await prisma.user.count();
-    const totalPatients = await prisma.user.count({
-      where: { role: "PATIENT" },
-    });
-    const totalDoctors = await prisma.user.count({
-      where: {
-        OR: [{ role: "INDEPENDENT_DOCTOR" }, { role: "HOSPITAL_DOCTOR" }],
-      },
-    });
-    const totalHospitals = await prisma.user.count({
-      where: { role: "HOSPITAL_ADMIN" },
-    });
-
-    // Get new users in the last 30 days
-    const thirtyDaysAgo = subDays(new Date(), 30);
-    const newUsers = await prisma.user.count({
-      where: {
-        createdAt: {
-          gte: thirtyDaysAgo,
-        },
-      },
-    });
-
-    // Get appointment counts
-    const totalAppointments = await prisma.appointment.count();
-
-    // Get revenue data
-    const totalRevenue = await prisma.subscriptionPayment.aggregate({
-      _sum: {
-        amount: true,
-      },
-      where: {
-        status: "COMPLETED",
-      },
-    });
-
-    // Generate user growth data
-    const userGrowthData = await generateStatisticsUserGrowthData();
-
-    // Generate active users data
-    const activeUsersData = await generateActiveUsersData();
-
-    // Generate revenue data
-    const revenueData = await generateStatisticsRevenueData();
-
-    // Generate appointments data
-    const appointmentsData = await generateAppointmentsData();
-
-    // Generate user type distribution
-    const userTypeData = [
-      {
-        name: "Patients",
-        value: Math.round((totalPatients / totalUsers) * 100) || 0,
-      },
-      {
-        name: "Médecins",
-        value: Math.round((totalDoctors / totalUsers) * 100) || 0,
-      },
-      {
-        name: "Hôpitaux",
-        value: Math.round((totalHospitals / totalUsers) * 100) || 0,
-      },
-    ];
-
-    // Generate subscription type distribution
-    const subscriptionTypeData = await generateSubscriptionTypeData();
-
-    // Generate platform usage data
-    const platformUsageData = await generatePlatformUsageData();
-
-    // Generate region data
-    const regionData = await generateRegionData();
-
-    // KPI cards data
-    const kpiData = [
-      {
-        title: "Utilisateurs totaux",
-        value: totalUsers.toString(),
-        change: "+12.5%",
-        trend: "up" as const,
-        period: "vs mois dernier",
-        icon: "Users",
-        color: "blue",
-      },
-      {
-        title: "Nouveaux utilisateurs",
-        value: newUsers.toString(),
-        change: "+8.2%",
-        trend: "up" as const,
-        period: "vs mois dernier",
-        icon: "Activity",
-        color: "green",
-      },
-      {
-        title: "Rendez-vous",
-        value: totalAppointments.toString(),
-        change: "-3.1%",
-        trend: "down" as const,
-        period: "vs mois dernier",
-        icon: "Calendar",
-        color: "amber",
-      },
-      {
-        title: "Revenus",
-        value: `€${Math.round(totalRevenue._sum.amount?.toNumber() || 0)}`,
-        change: "+15.3%",
-        trend: "up" as const,
-        period: "vs mois dernier",
-        icon: "LineChart",
-        color: "emerald",
-      },
-    ];
-
-    return {
-      kpiData,
-      userGrowthData,
-      activeUsersData,
-      revenueData,
-      appointmentsData,
-      userTypeData,
-      subscriptionTypeData,
-      platformUsageData,
-      regionData,
-    };
-  } catch (error) {
-    console.error("Error fetching statistics data:", error);
-    // Return fallback data
-    return generateFallbackData();
-  }
-}
-
-async function generateStatisticsUserGrowthData(): Promise<
-  StatisticsDataPoint[]
-> {
-  try {
-    const months = 12;
-    const data: StatisticsDataPoint[] = [];
-
-    for (let i = 0; i < months; i++) {
-      const startDate = subMonths(new Date(), months - i - 1);
-      const endDate = subMonths(new Date(), months - i - 2);
-
-      const value = await prisma.user.count({
-        where: {
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
-          },
-        },
-      });
-
-      data.push({
-        month: format(startDate, "MMM yyyy", { locale: fr }),
-        value,
-      });
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Error generating user growth data:", error);
-    // Return fallback data
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: format(subMonths(new Date(), 11 - i), "MMM yyyy", { locale: fr }),
-      value: Math.floor(Math.random() * 300) + 500 + i * 50,
-    }));
-  }
-}
-
-async function generateActiveUsersData(): Promise<StatisticsDataPoint[]> {
-  try {
-    const days = 30;
-    const data: StatisticsDataPoint[] = [];
-
-    for (let i = 0; i < days; i++) {
-      const date = subDays(new Date(), days - i - 1);
-
-      // In a real app, you would query a user_sessions or activity_logs table
-      // For now, we'll generate random data that looks realistic
-      const value = Math.floor(Math.random() * 1000) + 4000 + i * 30;
-
-      data.push({
-        month: format(date, "dd MMM", { locale: fr }),
-        value,
-      });
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Error generating active users data:", error);
-    // Return fallback data
-    return Array.from({ length: 30 }, (_, i) => ({
-      month: format(subDays(new Date(), 29 - i), "dd MMM", { locale: fr }),
-      value: Math.floor(Math.random() * 1000) + 4000 + i * 30,
-    }));
-  }
-}
-
-async function generateStatisticsRevenueData(): Promise<StatisticsDataPoint[]> {
-  try {
-    const months = 12;
-    const data: StatisticsDataPoint[] = [];
-
-    for (let i = 0; i < months; i++) {
-      const startDate = subMonths(new Date(), months - i - 1);
-      const endDate = subMonths(new Date(), months - i - 2);
-
-      const result = await prisma.subscriptionPayment.aggregate({
-        _sum: {
-          amount: true,
-        },
-        where: {
-          status: "COMPLETED",
-          paymentDate: {
-            gte: startDate,
-            lt: endDate,
-          },
-        },
-      });
-
-      data.push({
-        month: format(startDate, "MMM yyyy", { locale: fr }),
-        value: result._sum.amount?.toNumber() || 0,
-      });
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Error generating revenue data:", error);
-    // Return fallback data
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: format(subMonths(new Date(), 11 - i), "MMM yyyy", { locale: fr }),
-      value: Math.floor(Math.random() * 5000) + 10000 + i * 1000,
-    }));
-  }
-}
-
-async function generateAppointmentsData(): Promise<StatisticsDataPoint[]> {
-  try {
-    const months = 12;
-    const data: StatisticsDataPoint[] = [];
-
-    for (let i = 0; i < months; i++) {
-      const startDate = subMonths(new Date(), months - i - 1);
-      const endDate = subMonths(new Date(), months - i - 2);
-
-      const count = await prisma.appointment.count({
-        where: {
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
-          },
-        },
-      });
-
-      data.push({
-        month: format(startDate, "MMM yyyy", { locale: fr }),
-        value: count,
-      });
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Error generating appointments data:", error);
-    // Return fallback data
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: format(subMonths(new Date(), 11 - i), "MMM yyyy", { locale: fr }),
-      value: Math.floor(Math.random() * 500) + 2500 + i * 100,
-    }));
-  }
-}
-
-async function generateSubscriptionTypeData(): Promise<
-  DistributionDataPoint[]
-> {
-  try {
-    const subscriptionCounts = await prisma.subscription.groupBy({
-      by: ["plan"],
-      _count: {
-        id: true,
-      },
-      where: {
-        status: "ACTIVE",
-      },
-    });
-
-    const totalCount = subscriptionCounts.reduce(
-      (sum, item) => sum + item._count.id,
-      0
-    );
-
-    return subscriptionCounts.map((item) => ({
-      name: item.plan,
-      value:
-        totalCount > 0 ? Math.round((item._count.id / totalCount) * 100) : 0,
-    }));
-  } catch (error) {
-    console.error("Error generating subscription type data:", error);
-    // Return fallback data
-    return [
-      { name: "FREE", value: 40 },
-      { name: "STANDARD", value: 20 },
-      { name: "PREMIUM", value: 8 },
-    ];
-  }
-}
-
-async function generatePlatformUsageData(): Promise<DistributionDataPoint[]> {
-  // In a real app, you would query a user_sessions or analytics table
-  // For now, we'll return mock data
-  return [
-    { name: "Web", value: 45 },
-    { name: "Mobile", value: 55 },
-  ];
-}
-
-async function generateRegionData(): Promise<DistributionDataPoint[]> {
-  try {
-    // In a real app, you would query user addresses or location data
-    // For now, we'll return mock data
-    return [
-      { name: "Dakar", value: 35 },
-      { name: "Thiès", value: 15 },
-      { name: "Saint-Louis", value: 12 },
-      { name: "Ziguinchor", value: 10 },
-      { name: "Kaolack", value: 8 },
-      { name: "Autres", value: 20 },
-    ];
-  } catch (error) {
-    console.error("Error generating region data:", error);
-    // Return fallback data
-    return [
-      { name: "Dakar", value: 35 },
-      { name: "Thiès", value: 15 },
-      { name: "Saint-Louis", value: 12 },
-      { name: "Ziguinchor", value: 10 },
-      { name: "Kaolack", value: 8 },
-      { name: "Autres", value: 20 },
-    ];
-  }
-}
-
-function generateFallbackData(): StatisticsData {
-  // Generate fallback data for when the database queries fail
-  return {
-    kpiData: [
-      {
-        title: "Utilisateurs totaux",
-        value: "24,892",
-        change: "+12.5%",
-        trend: "up",
-        period: "vs mois dernier",
-        icon: "Users",
-        color: "blue",
-      },
-      {
-        title: "Nouveaux utilisateurs",
-        value: "1,253",
-        change: "+8.2%",
-        trend: "up",
-        period: "vs mois dernier",
-        icon: "Activity",
-        color: "green",
-      },
-      {
-        title: "Rendez-vous",
-        value: "8,472",
-        change: "-3.1%",
-        trend: "down",
-        period: "vs mois dernier",
-        icon: "Calendar",
-        color: "amber",
-      },
-      {
-        title: "Revenus",
-        value: "€89,432",
-        change: "+15.3%",
-        trend: "up",
-        period: "vs mois dernier",
-        icon: "LineChart",
-        color: "emerald",
-      },
-    ],
-    userGrowthData: Array.from({ length: 12 }, (_, i) => ({
-      month: format(subMonths(new Date(), 11 - i), "MMM yyyy", { locale: fr }),
-      value: Math.floor(Math.random() * 300) + 500 + i * 50,
-    })),
-    activeUsersData: Array.from({ length: 30 }, (_, i) => ({
-      month: format(subDays(new Date(), 29 - i), "dd MMM", { locale: fr }),
-      value: Math.floor(Math.random() * 1000) + 4000 + i * 30,
-    })),
-    revenueData: Array.from({ length: 12 }, (_, i) => ({
-      month: format(subMonths(new Date(), 11 - i), "MMM yyyy", { locale: fr }),
-      value: Math.floor(Math.random() * 5000) + 10000 + i * 1000,
-    })),
-    appointmentsData: Array.from({ length: 12 }, (_, i) => ({
-      month: format(subMonths(new Date(), 11 - i), "MMM yyyy", { locale: fr }),
-      value: Math.floor(Math.random() * 500) + 2500 + i * 100,
-    })),
-    userTypeData: [
-      { name: "Patients", value: 65 },
-      { name: "Médecins", value: 25 },
-      { name: "Hôpitaux", value: 10 },
-    ],
-    subscriptionTypeData: [
-      { name: "FREE", value: 40 },
-      { name: "STANDARD", value: 20 },
-      { name: "PREMIUM", value: 8 },
-    ],
-    platformUsageData: [
-      { name: "Web", value: 45 },
-      { name: "Mobile", value: 55 },
-    ],
-    regionData: [
-      { name: "Dakar", value: 35 },
-      { name: "Thiès", value: 15 },
-      { name: "Saint-Louis", value: 12 },
-      { name: "Ziguinchor", value: 10 },
-      { name: "Kaolack", value: 8 },
-      { name: "Autres", value: 20 },
-    ],
-  };
 }

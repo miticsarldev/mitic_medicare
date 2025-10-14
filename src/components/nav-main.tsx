@@ -1,7 +1,7 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronRight } from "lucide-react";
-
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,39 +28,47 @@ export function NavMain() {
   const session = useSession();
   const user = session.data?.user;
   const { setOpenMobile, isMobile } = useSidebar();
+  const pathname = usePathname();
 
   const navItems = getNavItems(user?.role ?? UserRole.PATIENT).map((item) => ({
     ...item,
     url: item.url ?? "#",
   }));
 
-  const pathname = usePathname();
+  // Persist manual opens; current route's parent is always forced open.
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Navigation</SidebarGroupLabel>
       <SidebarMenu>
         {navItems?.map((item) => {
-          const isActive =
-            pathname === item.url ||
-            item.items.some((subItem) => pathname === subItem.url);
+          // parent is "active" if path matches the parent url or any child url by prefix
+          const inParentByItemUrl =
+            !!item.url &&
+            (pathname === item.url || pathname.startsWith(item.url + "/"));
+          const inParentByChildren =
+            item.items?.some((sub) => pathname.startsWith(sub.url)) ?? false;
 
-          const isDefaultOpen = item.items.some((subItem) =>
-            pathname.startsWith(subItem.url)
-          );
+          const isParentActive = inParentByItemUrl || inParentByChildren;
+
+          // Parent open state: force-open if parent active OR if user toggled it open
+          const isOpen = isParentActive || openMap[item.title] === true;
 
           return (
             <Collapsible
               key={item.title}
-              asChild
               className="group/collapsible"
-              defaultOpen={isActive}
+              open={isOpen}
+              onOpenChange={(v) =>
+                setOpenMap((prev) => ({ ...prev, [item.title]: v }))
+              }
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    isActive={isDefaultOpen}
+                    isActive={isParentActive}
                   >
                     {item?.icon && <item.icon />}
                     <span>{item.title}</span>

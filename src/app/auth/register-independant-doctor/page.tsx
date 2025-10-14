@@ -16,6 +16,7 @@ import Navbar from "@/components/navbar";
 import { ClientAnimationWrapper } from "@/components/client-animation-wrapper";
 import { Badge } from "@/components/ui/badge";
 import IndependentDoctorRegistration from "@/components/independant-doctor-register-form";
+import { Footer } from "@/components/footer";
 
 export default function IndependentDoctorRegister() {
   return (
@@ -203,6 +204,8 @@ export default function IndependentDoctorRegister() {
             </ClientAnimationWrapper>
           </div>
         </main>
+
+        <Footer />
       </div>
     </div>
   );

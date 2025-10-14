@@ -1,11 +1,10 @@
 "use client";
 
-import { ChevronsUpDown, LogOut, Sparkles } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -19,7 +18,6 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { signOut, useSession } from "next-auth/react";
-import type { UserRole } from "@prisma/client";
 
 type NavItemProps = {
   btnClassName?: string;
@@ -30,10 +28,6 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
   const { isMobile } = useSidebar();
   const { data } = useSession();
   const user = data?.user;
-
-  // Roles that should NOT see the "Passer à Pro" entry
-  const HIDE_UPGRADE: UserRole[] = ["PATIENT", "SUPER_ADMIN"];
-  const showUpgrade = !!user && !HIDE_UPGRADE.includes(user.role as UserRole);
 
   const initials =
     user?.name
@@ -108,18 +102,6 @@ export function NavUser({ btnClassName, isNavbar }: NavItemProps) {
                     </div>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-              </>
-            )}
-
-            {showUpgrade && (
-              <>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <Sparkles />
-                    Passer à Pro
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
               </>
             )}

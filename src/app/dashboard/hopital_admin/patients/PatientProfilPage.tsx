@@ -38,6 +38,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { getSpecializationLabel } from "@/utils/function";
 
 type Appointment = {
   id: string;
@@ -234,7 +235,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-2 md:p-4 max-w-7xl mx-auto space-y-4">
       {/* Header avec photo et infos */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-4 md:p-6 w-full">
         <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
@@ -376,7 +377,9 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                     {appt.doctor.user.name}
                                   </div>
                                   <Badge variant="outline" className="text-xs">
-                                    {appt.doctor.specialization}
+                                    {getSpecializationLabel(
+                                      appt.doctor.specialization
+                                    )}
                                   </Badge>
                                 </div>
                                 <div className="text-sm">
@@ -610,7 +613,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                   </p>
                                 )}
                               </div>
-                              <div className="flex flex-col items-end gap-2">
+                              <div className="flex flex-col items-end justify-end gap-2">
                                 <Badge
                                   variant="outline"
                                   className={`${historiqueColors[history.status]} capitalize`}
@@ -618,7 +621,7 @@ export default function PatientProfilePage({ patient }: { patient: Patient }) {
                                   {translateHistorique(history.status)}
                                 </Badge>
                                 {history.diagnosedDate && (
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="text-xs text-muted-foreground mt-auto">
                                     {new Date(
                                       history.diagnosedDate
                                     ).toLocaleDateString()}

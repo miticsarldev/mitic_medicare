@@ -54,7 +54,7 @@ const clinicAdminSchema = z.object({
     .string()
     .regex(
       /^\+?[0-9]{9,15}$/,
-      "Numéro de téléphone invalide. Ex: +223123456789"
+      "Numéro de téléphone invalide. Ex: +22377777777"
     ),
   clinicName: z.string().min(2, "Le nom de la clinique est requis"),
   clinicPhone: z

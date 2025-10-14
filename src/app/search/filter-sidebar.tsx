@@ -21,7 +21,7 @@ import {
 import { Filter, Star, MapPin, Users, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { FILTERS_BY_TYPE } from "@/config/filters.config";
-import { labelForSort } from "@/utils/function";
+import { getSpecializationLabel, labelForSort } from "@/utils/function";
 
 interface FilterSidebarProps {
   initialFilters: SearchFilters;
@@ -286,7 +286,7 @@ export function FilterSidebar({
                         htmlFor={`spec-${spec}`}
                         className="text-sm cursor-pointer"
                       >
-                        {spec}
+                        {getSpecializationLabel(spec)}
                       </Label>
                     </div>
                   ))

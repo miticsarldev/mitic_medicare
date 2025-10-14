@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDoctorSlotsWithTakenStatus } from "@/app/actions/doctor-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getSpecializationLabel } from "@/utils/function";
 
 export interface Doctor {
   id: string;
@@ -52,17 +53,11 @@ export interface Doctor {
   address?: string;
   isVerified?: boolean;
   isActive?: boolean;
-  department?: {
-    id: string;
-    name: string;
-  };
+  department?: { id: string; name: string };
   education?: string;
   experience?: string;
   consultationFee?: string;
-  schedule?: {
-    day: string;
-    slots: string[];
-  }[];
+  schedule?: { day: string; slots: string[] }[];
   avatarUrl?: string;
 }
 
@@ -70,12 +65,14 @@ interface DoctorCardProps {
   doctor: Doctor;
   onChangeDepartment?: () => void;
   onChangeStatus?: (doctorId: string, isActive: boolean) => void;
+  toggling?: boolean;
 }
 
 export function DoctorCard({
   doctor,
   onChangeDepartment,
   onChangeStatus,
+  toggling,
 }: DoctorCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [weeklySlots, setWeeklySlots] = useState<
@@ -83,23 +80,28 @@ export function DoctorCard({
   >([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  const spec = doctor.specialization?.trim() || "";
+  const dept = doctor.department?.name?.trim() || "";
+  const showDept = !!dept && dept.toLowerCase() !== spec.toLowerCase();
+  const plainName =
+    doctor.name?.replace(/^\s*(dr\.?|doctor)\s+/i, "") || doctor.name;
+
   useEffect(() => {
-    if (showDetails) {
-      setLoadingSlots(true);
-      getDoctorSlotsWithTakenStatus(doctor.id)
-        .then((data) => {
-          const transformedSlots = Object.entries(data).flatMap(
-            ([day, { all, taken }]) =>
-              all.map((slot) => ({
-                day,
-                slot,
-                taken: taken.includes(slot),
-              }))
-          );
-          setWeeklySlots(transformedSlots);
-        })
-        .finally(() => setLoadingSlots(false));
-    }
+    if (!showDetails) return;
+    setLoadingSlots(true);
+    getDoctorSlotsWithTakenStatus(doctor.id)
+      .then((data) => {
+        const transformed = Object.entries(data).flatMap(
+          ([day, { all, taken }]) =>
+            (all as string[]).map((slot) => ({
+              day,
+              slot,
+              taken: (taken as string[]).includes(slot),
+            }))
+        );
+        setWeeklySlots(transformed);
+      })
+      .finally(() => setLoadingSlots(false));
   }, [showDetails, doctor.id]);
 
   const frenchDayNames: Record<string, string> = {
@@ -112,107 +114,124 @@ export function DoctorCard({
     sunday: "Dimanche",
   };
 
+  // Shared bits
+  const ActionsMenu = ({ desktop }: { desktop?: boolean }) => (
+    <div className={desktop ? "hidden sm:block" : "sm:hidden"}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setShowDetails(true)}>
+            <User className="mr-2 h-4 w-4" /> Détails
+          </DropdownMenuItem>
+          {onChangeDepartment && (
+            <DropdownMenuItem onClick={onChangeDepartment}>
+              <Briefcase className="mr-2 h-4 w-4" /> Changer département
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
+  // GRID VARIANT
+  const DoctorGridCard = () => (
+    <Card
+      className={`rounded-xl border border-border/50 hover:shadow-md transition-shadow ${doctor.isActive === false ? "opacity-70" : ""}`}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex flex-col items-center justify-between gap-2">
+          <Avatar className="size-24 shrink-0">
+            {doctor.avatarUrl ? (
+              <AvatarImage
+                src={doctor.avatarUrl}
+                alt={doctor.name}
+                className="object-cover"
+              />
+            ) : (
+              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                {doctor.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            )}
+          </Avatar>
+
+          <div className="min-w-0">
+            <CardTitle className="text-base font-medium flex flex-col justify-center items-center gap-2">
+              <span className="truncate text-center">{plainName}</span>
+              {doctor.isVerified && (
+                <Badge variant="outline" className="gap-1 shrink-0">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span>Vérifié</span>
+                </Badge>
+              )}
+            </CardTitle>
+
+            <div className="mt-1 flex flex-col justify-center items-center gap-1.5">
+              <Badge variant="secondary" className="font-normal text-xs">
+                Spécialité: {getSpecializationLabel(spec) || "—"}
+              </Badge>
+              {showDept && (
+                <Badge variant="outline" className="text-xs max-w-full">
+                  <span className="truncate">Département: {dept}</span>
+                </Badge>
+              )}
+            </div>
+          </div>
+          <ActionsMenu />
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex flex-col items-center justify-center gap-2 text-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="truncate">{doctor.phone}</span>
+        </div>
+        <div className="flex items-center gap-2 min-w-0">
+          <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="truncate">{doctor.email || "Non renseigné"}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Star className="h-4 w-4 text-yellow-500 shrink-0" />
+          <span>{doctor.averageRating.toFixed(1)}</span>
+          <span className="text-muted-foreground text-xs">
+            ({doctor.patientsCount} patients)
+          </span>
+        </div>
+      </CardContent>
+
+      <CardFooter className="flex items-center gap-2 pt-0 justify-between">
+        <ActionsMenu desktop />
+        <Button
+          variant={doctor.isActive ? "outline" : "default"}
+          size="sm"
+          className="h-8 text-xs"
+          disabled={toggling}
+          onClick={(e) => {
+            e.stopPropagation();
+            onChangeStatus?.(doctor.id, !doctor.isActive);
+          }}
+        >
+          {toggling
+            ? "Mise à jour..."
+            : doctor.isActive
+              ? "Désactiver"
+              : "Activer"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <>
-      {/* Carte principale */}
-      <Card className="hover:shadow-md transition-shadow border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                {doctor.avatarUrl ? (
-                  <AvatarImage
-                    src={doctor.avatarUrl}
-                    alt={doctor.name}
-                    className="object-contain"
-                  />
-                ) : (
-                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                    {doctor.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div>
-                <CardTitle className="text-base font-medium flex items-center gap-2">
-                  Dr.{doctor.name}
-                  {doctor.isVerified && (
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                  )}
-                </CardTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="font-normal text-xs">
-                    {doctor.specialization}
-                  </Badge>
-                  {doctor.department && (
-                    <Badge variant="outline" className="text-xs">
-                      {doctor.department.name}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
+      <DoctorGridCard />
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setShowDetails(true)}>
-                  <User className="mr-2 h-4 w-4" />
-                  Détails
-                </DropdownMenuItem>
-                {onChangeDepartment && (
-                  <DropdownMenuItem onClick={onChangeDepartment}>
-                    <Briefcase className="mr-2 h-4 w-4" />
-                    Changer département
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <span className="truncate">{doctor.phone}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="truncate">{doctor.email || "Non renseigné"}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Star className="h-4 w-4 text-yellow-500" />
-            <span>{doctor.averageRating.toFixed(1)}</span>
-            <span className="text-muted-foreground text-xs">
-              ({doctor.patientsCount} patients)
-            </span>
-          </div>
-        </CardContent>
-
-        <CardFooter className="flex justify-between items-center pt-0">
-          <Button
-            variant={doctor.isActive ? "outline" : "default"}
-            size="sm"
-            className="h-8 text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onChangeStatus?.(doctor.id, !doctor.isActive);
-            }}
-          >
-            {doctor.isActive ? "Désactiver" : "Activer"}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      {/* Modal de détails */}
+      {/* Details Modal (unchanged behavior) */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="sm:max-w-2xl rounded-lg">
           <DialogHeader>
@@ -222,7 +241,7 @@ export function DoctorCard({
                   <AvatarImage
                     src={doctor.avatarUrl}
                     alt={doctor.name}
-                    className="object-contain"
+                    className="object-cover"
                   />
                 ) : (
                   <AvatarFallback className="bg-primary/10 text-primary font-medium text-xl">
@@ -235,21 +254,22 @@ export function DoctorCard({
               </Avatar>
               <div>
                 <DialogTitle className="text-xl flex items-center gap-2">
-                  {doctor.name}
+                  {plainName}
                   {doctor.isVerified && (
                     <Badge
                       variant="secondary"
                       className="flex items-center gap-1"
                     >
-                      <CheckCircle className="h-3 w-3" />
-                      Vérifié
+                      <CheckCircle className="h-3 w-3" /> Vérifié
                     </Badge>
                   )}
                 </DialogTitle>
                 <DialogDescription className="flex flex-wrap items-center gap-2 mt-1">
-                  <Badge>{doctor.specialization}</Badge>
-                  {doctor.department && (
-                    <Badge variant="outline">{doctor.department.name}</Badge>
+                  <Badge>
+                    Spécialité: {getSpecializationLabel(spec) || "—"}
+                  </Badge>
+                  {showDept && (
+                    <Badge variant="outline">Département: {dept}</Badge>
                   )}
                 </DialogDescription>
               </div>
@@ -286,7 +306,6 @@ export function DoctorCard({
                       </div>
                     </div>
                   </div>
-
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">
                       Statistiques
@@ -321,7 +340,6 @@ export function DoctorCard({
                       </div>
                     </div>
                   )}
-
                   {doctor.experience && (
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-1">
@@ -342,18 +360,18 @@ export function DoctorCard({
             <TabsContent value="schedule" className="mt-6">
               {loadingSlots ? (
                 <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="space-y-2">
                       <Skeleton className="h-5 w-32" />
                       <div className="flex flex-wrap gap-2">
-                        {[...Array(6)].map((_, j) => (
+                        {Array.from({ length: 6 }).map((_, j) => (
                           <Skeleton key={j} className="h-8 w-16 rounded-full" />
                         ))}
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : weeklySlots.length > 0 ? (
+              ) : weeklySlots.length ? (
                 <div className="space-y-4">
                   {Array.from(new Set(weeklySlots.map((s) => s.day))).map(
                     (day) => (
@@ -363,7 +381,7 @@ export function DoctorCard({
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {weeklySlots
-                            .filter((slot) => slot.day === day)
+                            .filter((s) => s.day === day)
                             .map((slot) => (
                               <Badge
                                 key={slot.slot}
@@ -386,7 +404,7 @@ export function DoctorCard({
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Calendar className="mx-auto h-8 w-8 mb-2" />
-                  <p>Aucun créneau disponible</p>
+                  Aucun créneau disponible
                 </div>
               )}
             </TabsContent>

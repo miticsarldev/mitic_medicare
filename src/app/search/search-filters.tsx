@@ -203,7 +203,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                             )}
                           </div>
 
-                          {status === "authenticated" && (
+                          {/* {status === "authenticated" && (
                             <div className="mt-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 justify-center md:justify-start">
                               {doctor.user.phone && (
                                 <span className="flex items-center gap-1">
@@ -218,7 +218,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                                 </span>
                               )}
                             </div>
-                          )}
+                          )} */}
                         </div>
                       </div>
 

@@ -654,16 +654,22 @@ export default function AccountUnderReview() {
                     <div className="flex items-center gap-1.5">
                       <Mail className="h-4 w-4" />
                       <a
-                        href="mailto:support@miticcare.com"
+                        href="mailto:contact@miticsarlml.com"
                         className="hover:underline"
                       >
-                        support@miticcare.com
+                        contact@miticsarlml.com
                       </a>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <PhoneCall className="h-4 w-4" />
-                      <a href="tel:+33123456789" className="hover:underline">
-                        +33 1 23 45 67 89
+                      <a href="tel:+33753927721" className="hover:underline">
+                        +33 7 53 92 77 21
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <PhoneCall className="h-4 w-4" />
+                      <a href="tel:+22373810023" className="hover:underline">
+                        +223 73 81 00 23
                       </a>
                     </div>
                   </div>

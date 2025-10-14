@@ -1,5 +1,6 @@
+import { sendVerificationPendingEmail } from "@/lib/email";
 import prisma from "@/lib/prisma";
-import { SubscriptionPlan, SubscriptionStatus, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -90,69 +91,21 @@ export async function GET(req: Request) {
     data: { emailVerified: new Date() },
   });
 
-  // should check for role
-  // Assign Free Subscription to Patient (If not already assigned)
-  if (role === "INDEPENDENT_DOCTOR") {
-    const doctor = await prisma.doctor.findUnique({
-      where: { userId: user?.id },
-    });
-
-    const existingSubscription = await prisma.subscription.findFirst({
-      where: { doctorId: doctor?.id, subscriberType: "DOCTOR" },
-    });
-
-    if (!existingSubscription && doctor) {
-      await prisma.subscription.create({
-        data: {
-          doctorId: doctor?.id,
-          subscriberType: "DOCTOR",
-          plan: SubscriptionPlan.FREE,
-          status: SubscriptionStatus.ACTIVE,
-          amount: 0,
-          startDate: new Date(),
-          endDate: new Date(
-            new Date().setFullYear(new Date().getFullYear() + 1)
-          ),
-        },
-      });
-    }
-  } else if (role === "HOSPITAL_ADMIN") {
-    // Find the hospital associated with this admin
-    const hospital = await prisma.hospital.findUnique({
-      where: { adminId: user.id },
-    });
-
-    if (hospital) {
-      const existingSubscription = await prisma.subscription.findFirst({
-        where: {
-          hospitalId: hospital.id,
-          subscriberType: "HOSPITAL",
-        },
-      });
-
-      if (!existingSubscription) {
-        await prisma.subscription.create({
-          data: {
-            hospitalId: hospital.id,
-            subscriberType: "HOSPITAL",
-            plan: SubscriptionPlan.FREE,
-            status: SubscriptionStatus.ACTIVE,
-            amount: 0,
-            startDate: new Date(),
-            endDate: new Date(
-              new Date().setFullYear(new Date().getFullYear() + 1)
-            ),
-          },
-        });
-      }
-    }
-  }
-
   // Set expires token after verification
   await prisma.verificationToken.update({
     where: { token },
     data: { expires: new Date() },
   });
+
+  if (user.role === "HOSPITAL_ADMIN" || user.role === "INDEPENDENT_DOCTOR") {
+    await sendVerificationPendingEmail({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      statusUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/auth`,
+      helpUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/help`,
+    });
+  }
 
   // success state
   return NextResponse.json(

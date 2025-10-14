@@ -50,6 +50,7 @@ import {
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { getSpecializationLabel } from "@/utils/function";
 
 type MedicalRecordInput = {
   diagnosis: string;
@@ -672,7 +673,9 @@ function AppointmentCard({
               <div className="flex items-center gap-2 text-sm">
                 <Stethoscope className="h-4 w-4" />
                 {appointment.doctor.name} -{" "}
-                {appointment.doctor.specialization || "Spécialité non précisée"}
+                {getSpecializationLabel(
+                  appointment.doctor.specialization ?? ""
+                ) || "Spécialité non précisée"}
               </div>
             </CardDescription>
           </div>

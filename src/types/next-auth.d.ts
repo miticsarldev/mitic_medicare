@@ -18,6 +18,7 @@ declare module "next-auth" {
       role: UserRole;
       emailVerified: Date | null;
       isApproved: boolean;
+      isActive: boolean;
       createdAt: Date;
       updatedAt: Date;
 
@@ -37,6 +38,7 @@ declare module "next-auth" {
     role: UserRole;
     emailVerified: Date | null;
     isApproved: boolean;
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
     userProfile?: UserProfile;
@@ -54,6 +56,7 @@ declare module "next-auth" {
     role: UserRole;
     emailVerified: Date | null;
     isApproved: boolean;
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
     userProfile?: UserProfile;

@@ -473,7 +473,7 @@ model Subscription {
     startDate      DateTime
     endDate        DateTime
     amount         Decimal            @db.Decimal(10, 2)
-    currency       String             @default("USD")
+    currency       String             @default("XOF")
     autoRenew      Boolean            @default(true)
     createdAt      DateTime           @default(now())
     updatedAt      DateTime           @updatedAt
@@ -496,6 +496,15 @@ model SubscriptionPayment {
     status         PaymentStatus @default(PENDING) // "PENDING", "COMPLETED", "FAILED"
     paymentDate    DateTime      @default(now())
     createdAt      DateTime      @default(now())
+
+    // --- Orange Money integration fields ---
+    months          Int               @default(1) // renewal months
+    changePlanTo    SubscriptionPlan? // optional plan switch
+    externalOrderId String?           @unique
+    payToken        String?
+    provider        String?           @default("ORANGE_MONEY")
+    periodStart     DateTime?
+    periodEnd       DateTime?
 
     @@index([subscriptionId])
     @@index([status])

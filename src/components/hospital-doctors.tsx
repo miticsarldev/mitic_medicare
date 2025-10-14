@@ -35,6 +35,7 @@ import {
   PaginationItem,
   PaginationLink,
 } from "@/components/ui/pagination";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface HospitalDoctorsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -223,7 +224,7 @@ export default function HospitalDoctors({ hospital }: HospitalDoctorsProps) {
                     <SelectItem value="all">Toutes les spécialités</SelectItem>
                     {specializations.map((specialization) => (
                       <SelectItem key={specialization} value={specialization}>
-                        {specialization}
+                        {getSpecializationLabel(specialization)}
                       </SelectItem>
                     ))}
                   </SelectContent>

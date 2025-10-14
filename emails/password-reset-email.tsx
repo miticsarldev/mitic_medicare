@@ -46,11 +46,6 @@ export const PasswordResetEmail = ({
                     alt="MITICCARE"
                   />
                 </Column>
-                <Column>
-                  <Text className="font-bold text-4xl my-0 text-white">
-                    CARE
-                  </Text>
-                </Column>
               </Row>
               <Heading className="text-white text-lg font-semibold m-0">
                 Réinitialisation de votre mot de passe
@@ -146,10 +141,10 @@ export const PasswordResetEmail = ({
                 Si vous avez des difficultés avec la réinitialisation, contactez
                 notre support à{" "}
                 <Link
-                  href="mailto:support@miticsarl.com"
+                  href="mailto:contact@miticsarlml.com"
                   className="text-blue-600"
                 >
-                  support@miticsarl.com
+                  contact@miticsarlml.com
                 </Link>
               </Text>
               <Text className="text-sm text-gray-500 mb-3">

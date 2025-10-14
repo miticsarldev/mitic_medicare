@@ -52,6 +52,15 @@ type AdminData = {
   createdAt: string;
 };
 
+const fmt = (d: Date) => d.toISOString().slice(0, 10);
+const dateYearsAgo = (years: number) => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  return d;
+};
+const DOB_MIN = fmt(dateYearsAgo(60)); // oldest allowed birthday
+const DOB_MAX = fmt(dateYearsAgo(18));
+
 export default function ProfilePage() {
   const [admin, setAdmin] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,6 +166,31 @@ export default function ProfilePage() {
   const handleSubmit = async () => {
     setSaving(true);
     let newUrl: string | null = null;
+
+    if (form.genre !== "MALE" && form.genre !== "FEMALE") {
+      form.genre = ""; // sends "non spécifié" -> API should treat as null
+    }
+
+    // 2) guard age
+    if (form.dateOfBirth) {
+      const dob = new Date(form.dateOfBirth + "T00:00:00Z");
+      const now = new Date();
+      const age =
+        now.getFullYear() -
+        dob.getFullYear() -
+        (now < new Date(now.getFullYear(), dob.getMonth(), dob.getDate())
+          ? 1
+          : 0);
+      if (age < 18 || age > 60) {
+        toast({
+          title: "Date de naissance invalide",
+          description: "L’âge doit être compris entre 18 et 60 ans.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+    }
 
     try {
       // 1) upload (so we can rollback if PATCH fails)
@@ -431,7 +465,9 @@ export default function ProfilePage() {
                 <Label>Genre</Label>
                 <Select
                   value={form.genre}
-                  onValueChange={(value) => handleChange("genre", value)}
+                  onValueChange={(value) =>
+                    handleChange("genre", value === "OTHER" ? "" : value)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionnez votre genre" />
@@ -439,7 +475,7 @@ export default function ProfilePage() {
                   <SelectContent>
                     <SelectItem value="MALE">Homme</SelectItem>
                     <SelectItem value="FEMALE">Femme</SelectItem>
-                    <SelectItem value="OTHER">Autre</SelectItem>
+                    <SelectItem value="OTHER">Non spécifié</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -450,6 +486,8 @@ export default function ProfilePage() {
                 <Input
                   type="date"
                   value={form.dateOfBirth}
+                  min={DOB_MIN}
+                  max={DOB_MAX}
                   onChange={(e) => handleChange("dateOfBirth", e.target.value)}
                 />
               </div>

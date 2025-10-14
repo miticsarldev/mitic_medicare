@@ -6,7 +6,6 @@ import Image from "next/image";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Home, Mail, Sparkles, Compass, Search } from "lucide-react";
 
-// OPTIONAL: If you have these, you can import them. Otherwise, this page stands alone.
 import Navbar from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -143,11 +142,6 @@ export default function NotFoundPage() {
   );
 }
 
-/* =========================
-   Fancy components
-   ========================= */
-
-/** Big glitchy “404” with neon gradient + jitter */
 function Glitch404() {
   const layers = [0, 1, 2];
   const jitter = {
@@ -198,7 +192,6 @@ function Glitch404() {
   );
 }
 
-/** Interactive 3D tilt card */
 function TiltCard({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0.5);
@@ -206,7 +199,7 @@ function TiltCard({ children }: { children: React.ReactNode }) {
 
   const rotateX = useTransform(y, [0, 1], [10, -10]);
   const rotateY = useTransform(x, [0, 1], [-10, 10]);
-  const translateZ = useTransform(x, [0, 1], [10, 10]); // subtle depth
+  const translateZ = useTransform(x, [0, 1], [10, 10]);
 
   const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = ref.current?.getBoundingClientRect();
@@ -237,7 +230,6 @@ function TiltCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Gooey blob background + soft lights */
 function FloatingBlobs() {
   return (
     <div className="pointer-events-none absolute inset-0 -z-0 overflow-hidden">
@@ -317,7 +309,6 @@ function FloatingBlobs() {
   );
 }
 
-/** Parallax starfield canvas */
 function Starfield({ className = "" }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dpr, setDpr] = useState(1);
@@ -336,7 +327,7 @@ function Starfield({ className = "" }: { className?: string }) {
     let W = 0;
     let H = 0;
     const stars: { x: number; y: number; z: number; s: number }[] = [];
-    const STAR_COUNT = 180; // balanced for perf
+    const STAR_COUNT = 180;
     const motion = { x: 0, y: 0 };
 
     const resize = () => {
@@ -362,7 +353,6 @@ function Starfield({ className = "" }: { className?: string }) {
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
 
-      // subtle vignette
       const grd = ctx.createRadialGradient(
         W / 2,
         H / 2,

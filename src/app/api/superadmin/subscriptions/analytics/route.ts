@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
       GROUP BY DATE_TRUNC('month', "paymentDate")
       ORDER BY DATE_TRUNC('month', "paymentDate") ASC
     `;
-    console.log({ revenueByMonth });
 
     // Get total revenue
     const totalRevenue = await prisma.subscriptionPayment.aggregate({
@@ -82,7 +81,6 @@ export async function GET(request: NextRequest) {
         amount: true,
       },
     });
-    console.log({ totalRevenue });
 
     // Get average subscription value
     const totalRevenueAmount = totalRevenue._sum.amount ?? 0;
@@ -90,7 +88,6 @@ export async function GET(request: NextRequest) {
       activeSubscriptions > 0
         ? Number(totalRevenueAmount) / activeSubscriptions
         : 0;
-    console.log({ avgSubscriptionValue });
 
     return NextResponse.json({
       totalSubscriptions,

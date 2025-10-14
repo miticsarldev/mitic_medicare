@@ -102,9 +102,6 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Log reviews to check for missing relations
-    console.log("Fetched reviews:", JSON.stringify(reviews, null, 2));
-
     // Calculate total pages
     const totalPages = Math.ceil(totalReviews / limit);
 
@@ -135,7 +132,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { reviewId, status, title, content, isFeatured } = await request.json();
+    const { reviewId, status, title, content, isFeatured } =
+      await request.json();
 
     if (!reviewId) {
       return NextResponse.json(

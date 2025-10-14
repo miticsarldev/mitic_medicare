@@ -49,9 +49,6 @@ export const VerificationEmailDoctor = ({
                     alt="MITICCARE"
                   />
                 </Column>
-                <Column>
-                  <Text className="font-bold text-4xl my-0">CARE</Text>
-                </Column>
               </Row>
               <Heading className="text-black text-lg font-semibold m-0">
                 Vérification de votre compte médecin
@@ -156,10 +153,10 @@ export const VerificationEmailDoctor = ({
                 Si vous avez des questions concernant le processus de
                 vérification, veuillez contacter notre équipe à{" "}
                 <Link
-                  href="mailto:verification@miticsarl.com"
+                  href="mailto:contact@miticsarlml.com"
                   className="text-green-600"
                 >
-                  verification@miticsarl.com
+                  contact@miticsarlml.com
                 </Link>
               </Text>
 

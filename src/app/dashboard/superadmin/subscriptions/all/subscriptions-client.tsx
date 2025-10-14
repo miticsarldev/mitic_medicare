@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
 import {
   Building2,
   CalendarClock,
@@ -616,7 +616,9 @@ export function PaymentsDialog({
             <table className="w-full text-sm">
               <thead className="text-muted-foreground">
                 <tr className="[&>th]:py-2 [&>th]:px-2 text-left">
-                  <th>Date</th>
+                  <th>Date de paiement</th>
+                  <th>Date de debut</th>
+                  <th>Date de fin</th>
                   <th>Statut</th>
                   <th>Méthode</th>
                   <th>Plan</th>
@@ -638,6 +640,22 @@ export function PaymentsDialog({
                       className="[&>td]:py-2 [&>td]:px-2 border-b last:border-0"
                     >
                       <td>{format(new Date(p.paymentDate), "dd/MM/yyyy")}</td>
+                      <td>
+                        {format(
+                          p.periodStart
+                            ? new Date(p?.periodStart)
+                            : startOfMonth(p.paymentDate),
+                          "dd/MM/yyyy"
+                        )}
+                      </td>
+                      <td>
+                        {format(
+                          p.periodEnd
+                            ? new Date(p.periodEnd)
+                            : endOfMonth(p.paymentDate),
+                          "dd/MM/yyyy"
+                        )}
+                      </td>
                       <td>{paymentStatusBadge(p.status)}</td>
                       <td className="capitalize">
                         {humanMethod(p.paymentMethod)}

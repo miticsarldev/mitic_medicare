@@ -86,9 +86,12 @@ export function NavUserNavbar({ user }: { user: Session["user"] | null }) {
           )}
           {user?.role === "HOSPITAL_ADMIN" && (
             <DropdownMenuItem>
-              <Link href={profileLink} className="flex items-center gap-1">
+              <Link
+                href="/dashboard/hopital_admin/management/details"
+                className="flex items-center gap-1"
+              >
                 <CreditCard />
-                <span>Mon entreprise</span>
+                <span>Mon hôpital</span>
               </Link>
             </DropdownMenuItem>
           )}

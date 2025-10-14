@@ -18,12 +18,21 @@ export async function GET(request: Request) {
 
     // Pagination & filtres
     const { searchParams } = new URL(request.url);
+    const doctorId = searchParams.get("doctorId") || undefined;
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(
       searchParams.get("pageSize") || DEFAULT_PAGE_SIZE.toString(),
       10
     );
     const statusFilter = searchParams.get("status") as AppointmentStatus | null;
+
+    let fromDate: Date | undefined;
+    let toDate: Date | undefined;
+
+    if (dateFrom) fromDate = new Date(dateFrom);
+    if (dateTo) toDate = new Date(dateTo);
 
     if (isNaN(page) || page < 1 || isNaN(pageSize) || pageSize < 1) {
       return NextResponse.json(
@@ -37,15 +46,26 @@ export async function GET(request: Request) {
       select: { id: true },
     });
     if (!hospital) {
-      return NextResponse.json({ error: "Hospital not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Hospital not found" },
+        { status: 404 }
+      );
     }
 
     const skip = (page - 1) * pageSize;
     const whereConditions: Prisma.AppointmentWhereInput = {
       hospitalId: hospital.id,
       ...(statusFilter ? { status: statusFilter } : {}),
+      ...(doctorId ? { doctorId } : {}),
+      ...(fromDate || toDate
+        ? {
+            scheduledAt: {
+              ...(fromDate ? { gte: fromDate } : {}),
+              ...(toDate ? { lte: toDate } : {}),
+            },
+          }
+        : {}),
     };
-
 
     // Requête avec medicalRecord + attachments
     const [appointments, totalCount] = await Promise.all([
@@ -149,34 +169,34 @@ export async function GET(request: Request) {
       },
       medicalRecord: apt.medicalRecord
         ? {
-          id: apt.medicalRecord.id,
-          diagnosis: apt.medicalRecord.diagnosis,
-          treatment: apt.medicalRecord.treatment,
-          notes: apt.medicalRecord.notes,
-          followUpNeeded: apt.medicalRecord.followUpNeeded,
-          followUpDate: apt.medicalRecord.followUpDate,
-          createdAt: apt.medicalRecord.createdAt,
-          updatedAt: apt.medicalRecord.updatedAt,
-          attachments: apt.medicalRecord.attachments.map((att) => ({
-            id: att.id,
-            fileName: att.fileName,
-            fileType: att.fileType,
-            fileUrl: att.fileUrl,
-            fileSize: att.fileSize,
-            uploadedAt: att.uploadedAt,
-          })),
-          prescriptions: apt.medicalRecord.prescription.map((presc) => ({
-            id: presc.id,
-            medicationName: presc.medicationName,
-            dosage: presc.dosage,
-            frequency: presc.frequency,
-            duration: presc.duration,
-            instructions: presc.instructions,
-            isActive: presc.isActive,
-            startDate: presc.startDate,
-            endDate: presc.endDate,
-          })),
-        }
+            id: apt.medicalRecord.id,
+            diagnosis: apt.medicalRecord.diagnosis,
+            treatment: apt.medicalRecord.treatment,
+            notes: apt.medicalRecord.notes,
+            followUpNeeded: apt.medicalRecord.followUpNeeded,
+            followUpDate: apt.medicalRecord.followUpDate,
+            createdAt: apt.medicalRecord.createdAt,
+            updatedAt: apt.medicalRecord.updatedAt,
+            attachments: apt.medicalRecord.attachments.map((att) => ({
+              id: att.id,
+              fileName: att.fileName,
+              fileType: att.fileType,
+              fileUrl: att.fileUrl,
+              fileSize: att.fileSize,
+              uploadedAt: att.uploadedAt,
+            })),
+            prescriptions: apt.medicalRecord.prescription.map((presc) => ({
+              id: presc.id,
+              medicationName: presc.medicationName,
+              dosage: presc.dosage,
+              frequency: presc.frequency,
+              duration: presc.duration,
+              instructions: presc.instructions,
+              isActive: presc.isActive,
+              startDate: presc.startDate,
+              endDate: presc.endDate,
+            })),
+          }
         : null,
     }));
 

@@ -128,7 +128,7 @@ const LoginForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <h2 className="text-lg md:text-xl font-medium">
+      <h2 className="text-sm sm:text-base font-medium">
         Veuillez saisir vos informations
       </h2>
       <div className="relative">

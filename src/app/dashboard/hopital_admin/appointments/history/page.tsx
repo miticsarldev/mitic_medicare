@@ -21,7 +21,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import frLocale from "@fullcalendar/core/locales/fr";
-import { format, isWithinInterval, parseISO } from "date-fns";
+import { format } from "date-fns";
 import {
   CalendarDays,
   User,
@@ -43,6 +43,7 @@ import { toast } from "@/hooks/use-toast";
 import { AppointmentStatus } from "@prisma/client";
 import { EventClickArg } from "@fullcalendar/core";
 import { fr } from "date-fns/locale";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface Doctor {
   id: string;
@@ -72,17 +73,6 @@ interface Appointment {
   patient: Patient;
 }
 
-const STATUS_COLORS = {
-  CONFIRMED:
-    "bg-green-200 text-green-900 dark:bg-green-800/30 dark:text-green-300",
-  PENDING:
-    "bg-yellow-200 text-yellow-900 dark:bg-yellow-800/30 dark:text-yellow-300",
-  CANCELED: "bg-red-200 text-red-900 dark:bg-red-800/30 dark:text-red-300",
-  COMPLETED: "bg-blue-200 text-blue-900 dark:bg-blue-800/30 dark:text-blue-300",
-  NO_SHOW: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
-  DEFAULT: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
-} as const;
-
 const STATUS_TRANSLATIONS = {
   CONFIRMED: "Confirmé",
   CANCELED: "Annulé",
@@ -105,9 +95,34 @@ export default function AppointmentCalendarView() {
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/hospital_admin/appointment/list");
-      if (!res.ok) throw new Error("Failed to fetch appointments");
+      const url = new URL(
+        "/api/hospital_admin/appointment/list",
+        window.location.origin
+      );
 
+      // doctor filter
+      if (selectedDoctor && selectedDoctor !== "all") {
+        url.searchParams.set("doctorId", selectedDoctor);
+      }
+
+      // date range (normalize to full days)
+      if (dateRange?.from) {
+        const from = new Date(dateRange.from);
+        from.setHours(0, 0, 0, 0);
+        url.searchParams.set("dateFrom", from.toISOString());
+      }
+      if (dateRange?.to) {
+        const to = new Date(dateRange.to);
+        to.setHours(23, 59, 59, 999);
+        url.searchParams.set("dateTo", to.toISOString());
+      }
+
+      // calendar typically needs lots of events; you can tune this
+      url.searchParams.set("page", "1");
+      url.searchParams.set("pageSize", "500");
+
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error("Failed to fetch appointments");
       const data = await res.json();
       setAppointments(data.appointments || []);
     } catch (err) {
@@ -120,7 +135,7 @@ export default function AppointmentCalendarView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDoctor, dateRange]);
 
   useEffect(() => {
     fetchAppointments();
@@ -134,24 +149,17 @@ export default function AppointmentCalendarView() {
     []
   );
 
-  const filteredAppointments = useMemo(() => {
-    let result = [...appointments];
-
-    if (selectedDoctor !== "all") {
-      result = result.filter((a) => a.doctor.id === selectedDoctor);
-    }
-
-    if (dateRange?.from && dateRange?.to) {
-      result = result.filter((a) =>
-        isWithinInterval(parseISO(a.scheduledAt), {
-          start: dateRange.from!,
-          end: dateRange.to!,
-        })
-      );
-    }
-
-    return result;
-  }, [selectedDoctor, dateRange, appointments]);
+  const STATUS_CLASSES: Record<
+    keyof typeof AppointmentStatus | "DEFAULT",
+    string
+  > = {
+    CONFIRMED: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+    PENDING: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    CANCELED: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+    COMPLETED: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+    NO_SHOW: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300",
+    DEFAULT: "bg-muted text-red-500",
+  };
 
   const doctorOptions = useMemo(() => {
     const doctorsMap = new Map<string, Doctor>();
@@ -207,7 +215,8 @@ export default function AppointmentCalendarView() {
                 <SelectItem value="all">Tous les médecins</SelectItem>
                 {doctorOptions.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
-                    {doctor.name} ({doctor.specialization})
+                    {doctor.name} (
+                    {getSpecializationLabel(doctor.specialization)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -257,15 +266,18 @@ export default function AppointmentCalendarView() {
           ) : (
             <div className="rounded-lg border bg-card shadow-sm">
               <FullCalendar
+                key={`${selectedDoctor}-${dateRange?.from?.toISOString() ?? ""}-${dateRange?.to?.toISOString() ?? ""}`}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView={calendarView}
                 locale={frLocale}
-                events={filteredAppointments.map((appt) => ({
+                events={appointments.map((appt) => ({
                   id: appt.id,
-                  title: `${appt.patient.name}`,
+                  title: appt.patient.name,
                   start: appt.scheduledAt,
                   extendedProps: { appointment: appt },
-                  className: STATUS_COLORS[appt.status],
+                  classNames: [
+                    STATUS_CLASSES[appt.status] ?? STATUS_CLASSES.DEFAULT,
+                  ],
                 }))}
                 eventClick={handleEventClick}
                 height={700}
@@ -300,10 +312,10 @@ export default function AppointmentCalendarView() {
                   today: "Aujourd'hui",
                 }}
                 eventClassNames="cursor-pointer hover:opacity-90 transition-opacity"
-                dayHeaderClassNames="bg-muted text-muted-foreground font-medium"
-                dayCellClassNames="hover:bg-muted/50"
                 viewDidMount={(info) => handleViewChange(info.view.type)}
                 nowIndicator
+                dayHeaderClassNames="bg-muted text-foreground/80 font-medium"
+                dayCellClassNames="hover:bg-muted/50"
               />
             </div>
           )}
@@ -356,16 +368,16 @@ export default function AppointmentCalendarView() {
                     <strong>Motif :</strong> {selectedAppointment.reason}
                   </p>
                   <p>
-                    <strong>Type :</strong> {selectedAppointment.type}
-                  </p>
-                  <p>
                     <strong>Médecin :</strong> {selectedAppointment.doctor.name}{" "}
                     ({selectedAppointment.doctor.specialization})
                   </p>
                   <p className="flex items-center gap-2">
                     <strong>Statut :</strong>
                     <Badge
-                      className={STATUS_COLORS[selectedAppointment.status]}
+                      className={
+                        STATUS_CLASSES[selectedAppointment.status] ??
+                        STATUS_CLASSES.DEFAULT
+                      }
                     >
                       {STATUS_TRANSLATIONS[selectedAppointment.status]}
                     </Badge>

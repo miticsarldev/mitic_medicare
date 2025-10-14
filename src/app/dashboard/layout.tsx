@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import LimitBanner from "@/components/limit-banner";
 import { ModeToggle } from "@/components/mode-toggle";
+import { SubscriptionIndicator } from "@/components/subscription-indicator";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -25,6 +26,7 @@ export default function Page({ children }: LayoutProps) {
             <Breadcrumbs />
           </div>
           <div className="ml-auto flex items-center justify-center gap-2 sm:gap-4 mr-4">
+            <SubscriptionIndicator />
             <ModeToggle />
           </div>
         </header>

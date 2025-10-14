@@ -92,6 +92,7 @@ export function DashboardContent({
   pendingApprovals,
   subscriptionStats,
 }: DashboardContentProps) {
+  console.log({});
   const { toast } = useToast();
   const [timeRange, setTimeRange] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -105,10 +106,9 @@ export function DashboardContent({
     null
   );
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
-  const [stats, setStats] = useState<DashboardStats>(dashboardStats ?? []);
-  const [approvals, setApprovals] = useState<PendingApprovalUser[]>(
-    pendingApprovals ?? []
-  );
+  const [stats, setStats] = useState<DashboardStats>(dashboardStats);
+  const [approvals, setApprovals] =
+    useState<PendingApprovalUser[]>(pendingApprovals);
   const [subStats, setSubStats] =
     useState<SubscriptionStats>(subscriptionStats);
 

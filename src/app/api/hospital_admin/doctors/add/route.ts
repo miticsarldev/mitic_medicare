@@ -5,13 +5,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-
-// Quotas de médecins par type d'abonnement
-const DOCTOR_QUOTAS = {
-  FREE: 10,
-  STANDARD: 50,
-  PREMIUM: Infinity,
-};
+import { generateVerificationToken } from "@/lib/token";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
@@ -45,48 +40,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Vérification de l'abonnement
-    if (!hospital.subscription) {
-      return NextResponse.json(
-        {
-          error: "Abonnement requis : Votre hôpital n'a pas d'abonnement actif",
-        },
-        { status: 403 }
-      );
-    }
-
-    const currentDate = new Date();
-    if (
-      hospital.subscription.endDate < currentDate ||
-      hospital.subscription.status !== "ACTIVE"
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Abonnement expiré : Veuillez renouveler votre abonnement pour ajouter des médecins",
-        },
-        { status: 403 }
-      );
-    }
-
     // Vérification du quota
-    const currentDoctorCount = hospital.doctors.length;
-    const quota = DOCTOR_QUOTAS[hospital.subscription.plan];
-
-    if (currentDoctorCount >= quota) {
-      let message = "";
-      if (quota === Infinity) {
-        message = "Erreur inattendue : Contactez le support";
-      } else {
-        message = `Quota atteint : Votre abonnement ${hospital.subscription.plan} permet un maximum de ${quota} médecins. `;
-        message += `Vous avez actuellement ${currentDoctorCount} médecins. `;
-        message +=
-          "Veuillez mettre à niveau votre abonnement pour ajouter plus de médecins.";
-      }
-
-      return NextResponse.json({ error: message }, { status: 403 });
-    }
-
     const data = await req.json();
     const {
       name,
@@ -187,6 +141,7 @@ export async function POST(req: Request) {
           email,
           phone,
           password: hashedPassword,
+          emailVerified: null,
           role: "HOSPITAL_DOCTOR",
           isApproved: true, // Auto-approval pour les médecins créés par l'admin
         },
@@ -231,6 +186,10 @@ export async function POST(req: Request) {
 
       return doctor;
     });
+
+    // Send verification email
+    const token = await generateVerificationToken(email);
+    await sendVerificationEmail(name, email, token.token);
 
     return NextResponse.json(
       {

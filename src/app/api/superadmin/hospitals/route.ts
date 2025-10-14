@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Log the where clause for debugging
-    console.log("Where Clause:", JSON.stringify(where, null, 2));
 
     let orderBy: Prisma.HospitalOrderByWithRelationInput = {
       createdAt: sortOrder === "asc" ? "asc" : "desc",
@@ -142,15 +141,6 @@ export async function GET(request: NextRequest) {
       take: limit,
       orderBy,
     });
-
-    // Log the returned hospitals for debugging
-    console.log(
-      "Returned Hospitals:",
-      hospitals.map((h) => ({
-        id: h.id,
-        createdAt: h.createdAt,
-      }))
-    );
 
     const ratings = await prisma.review.groupBy({
       by: ["hospitalId"],

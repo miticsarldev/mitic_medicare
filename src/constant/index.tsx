@@ -132,24 +132,6 @@ export const governorates = [
   { value: "Niamey", label: "Niamey" },
 ];
 
-// export const specialities = [
-//   { value: "cardiologue", label: "Cardiologue" },
-//   { value: "dermatologue", label: "Dermatologue" },
-//   { value: "generaliste", label: "Médecin Généraliste" },
-//   { value: "chirurgien", label: "Chirurgien" },
-//   { value: "gynecologue", label: "Gynécologue-Obstétricien" },
-//   { value: "neurologue", label: "Neurologue" },
-//   { value: "ophtalmologue", label: "Ophtalmologue" },
-//   { value: "orl", label: "Oto-Rhino-Laryngologiste (ORL)" },
-//   { value: "pediatre", label: "Pédiatre" },
-//   { value: "psychiatre", label: "Psychiatre" },
-//   { value: "radiologue", label: "Radiologue" },
-//   { value: "anesthesiste", label: "Anesthésiste" },
-//   { value: "med_interne", label: "Médecin Interne" },
-//   { value: "sante_publique", label: "Médecin en Santé Publique" },
-//   { value: "med_laboratoire", label: "Médecin de Laboratoire" },
-// ];
-
 export const specialities = [
   {
     value: "generaliste",

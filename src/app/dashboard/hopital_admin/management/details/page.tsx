@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -8,7 +8,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +22,11 @@ import {
   Calendar,
   FileText,
   Star,
+  Camera,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { useAvatarUpload } from "@/lib/upload/useAvatarUpload";
 
 type Hospital = {
   id: string;
@@ -33,14 +34,12 @@ type Hospital = {
   address: string;
   city: string;
   state: string;
-  zipCode: string;
   country: string;
   phone: string;
   email: string;
   website?: string;
   description?: string;
   logoUrl?: string;
-  isVerified: boolean;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -59,6 +58,12 @@ export default function HospitalInfo() {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Hospital>>({});
   const [saving, setSaving] = useState(false);
+  const logoUploader = useAvatarUpload({ folder: "logos/hospitals", maxMB: 5 });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [originalLogoUrl, setOriginalLogoUrl] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const [logoObjectUrl, setLogoObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHospital = async () => {
@@ -67,6 +72,8 @@ export default function HospitalInfo() {
         const data = await res.json();
         setHospital(data.hospital);
         setFormData(data.hospital);
+        setLogoPreview(data.hospital?.logoUrl || null);
+        setOriginalLogoUrl(data.hospital?.logoUrl || null);
       } catch (error) {
         console.error("Erreur récupération hôpital:", error);
         toast({
@@ -83,39 +90,87 @@ export default function HospitalInfo() {
     fetchHospital();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl);
+    };
+  }, [logoObjectUrl]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.currentTarget.value = "";
+    if (!file) return;
+
+    setLogoFile(file);
+    if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl);
+    const url = URL.createObjectURL(file);
+    setLogoObjectUrl(url);
+    setLogoPreview(url);
+  };
+
   const handleSave = async () => {
     setSaving(true);
+    let newLogoUrl: string | null = null;
+
     try {
+      // 1) upload new logo first
+      if (logoFile) {
+        newLogoUrl = await logoUploader.onPick(logoFile);
+      }
+
+      // 2) send PATCH with form + optional logoUrl
+      const payload = {
+        ...formData,
+        ...(newLogoUrl ? { logoUrl: newLogoUrl } : {}),
+      };
+
       const res = await fetch("/api/hospital_admin/hospital/modify", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Erreur lors de la mise à jour");
+      if (!res.ok) {
+        if (newLogoUrl)
+          await logoUploader.deleteByUrl(newLogoUrl).catch(() => {});
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur lors de la mise à jour");
+      }
 
-      setEditing(false);
+      // 3) cleanup old logo if changed
+      if (newLogoUrl && originalLogoUrl && originalLogoUrl !== newLogoUrl) {
+        await logoUploader.deleteByUrl(originalLogoUrl).catch(() => {});
+      }
+
+      // 4) UI/local state
+      setOriginalLogoUrl(newLogoUrl ?? originalLogoUrl ?? null);
+      setLogoFile(null);
+      if (logoInputRef.current) logoInputRef.current.value = "";
       toast({
         title: "Succès",
-        description:
-          "Les informations de l'hôpital ont été mises à jour avec succès.",
-        variant: "default",
+        description: "Les informations de l'hôpital ont été mises à jour.",
       });
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+
+      // refresh without hard reload:
+      const fresh = await fetch("/api/hospital_admin/hospital").then((r) =>
+        r.json()
+      );
+      setHospital(fresh.hospital);
+      setFormData(fresh.hospital);
+      setLogoPreview(fresh.hospital.logoUrl || null);
+      setEditing(false);
     } catch (error) {
       console.error(error);
       toast({
         title: "Erreur",
         description:
-          "Une erreur est survenue lors de la mise à jour des informations.",
+          error instanceof Error ? error.message : "Mise à jour impossible.",
         variant: "destructive",
       });
     } finally {
@@ -186,7 +241,7 @@ export default function HospitalInfo() {
 
   if (!hospital) {
     return (
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-4">
         <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive">
@@ -205,7 +260,7 @@ export default function HospitalInfo() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-2 sm:p-4 space-y-6">
+    <div className="max-w-6xl mx-auto p-2 sm:p-4 space-y-4">
       {/* Header avec titre et boutons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -242,21 +297,50 @@ export default function HospitalInfo() {
 
       {/* Informations principales */}
       <Card className="border shadow-sm">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center gap-6">
-          <div className="flex items-center gap-6">
-            {hospital.logoUrl ? (
-              <Image
-                src={hospital.logoUrl}
-                alt={hospital.name}
-                width={96}
-                height={96}
-                className="object-cover rounded-lg border shadow-sm"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-lg border shadow-sm flex items-center justify-center bg-muted">
-                <Building2 className="w-8 h-8 text-muted-foreground" />
-              </div>
-            )}
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              {logoPreview ? (
+                // using next/image is fine too—div keeps overlay sizing simple
+                <div className="w-24 h-24 rounded-lg border shadow-sm overflow-hidden bg-muted">
+                  <Image
+                    src={logoPreview}
+                    alt={hospital.name}
+                    width={96}
+                    height={96}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+              ) : (
+                <div className="w-24 h-24 rounded-lg border shadow-sm flex items-center justify-center bg-muted">
+                  <Building2 className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
+
+              {editing && (
+                <>
+                  <label
+                    htmlFor="hospital-logo"
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-lg opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Changer le logo"
+                  >
+                    <Camera className="h-5 w-5" />
+                    <span className="sr-only">Changer le logo</span>
+                  </label>
+                  <input
+                    ref={logoInputRef}
+                    id="hospital-logo"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onClick={(e) => {
+                      (e.currentTarget as HTMLInputElement).value = "";
+                    }}
+                    onChange={handleLogoChange}
+                  />
+                </>
+              )}
+            </div>
 
             <div className="space-y-2">
               {editing ? (
@@ -272,9 +356,6 @@ export default function HospitalInfo() {
                 </CardTitle>
               )}
               <div className="flex items-center gap-2">
-                <Badge variant={hospital.isVerified ? "default" : "outline"}>
-                  {hospital.isVerified ? "Vérifié" : "Non vérifié"}
-                </Badge>
                 {editing ? (
                   <div className="flex gap-2">
                     <Input
@@ -380,7 +461,7 @@ export default function HospitalInfo() {
 
             <div className="flex items-start gap-3">
               <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
-              <div className="space-y-2">
+              <div className="space-x-2 flex">
                 {editing ? (
                   <>
                     <Input
@@ -389,27 +470,17 @@ export default function HospitalInfo() {
                       onChange={handleChange}
                       placeholder="Adresse"
                     />
-                    <div className="flex gap-2">
-                      <Input
-                        name="zipCode"
-                        value={formData.zipCode || ""}
-                        onChange={handleChange}
-                        placeholder="Code postal"
-                      />
-                      <Input
-                        name="state"
-                        value={formData.state || ""}
-                        onChange={handleChange}
-                        placeholder="État/Région"
-                      />
-                    </div>
+                    <Input
+                      name="state"
+                      value={formData.state || ""}
+                      onChange={handleChange}
+                      placeholder="État/Région"
+                    />
                   </>
                 ) : (
                   <>
                     <p>{hospital.address}</p>
-                    <p className="text-muted-foreground">
-                      {hospital.zipCode}, {hospital.state}
-                    </p>
+                    <p className="text-muted-foreground">{hospital.state}</p>
                   </>
                 )}
               </div>

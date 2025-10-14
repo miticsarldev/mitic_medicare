@@ -31,7 +31,6 @@ export const SupportEmailTemplate = ({
   priority,
   message,
 }: SupportEmailTemplateProps) => {
-  // Convert priority to French and add color
   const priorityMap = {
     low: { text: "Basse", color: "#4CAF50" },
     medium: { text: "Moyenne", color: "#FF9800" },
@@ -41,7 +40,6 @@ export const SupportEmailTemplate = ({
   const priorityInfo =
     priorityMap[priority as keyof typeof priorityMap] || priorityMap.medium;
 
-  // Format category for display
   const categoryMap: Record<string, string> = {
     technical: "Problème technique",
     account: "Compte & Profil",
@@ -53,7 +51,6 @@ export const SupportEmailTemplate = ({
 
   const formattedCategory = categoryMap[category] || category;
 
-  // Get current date in French format
   const currentDate = new Date().toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "long",

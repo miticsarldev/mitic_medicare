@@ -113,16 +113,26 @@ export async function GET(request: Request) {
       whereConditions.user = {};
     }
 
+    if (nameFilter || genderFilter) {
+      whereConditions.user = {};
+    }
     if (nameFilter) {
       whereConditions.user!.name = {
         contains: nameFilter,
         mode: "insensitive",
       };
     }
-
     if (genderFilter) {
+      const genders = genderFilter
+        .split(",")
+        .map((g) => g.trim())
+        .filter(Boolean) as UserGenre[];
+
+      // Important: correct nested filter format + allow multiple
       whereConditions.user!.profile = {
-        genre: UserGenre[genderFilter as keyof typeof UserGenre],
+        is: {
+          genre: { in: genders },
+        },
       };
     }
 

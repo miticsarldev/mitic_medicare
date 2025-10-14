@@ -1,4 +1,3 @@
-// components/LimitBanner.tsx (or wherever)
 "use client";
 
 import { useEffect, useState } from "react";
@@ -48,6 +47,8 @@ export default function LimitBanner() {
   }, []);
 
   if (!summary) return null;
+
+  console.log(summary);
 
   const exceededKeys = (
     Object.entries(summary.exceeded) as [LimitKey, boolean][]

@@ -71,6 +71,7 @@ export const authOptions: AuthOptions = {
           role: user.role,
           emailVerified: user.emailVerified,
           isApproved: user.isApproved,
+          isActive: user.isActive,
         };
       }
 
@@ -103,6 +104,7 @@ export const authOptions: AuthOptions = {
             role: token.role,
             emailVerified: token.emailVerified,
             isApproved: token.isApproved,
+            isActive: token.isActive,
           },
         };
       }
