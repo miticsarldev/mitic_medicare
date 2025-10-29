@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AuthOptions } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
@@ -112,3 +113,21 @@ export const authOptions: AuthOptions = {
     },
   },
 };
+
+export async function getCurrentUser() {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    throw new Error("Unauthorized");
+  }
+  return session.user;
+}
+
+export async function getDoctorProfile(userId: string) {
+  const doctor = await prisma.doctor.findUnique({
+    where: { userId },
+  });
+  if (!doctor) {
+    throw new Error("Doctor profile not found");
+  }
+  return doctor;
+}

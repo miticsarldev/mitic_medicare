@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { HospitalWithDetails } from "@/types/ui-actions.types";
 import { useSession } from "next-auth/react";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface HospitalDetailProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -362,7 +363,7 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                                         {doctor.user.name}
                                       </h3>
                                       <p className="text-sm text-primary">
-                                        {doctor.specialization}
+                                        {getSpecializationLabel(doctor.specialization)}
                                       </p>
                                       <div className="flex items-center mt-1">
                                         {[...Array(5)].map((_, i) => (
@@ -479,7 +480,7 @@ export default function HospitalDetail({ hospital }: HospitalDetailProps) {
                                         </div>
 
                                         <p className="text-primary font-medium mt-1">
-                                          {doctor.specialization}
+                                          {getSpecializationLabel(doctor.specialization)}
                                         </p>
 
                                         <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">

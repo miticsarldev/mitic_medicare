@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TopDoctor } from "@/types/ui-actions.types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getSpecializationLabel } from "@/utils/function";
 
 // Animation variants
 const containerVariants = {
@@ -153,7 +154,9 @@ function DoctorCard({ doctor }: { doctor: TopDoctor }) {
 
         <CardContent className="flex flex-col items-center text-center mt-6 flex-grow px-4">
           <h3 className="text-xl font-bold">{doctor.name}</h3>
-          <p className="text-primary text-sm mt-1">{doctor.specialization}</p>
+          <p className="text-primary text-sm mt-1">
+            {getSpecializationLabel(doctor.specialization)}
+          </p>
 
           {doctor.city && (
             <div className="flex items-center gap-1 mt-2 text-gray-500 dark:text-gray-400 text-sm">

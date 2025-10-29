@@ -171,7 +171,7 @@ export function FilterSidebar({
                 variant="secondary"
                 className="pl-2 pr-1 py-1 flex items-center gap-1"
               >
-                {filters.specialization}
+                {getSpecializationLabel(filters.specialization)}
                 <Button
                   variant="ghost"
                   size="icon"

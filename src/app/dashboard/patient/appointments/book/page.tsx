@@ -40,6 +40,7 @@ import {
 } from "../../actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { getSpecializationLabel } from "@/utils/function";
 
 export type SimpleDoctor = {
   id: string;
@@ -260,22 +261,13 @@ export default function BookAppointmentPage() {
                     <div className="flex-1">
                       <h4 className="font-medium">{doctor.name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {doctor.specialization}
+                        {getSpecializationLabel(doctor.specialization)}
                       </p>
                       <div className="flex items-center justify-between mt-1">
                         <p className="text-xs text-muted-foreground">
                           {doctor.hospital}
                           {doctor.department && ` • ${doctor.department}`}
                         </p>
-                        {doctor.isIndependent && doctor.consultationFee && (
-                          <span className="text-xs font-medium text-primary">
-                            {new Intl.NumberFormat("fr-ML", {
-                              style: "currency",
-                              currency: "XOF",
-                              minimumFractionDigits: 0,
-                            }).format(doctor.consultationFee)}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -309,8 +301,8 @@ export default function BookAppointmentPage() {
                   <h4 className="font-medium">Médecin sélectionné</h4>
                   <p className="text-sm">{selectedDoctorData.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {selectedDoctorData.specialization} •{" "}
-                    {selectedDoctorData.hospital}
+                    {getSpecializationLabel(selectedDoctorData.specialization)}{" "}
+                    • {selectedDoctorData.hospital}
                   </p>
                 </div>
               )}

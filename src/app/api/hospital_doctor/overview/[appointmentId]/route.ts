@@ -1,32 +1,28 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import { AppointmentStatus } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export async function PATCH(
   request: Request,
   { params }: { params: { appointmentId: string } }
 ) {
   const session = await getServerSession(authOptions);
-
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
     const { status } = await request.json();
-
-    // Validation du statut
-    const validStatuses = [
+    const validStatuses: AppointmentStatus[] = [
       "PENDING",
       "CONFIRMED",
-      "REJECTED",
       "COMPLETED",
       "CANCELED",
       "NO_SHOW",
-    ];
+    ] as const;
     if (!validStatuses.includes(status)) {
       return NextResponse.json({ error: "Statut invalide" }, { status: 400 });
     }
@@ -34,29 +30,19 @@ export async function PATCH(
     const doctor = await prisma.doctor.findUnique({
       where: { userId: session.user.id },
     });
-
-    if (!doctor) {
+    if (!doctor)
       return NextResponse.json(
         { error: "Médecin non trouvé" },
         { status: 404 }
       );
-    }
 
     const updatedAppointment = await prisma.appointment.update({
-      where: {
-        id: params.appointmentId,
-        doctorId: doctor.id,
-      },
+      where: { id: params.appointmentId, doctorId: doctor.id },
       data: { status },
-      include: {
-        patient: {
-          include: {
-            user: true,
-          },
-        },
-        hospital: true,
-      },
+      include: { patient: { include: { user: true } }, hospital: true },
     });
+
+    revalidateTag(`doctor:overview:${doctor.id}`);
 
     return NextResponse.json({
       id: updatedAppointment.id,

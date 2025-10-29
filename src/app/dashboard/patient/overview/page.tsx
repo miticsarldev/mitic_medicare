@@ -193,7 +193,7 @@ async function PatientOverviewContent() {
             <div className="text-sm text-muted-foreground">
               <span className="font-medium">Contact d&apos;urgence:</span>{" "}
               {data.patient.emergencyContact
-                ? `${data.patient.emergencyContact} (${data.patient.emergencyPhone})`
+                ? `${data.patient.emergencyContact} (${data.patient.emergencyPhone ? data.patient.emergencyPhone : "Téléphone non spécifié"})`
                 : "Non spécifié"}
             </div>
           </div>

@@ -32,6 +32,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface SearchResultsProps {
   results: SearchResultsType;
@@ -170,7 +171,7 @@ export function SearchResults({ results, type, filters }: SearchResultsProps) {
                           </div>
 
                           <p className="text-primary font-medium mt-1">
-                            {doctor.specialization}
+                            {getSpecializationLabel(doctor.specialization)}
                           </p>
 
                           <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">

@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Hospital } from "@/types/hospital";
+import { getSpecializationLabel } from "@/utils/function";
 import type { HospitalStatus, SubscriptionPlan } from "@prisma/client";
 
 interface HospitalDetailsProps {
@@ -235,7 +236,7 @@ export default function HospitalDetails({
                               {doctor.user.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {doctor.specialization}
+                              {getSpecializationLabel(doctor.specialization)}
                             </p>
                           </div>
                         </div>

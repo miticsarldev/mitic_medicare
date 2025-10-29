@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DoctorType } from "@/types/doctor";
+import { getSpecializationLabel } from "@/utils/function";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AppointmentStatus } from "@prisma/client";
 
@@ -97,7 +98,7 @@ export default function DoctorProfilePage({ doctor }: { doctor: DoctorType }) {
                 </h1>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
                   <Badge variant="secondary" className="text-primary">
-                    {doctor.specialization}
+                    {getSpecializationLabel(doctor.specialization)}
                   </Badge>
                   {doctor.isVerified && (
                     <Badge

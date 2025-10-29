@@ -369,7 +369,11 @@ export default function AppointmentCalendarView() {
                   </p>
                   <p>
                     <strong>Médecin :</strong> {selectedAppointment.doctor.name}{" "}
-                    ({selectedAppointment.doctor.specialization})
+                    (
+                    {getSpecializationLabel(
+                      selectedAppointment.doctor.specialization
+                    )}
+                    )
                   </p>
                   <p className="flex items-center gap-2">
                     <strong>Statut :</strong>

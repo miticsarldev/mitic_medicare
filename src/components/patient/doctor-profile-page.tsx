@@ -286,7 +286,7 @@ export default function DoctorProfile({
                 </h1>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
                   <Badge variant="secondary" className="text-primary">
-                    {doctor.specialization}
+                    {getSpecializationLabel(doctor.specialization)}
                   </Badge>
                   {doctor.isVerified && (
                     <Badge
@@ -379,7 +379,7 @@ export default function DoctorProfile({
                 <CardContent>
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     {doctor.user.profile?.bio ||
-                      `Dr. ${doctor.user.name} est un médecin spécialisé en ${doctor.specialization} avec ${experienceYears} ans d'expérience. 
+                      `Dr. ${doctor.user.name} est un médecin spécialisé en ${getSpecializationLabel(doctor.specialization)} avec ${experienceYears} ans d'expérience. 
                       ${
                         doctor.hospital
                           ? `Il exerce actuellement à ${doctor.hospital.name} dans le département de ${doctor.department?.name}.`
@@ -428,7 +428,7 @@ export default function DoctorProfile({
                       </div>
                       <div>
                         <h4 className="font-medium">
-                          Spécialisation en {doctor.specialization}
+                          Spécialisation en {getSpecializationLabel(doctor.specialization)}
                         </h4>
                         <p className="text-sm text-muted-foreground">
                           Centre Hospitalier Universitaire du Point G

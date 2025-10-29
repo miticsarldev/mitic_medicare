@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, Building, Calendar, User, Users } from "lucide-react";
 import type { SearchResults as SearchResultsType } from "@/app/actions/ui-actions";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface SearchResultsProps {
   results: SearchResultsType;
@@ -70,7 +71,7 @@ export function SearchResults({ results, type }: SearchResultsProps) {
                       </h3>
                     </Link>
                     <p className="text-muted-foreground">
-                      {doctor.specialization}
+                      {getSpecializationLabel(doctor.specialization)}
                     </p>
 
                     <div className="flex items-center justify-center md:justify-start mt-2 space-x-1">

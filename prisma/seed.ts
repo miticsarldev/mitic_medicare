@@ -673,166 +673,6 @@ async function seedAnchoredTimelineToCurrentMonth(subscriber: Subscriber) {
   }
 }
 
-// async function seedRealisticSubscriptionTimeline(subscriber: Subscriber) {
-//   // 1) Signup 4–12 months ago (trial = FREE, TRIAL status)
-//   const signupOffset = randomInt(4, 12);
-//   const signupStart = startOfMonth(subMonths(NOW, signupOffset));
-//   const signupEnd = endOfMonth(signupStart);
-
-//   const trial = await prisma.subscription.upsert({
-//     where:
-//       subscriber.type === "DOCTOR"
-//         ? { doctorId: subscriber.id }
-//         : { hospitalId: subscriber.id },
-//     create: {
-//       subscriberType: subscriber.type,
-//       doctorId: subscriber.type === "DOCTOR" ? subscriber.id : null,
-//       hospitalId: subscriber.type === "HOSPITAL" ? subscriber.id : null,
-//       plan: SubscriptionPlan.FREE,
-//       status: SubscriptionStatus.TRIAL,
-//       startDate: signupStart,
-//       endDate: signupEnd,
-//       amount: new Prisma.Decimal(0),
-//       currency: "XOF",
-//       autoRenew: true,
-//     },
-//     update: {
-//       plan: SubscriptionPlan.FREE,
-//       status: SubscriptionStatus.TRIAL,
-//       startDate: signupStart,
-//       endDate: signupEnd,
-//       amount: new Prisma.Decimal(0),
-//       currency: "XOF",
-//       autoRenew: true,
-//     },
-//   });
-
-//   // ~20% never upgrade after free
-//   if (Math.random() < 0.2) {
-//     await prisma.subscription.update({
-//       where: { id: trial.id },
-//       data: {
-//         status:
-//           signupEnd < NOW
-//             ? SubscriptionStatus.EXPIRED
-//             : SubscriptionStatus.TRIAL,
-//       },
-//     });
-//     return;
-//   }
-
-//   // 2) Paid months: 3–7, starting the month after trial; never beyond Oct-2025
-//   const firstPaidStart = startOfMonth(addMonths(signupStart, 1));
-//   const paidCount = randomInt(3, 7);
-//   const months = clampMonthsUpToCurrent(firstPaidStart, paidCount);
-
-//   // Variant: some subscribers stopped paying **before** current month (so they’re EXPIRED now)
-//   // 30% chance to stop 1–3 months ago (only if we have enough months)
-//   let stopEarly = false;
-//   if (months.length > 0 && Math.random() < 0.3) {
-//     const cut = Math.max(
-//       0,
-//       months.length - randomInt(1, Math.min(3, months.length))
-//     );
-//     months.splice(cut); // drop the tail, so last month < current month → EXPIRED
-//     stopEarly = true;
-//   }
-
-//   // If months is empty (trial was recently), keep the trial row; update status:
-//   if (months.length === 0) {
-//     await prisma.subscription.update({
-//       where: { id: trial.id },
-//       data: {
-//         status:
-//           signupEnd < NOW
-//             ? SubscriptionStatus.EXPIRED
-//             : SubscriptionStatus.TRIAL,
-//       },
-//     });
-//     return;
-//   }
-
-//   // Should the *current month* be paid & active? Only applicable if last month == current month.
-//   const currentMonthIncluded = sameMonth(months[months.length - 1], NOW);
-//   const markActiveThisMonth =
-//     currentMonthIncluded && !stopEarly && Math.random() < 0.6;
-
-//   let lastPaymentOutcome: PaymentStatus | null = null;
-
-//   for (const mStart of months) {
-//     const mEnd = endOfMonth(mStart);
-//     const { start, end } = capToCurrentMonthWindow(mStart, mEnd); // safety
-
-//     const plan =
-//       Math.random() < 0.7
-//         ? SubscriptionPlan.STANDARD
-//         : SubscriptionPlan.PREMIUM;
-//     const { amount, currency } = await priceForFromDB(plan, subscriber.type);
-
-//     const isCurrent = sameMonth(start, NOW);
-//     const outcome: PaymentStatus = isCurrent
-//       ? markActiveThisMonth
-//         ? "COMPLETED"
-//         : Math.random() < 0.7
-//           ? "FAILED"
-//           : "PENDING"
-//       : Math.random() < 0.9
-//         ? "COMPLETED"
-//         : "FAILED";
-
-//     await prisma.subscriptionPayment.create({
-//       data: {
-//         subscriptionId: trial.id,
-//         amount,
-//         currency,
-//         paymentMethod: PaymentMethod.MOBILE_MONEY,
-//         transactionId:
-//           outcome === "COMPLETED"
-//             ? `OM-${yyyymm(start)}-${randomInt(100000, 999999)}`
-//             : null,
-//         status: outcome,
-//         paymentDate: randomDateInRange(
-//           new Date(start.getTime() - 3 * 86400000),
-//           new Date(start.getTime() + 7 * 86400000)
-//         ),
-//         months: 1,
-//         changePlanTo: plan,
-//         externalOrderId: `REN-${trial.id}-${yyyymm(start)}-${randomInt(1000, 9999)}`,
-//         payToken:
-//           outcome !== "FAILED" ? `tok_${randomInt(100000, 999999)}` : null,
-//         provider: "ORANGE_MONEY",
-//       },
-//     });
-
-//     // Keep the single subscription row in-step with the *latest* cycle
-//     await prisma.subscription.update({
-//       where: { id: trial.id },
-//       data: {
-//         plan,
-//         startDate: start,
-//         endDate: end,
-//         amount,
-//         currency,
-//         status: finalStatusForCycle({ periodEnd: end, lastPayment: outcome }),
-//       },
-//     });
-
-//     lastPaymentOutcome = outcome;
-//   }
-
-//   // Tiny edge: allow a rare manual override that keeps ACTIVE despite a fail (OPS scenario)
-//   if (
-//     currentMonthIncluded &&
-//     lastPaymentOutcome !== "COMPLETED" &&
-//     Math.random() < 0.05
-//   ) {
-//     await prisma.subscription.update({
-//       where: { id: trial.id },
-//       data: { status: SubscriptionStatus.ACTIVE },
-//     });
-//   }
-// }
-
 async function main() {
   console.log("Starting database seeding...");
   const usedEmails = new Set<string>();
@@ -1058,17 +898,6 @@ async function main() {
     });
 
     // Create subscription for hospital
-    // ====== Hospital subscription lifecycle (TRIAL -> upgrade or INACTIVE) ======
-    // const cyclesStartOffset = randomInt(4, 18); // when their trial started
-    // const hospitalStart = subMonths(NOW, cyclesStartOffset);
-    // await seedSubscriptionLifecycle(
-    //   { type: SubscriberType.HOSPITAL, id: createdHospital.id },
-    //   hospitalStart
-    // );
-    // await createFreeSignupMonthForCurrentPeriod({
-    //   type: SubscriberType.HOSPITAL,
-    //   id: createdHospital.id,
-    // });
     await seedAnchoredTimelineToCurrentMonth({
       type: SubscriberType.HOSPITAL,
       id: createdHospital.id,
@@ -1301,106 +1130,10 @@ async function main() {
       });
     }
 
-    // ====== Doctor subscription lifecycle (TRIAL -> upgrade or INACTIVE) ======
-    // const docStartOffset = randomInt(2, 10);
-    // const doctorStart = subMonths(NOW, docStartOffset);
-    // await seedSubscriptionLifecycle(
-    //   { type: SubscriberType.DOCTOR, id: doctor.id },
-    //   doctorStart
-    // );
-    // await createFreeSignupMonthForCurrentPeriod({
-    //   type: SubscriberType.DOCTOR,
-    //   id: doctor.id,
-    // });
     await seedAnchoredTimelineToCurrentMonth({
       type: SubscriberType.DOCTOR,
       id: doctor.id,
     });
-
-    // // Doctor subscription: exactly 1 FREE month, then paid months
-    // const docCyclesPaid = randomInt(1, 6); // paid months after FREE
-    // const docStartOffset = randomInt(2, 10); // start a few months ago
-    // let docPeriodStart = startOfMonth(subMonths(NOW, docStartOffset));
-    // let docPeriodEnd = endOfMonth(docPeriodStart);
-
-    // // create sub starting on FREE (first month)
-    // let docPlan: SubscriptionPlan = SubscriptionPlan.FREE;
-
-    // const docSub = await prisma.subscription.create({
-    //   data: {
-    //     subscriberType: SubscriberType.DOCTOR,
-    //     doctorId: doctor.id,
-    //     plan: docPlan,
-    //     status: SubscriptionStatus.ACTIVE,
-    //     startDate: docPeriodStart,
-    //     endDate: docPeriodEnd,
-    //     ...priceFor(SubscriptionPlan.FREE, "DOCTOR"),
-    //     currency: "XOF",
-    //     autoRenew: true,
-    //   },
-    // });
-
-    // // 1) FREE month (no payment)
-    // await prisma.subscription.update({
-    //   where: { id: docSub.id },
-    //   data: {
-    //     plan: SubscriptionPlan.FREE,
-    //     endDate: docPeriodEnd,
-    //     ...priceFor(SubscriptionPlan.FREE, "DOCTOR"),
-    //   },
-    // });
-
-    // // advance to next month
-    // docPeriodStart = startOfMonth(addMonths(docPeriodStart, 1));
-    // docPeriodEnd = endOfMonth(docPeriodStart);
-
-    // // 2) Paid months (STANDARD or PREMIUM)
-    // for (let m = 0; m < docCyclesPaid; m++) {
-    //   docPlan =
-    //     Math.random() < 0.7
-    //       ? SubscriptionPlan.STANDARD
-    //       : SubscriptionPlan.PREMIUM;
-    //   const { amount, currency } = priceFor(docPlan, "DOCTOR");
-
-    //   await prisma.subscriptionPayment.create({
-    //     data: {
-    //       subscriptionId: docSub.id,
-    //       amount,
-    //       currency,
-    //       paymentMethod: randomItem(paymentMethods),
-    //       transactionId: `TRANS-${randomInt(10000, 99999)}`,
-    //       status: "COMPLETED",
-    //       paymentDate: randomPaymentDateAround(docPeriodStart),
-    //     },
-    //   });
-
-    //   await prisma.subscription.update({
-    //     where: { id: docSub.id },
-    //     data: {
-    //       plan: docPlan,
-    //       endDate: docPeriodEnd,
-    //       amount,
-    //       currency,
-    //     },
-    //   });
-
-    //   docPeriodStart = startOfMonth(addMonths(docPeriodStart, 1));
-    //   docPeriodEnd = endOfMonth(docPeriodStart);
-    // }
-
-    // // Set final status based on endDate vs NOW
-    // const currentDocSub = await prisma.subscription.findUnique({
-    //   where: { id: docSub.id },
-    // });
-    // await prisma.subscription.update({
-    //   where: { id: docSub.id },
-    //   data: {
-    //     status:
-    //       (currentDocSub?.endDate ?? NOW) < NOW
-    //         ? SubscriptionStatus.EXPIRED
-    //         : SubscriptionStatus.ACTIVE,
-    //   },
-    // });
   }
 
   console.log(`Created ${createdDoctors.length} doctors`);
@@ -1573,166 +1306,303 @@ async function main() {
 
   console.log(`Created ${createdPatients.length} patients`);
 
-  // Create appointments
+  // Create appointments with proper distribution
   console.log("Creating appointments...");
 
-  // Create appointments for each patient
-  for (const patient of createdPatients) {
-    // Each patient has 3-5 appointments
-    const numAppointments = randomInt(5, 10);
+  // Helper function to get a random time slot within doctor availability
+  async function getAppointmentTimeSlot(
+    doctorId: string,
+    targetDate: Date
+  ): Promise<{ start: Date; end: Date } | null> {
+    const dayOfWeek = targetDate.getDay();
+    const availabilities = await prisma.doctorAvailability.findMany({
+      where: {
+        doctorId,
+        dayOfWeek,
+        isActive: true,
+      },
+    });
 
-    for (let i = 0; i < numAppointments; i++) {
-      const doctor = randomItem(createdDoctors);
-      const hospitalId = doctor.hospitalId;
+    if (availabilities.length === 0) return null;
 
-      const appointmentDate = randomDateInRange(
-        subMonths(NOW, 18), // up to 18 months back
-        addMonths(NOW, 2) // a little into the future
-      );
+    const availability = randomItem(availabilities);
+    const [startHour, startMin] = availability.startTime.split(":").map(Number);
+    const [endHour, endMin] = availability.endTime.split(":").map(Number);
+
+    const slotStart = new Date(targetDate);
+    slotStart.setHours(startHour, startMin || 0, 0, 0);
+    const slotEnd = new Date(targetDate);
+    slotEnd.setHours(endHour, endMin || 0, 0, 0);
+
+    // Pick a random time within the availability window
+    const totalMinutes =
+      (endHour - startHour) * 60 + (endMin || 0) - (startMin || 0);
+    const slotDuration = availability.slotDuration || 60;
+    const maxSlots = Math.floor(totalMinutes / slotDuration);
+    if (maxSlots === 0) return null;
+
+    const slotIndex = randomInt(0, maxSlots - 1);
+    const appointmentStart = new Date(slotStart);
+    appointmentStart.setMinutes(
+      appointmentStart.getMinutes() + slotIndex * slotDuration
+    );
+    const appointmentEnd = new Date(appointmentStart);
+    appointmentEnd.setMinutes(appointmentEnd.getMinutes() + slotDuration);
+
+    return { start: appointmentStart, end: appointmentEnd };
+  }
+
+  // Get hospital doctors only (for hospital admin dashboard consistency)
+  const hospitalDoctors = createdDoctors.filter((d) => d.hospitalId !== null);
+
+  const appointmentsToCreate: Array<{
+    patient: PatientWithUser;
+    doctor: DoctorWithUser;
+    date: Date;
+    weight: number;
+  }> = [];
+
+  // Current month appointments (heavily weighted)
+  const currentMonthStart = new Date(NOW.getFullYear(), NOW.getMonth(), 1);
+  const currentMonthEnd = new Date(
+    NOW.getFullYear(),
+    NOW.getMonth() + 1,
+    0,
+    23,
+    59,
+    59
+  );
+  const currentMonthCount = Math.floor(createdPatients.length * 8 * 0.4);
+
+  for (let i = 0; i < currentMonthCount; i++) {
+    const patient = randomItem(createdPatients);
+    // Prefer hospital doctors for hospital admin dashboard
+    const doctor =
+      Math.random() < 0.7
+        ? randomItem(
+            hospitalDoctors.length > 0 ? hospitalDoctors : createdDoctors
+          )
+        : randomItem(createdDoctors);
+    const date = randomDateInRange(currentMonthStart, currentMonthEnd);
+    appointmentsToCreate.push({ patient, doctor, date, weight: 1 });
+  }
+
+  // Last 3 months appointments
+  const threeMonthsAgo = subMonths(NOW, 3);
+  const threeMonthsCount = Math.floor(createdPatients.length * 8 * 0.3);
+
+  for (let i = 0; i < threeMonthsCount; i++) {
+    const patient = randomItem(createdPatients);
+    const doctor =
+      Math.random() < 0.7
+        ? randomItem(
+            hospitalDoctors.length > 0 ? hospitalDoctors : createdDoctors
+          )
+        : randomItem(createdDoctors);
+    const date = randomDateInRange(threeMonthsAgo, currentMonthStart);
+    appointmentsToCreate.push({ patient, doctor, date, weight: 1 });
+  }
+
+  // Last 6 months appointments
+  const sixMonthsAgo = subMonths(NOW, 6);
+  const sixMonthsCount = Math.floor(createdPatients.length * 8 * 0.2);
+
+  for (let i = 0; i < sixMonthsCount; i++) {
+    const patient = randomItem(createdPatients);
+    const doctor = randomItem(createdDoctors);
+    const date = randomDateInRange(sixMonthsAgo, threeMonthsAgo);
+    appointmentsToCreate.push({ patient, doctor, date, weight: 1 });
+  }
+
+  // Older and future appointments
+  const olderCount = Math.floor(createdPatients.length * 8 * 0.1);
+
+  for (let i = 0; i < olderCount; i++) {
+    const patient = randomItem(createdPatients);
+    const doctor = randomItem(createdDoctors);
+    // Mix of past (12 months ago) and future (up to 2 months ahead)
+    const date = randomBoolean(0.7)
+      ? randomDateInRange(subMonths(NOW, 12), sixMonthsAgo)
+      : randomDateInRange(currentMonthEnd, addMonths(NOW, 2));
+    appointmentsToCreate.push({ patient, doctor, date, weight: 1 });
+  }
+
+  // Create appointments with proper time slots and statuses
+  for (const { patient, doctor, date } of appointmentsToCreate) {
+    const hospitalId = doctor.hospitalId;
+
+    // Try to align with doctor availability
+    let appointmentDateTime: Date;
+    let endDateTime: Date;
+
+    const timeSlot = await getAppointmentTimeSlot(doctor.id, date);
+    if (timeSlot) {
+      appointmentDateTime = timeSlot.start;
+      endDateTime = timeSlot.end;
+    } else {
+      // Fallback: use random time if no availability
       const hour = randomInt(8, 17);
-      const appointmentDateTime = new Date(appointmentDate);
+      appointmentDateTime = new Date(date);
       appointmentDateTime.setHours(hour, 0, 0, 0);
-
-      const endDateTime = new Date(appointmentDateTime);
+      endDateTime = new Date(appointmentDateTime);
       endDateTime.setHours(appointmentDateTime.getHours() + 1);
+    }
 
-      const isPast = appointmentDateTime < new Date();
+    // Determine status based on date
+    const isPast = appointmentDateTime < NOW;
+    const isToday = appointmentDateTime.toDateString() === NOW.toDateString();
 
-      let status: AppointmentStatus;
-      if (isPast) {
-        status = randomItem([
-          AppointmentStatus.COMPLETED,
-          AppointmentStatus.CANCELED,
-          AppointmentStatus.NO_SHOW,
-        ]);
+    let status: AppointmentStatus;
+    if (isPast) {
+      // Past appointments: mostly completed, some canceled, few no-shows
+      const rand = Math.random();
+      if (rand < 0.7) {
+        status = AppointmentStatus.COMPLETED;
+      } else if (rand < 0.9) {
+        status = AppointmentStatus.CANCELED;
       } else {
-        status = randomItem([
-          AppointmentStatus.PENDING,
-          AppointmentStatus.CONFIRMED,
-        ]);
+        status = AppointmentStatus.NO_SHOW;
       }
+    } else if (isToday) {
+      // Today: mix of pending, confirmed, and some completed
+      status = randomItem([
+        AppointmentStatus.PENDING,
+        AppointmentStatus.CONFIRMED,
+        AppointmentStatus.PENDING,
+        AppointmentStatus.CONFIRMED,
+        AppointmentStatus.COMPLETED, // Some already completed today
+      ]);
+    } else {
+      // Future: pending or confirmed
+      status = randomItem([
+        AppointmentStatus.PENDING,
+        AppointmentStatus.CONFIRMED,
+        AppointmentStatus.PENDING,
+        AppointmentStatus.CONFIRMED,
+        AppointmentStatus.CONFIRMED, // More confirmed for future
+      ]);
+    }
 
-      const appointment = await prisma.appointment.create({
+    const appointment = await prisma.appointment.create({
+      data: {
+        patientId: patient.id,
+        doctorId: doctor.id,
+        hospitalId: hospitalId,
+        scheduledAt: appointmentDateTime,
+        startTime: appointmentDateTime,
+        endTime: endDateTime,
+        status: status,
+        type: randomItem([
+          "Consultation",
+          "Suivi",
+          "Urgence",
+          "Examen",
+          "Vaccination",
+        ]),
+        reason: `Consultation pour ${randomItem(medicalConditions)}`,
+        notes: randomBoolean(0.5)
+          ? `Patient se plaint de ${randomItem(["douleurs", "fièvre", "fatigue", "maux de tête", "toux"])}`
+          : null,
+        completedAt:
+          status === AppointmentStatus.COMPLETED ? endDateTime : null,
+        cancelledAt:
+          status === AppointmentStatus.CANCELED
+            ? new Date(
+                appointmentDateTime.getTime() -
+                  randomInt(1, 72) * 60 * 60 * 1000
+              )
+            : null,
+        cancellationReason:
+          status === AppointmentStatus.CANCELED
+            ? randomItem([
+                "Indisponibilité du patient",
+                "Indisponibilité du médecin",
+                "Urgence",
+                "Raisons personnelles",
+              ])
+            : null,
+      },
+    });
+
+    // Create medical records for completed appointments
+    if (status === AppointmentStatus.COMPLETED) {
+      const medicalRecord = await prisma.medicalRecord.create({
         data: {
           patientId: patient.id,
           doctorId: doctor.id,
+          appointmentId: appointment.id,
           hospitalId: hospitalId,
-          scheduledAt: appointmentDateTime,
-          startTime: appointmentDateTime,
-          endTime: endDateTime,
-          status: status,
-          type: randomItem([
-            "Consultation",
-            "Suivi",
-            "Urgence",
-            "Examen",
-            "Vaccination",
-          ]),
-          reason: `Consultation pour ${randomItem(medicalConditions)}`,
-          notes: randomBoolean(0.5)
-            ? `Patient se plaint de ${randomItem(["douleurs", "fièvre", "fatigue", "maux de tête", "toux"])}`
+          diagnosis: `Patient diagnostiqué avec ${randomItem(medicalConditions)}`,
+          treatment: `Traitement prescrit: ${randomItem(["médicaments", "repos", "exercices", "régime alimentaire", "chirurgie"])}`,
+          notes: randomBoolean(0.7)
+            ? `Patient présente des symptômes de ${randomItem(medicalConditions)} depuis ${randomInt(1, 30)} jours`
             : null,
-          completedAt:
-            status === AppointmentStatus.COMPLETED ? endDateTime : null,
-          cancelledAt:
-            status === AppointmentStatus.CANCELED
-              ? new Date(
-                  appointmentDateTime.getTime() -
-                    randomInt(1, 72) * 60 * 60 * 1000
-                )
-              : null,
-          cancellationReason:
-            status === AppointmentStatus.CANCELED
-              ? randomItem([
-                  "Indisponibilité du patient",
-                  "Indisponibilité du médecin",
-                  "Urgence",
-                  "Raisons personnelles",
-                ])
-              : null,
+          followUpNeeded: randomBoolean(0.6),
+          followUpDate: randomBoolean(0.6)
+            ? randomDateInRange(
+                subMonths(NOW, 18), // up to 18 months back
+                addMonths(NOW, 2) // a little into the future
+              )
+            : null,
         },
       });
 
-      // Create medical records for completed appointments
-      if (status === AppointmentStatus.COMPLETED) {
-        const medicalRecord = await prisma.medicalRecord.create({
+      // Create prescriptions for some medical records
+      if (randomBoolean(0.8)) {
+        // Create prescription order
+        const prescriptionOrder = await prisma.prescriptionOrder.create({
           data: {
-            patientId: patient.id,
+            medicalRecordId: medicalRecord.id,
             doctorId: doctor.id,
-            appointmentId: appointment.id,
-            hospitalId: hospitalId,
-            diagnosis: `Patient diagnostiqué avec ${randomItem(medicalConditions)}`,
-            treatment: `Traitement prescrit: ${randomItem(["médicaments", "repos", "exercices", "régime alimentaire", "chirurgie"])}`,
-            notes: randomBoolean(0.7)
-              ? `Patient présente des symptômes de ${randomItem(medicalConditions)} depuis ${randomInt(1, 30)} jours`
-              : null,
-            followUpNeeded: randomBoolean(0.6),
-            followUpDate: randomBoolean(0.6)
-              ? randomDateInRange(
-                  subMonths(NOW, 18), // up to 18 months back
-                  addMonths(NOW, 2) // a little into the future
-                )
-              : null,
+            patientId: patient.id,
+            issuedAt: new Date(appointmentDateTime),
+            notes: randomBoolean(0.3) ? "Ordonnance standard" : null,
           },
         });
 
-        // Create prescriptions for some medical records
-        if (randomBoolean(0.8)) {
-          // Create prescription order
-          const prescriptionOrder = await prisma.prescriptionOrder.create({
+        const numMedications = randomInt(1, 3);
+
+        for (let j = 0; j < numMedications; j++) {
+          const medication = randomItem(medications);
+
+          await prisma.prescription.create({
             data: {
-              medicalRecordId: medicalRecord.id,
-              doctorId: doctor.id,
               patientId: patient.id,
-              issuedAt: new Date(appointmentDateTime),
-              notes: randomBoolean(0.3) ? "Ordonnance standard" : null,
-            },
-          });
-
-          const numMedications = randomInt(1, 3);
-
-          for (let j = 0; j < numMedications; j++) {
-            const medication = randomItem(medications);
-
-            await prisma.prescription.create({
-              data: {
-                patientId: patient.id,
-                doctorId: doctor.id,
-                prescriptionOrderId: prescriptionOrder.id,
-                medicalRecordId: medicalRecord.id,
-                medicationName: medication.name,
-                dosage: medication.dosage,
-                frequency: medication.frequency,
-                duration: `${randomInt(3, 14)} jours`,
-                instructions: randomBoolean(0.7)
-                  ? `Prendre ${randomItem(["avant", "pendant", "après"])} les repas`
-                  : null,
-                isActive: randomBoolean(0.9),
-                startDate: new Date(appointmentDateTime),
-                endDate: randomBoolean(0.8)
-                  ? new Date(
-                      appointmentDateTime.getTime() +
-                        randomInt(7, 30) * 24 * 60 * 60 * 1000
-                    )
-                  : null,
-              },
-            });
-          }
-        }
-
-        // Create medical record attachments for some records
-        if (randomBoolean(0.3)) {
-          await prisma.medicalRecordAttachment.create({
-            data: {
+              doctorId: doctor.id,
+              prescriptionOrderId: prescriptionOrder.id,
               medicalRecordId: medicalRecord.id,
-              fileName: `${randomItem(["radiographie", "analyse", "ordonnance", "rapport"])}_${randomInt(1000, 9999)}.pdf`,
-              fileType: "application/pdf",
-              fileUrl: `https://example.com/files/${randomInt(1000, 9999)}.pdf`,
-              fileSize: randomInt(100000, 5000000),
-              uploadedAt: new Date(appointmentDateTime),
+              medicationName: medication.name,
+              dosage: medication.dosage,
+              frequency: medication.frequency,
+              duration: `${randomInt(3, 14)} jours`,
+              instructions: randomBoolean(0.7)
+                ? `Prendre ${randomItem(["avant", "pendant", "après"])} les repas`
+                : null,
+              isActive: randomBoolean(0.9),
+              startDate: new Date(appointmentDateTime),
+              endDate: randomBoolean(0.8)
+                ? new Date(
+                    appointmentDateTime.getTime() +
+                      randomInt(7, 30) * 24 * 60 * 60 * 1000
+                  )
+                : null,
             },
           });
         }
+      }
+
+      // Create medical record attachments for some records
+      if (randomBoolean(0.3)) {
+        await prisma.medicalRecordAttachment.create({
+          data: {
+            medicalRecordId: medicalRecord.id,
+            fileName: `${randomItem(["radiographie", "analyse", "ordonnance", "rapport"])}_${randomInt(1000, 9999)}.pdf`,
+            fileType: "application/pdf",
+            fileUrl: `https://example.com/files/${randomInt(1000, 9999)}.pdf`,
+            fileSize: randomInt(100000, 5000000),
+            uploadedAt: new Date(appointmentDateTime),
+          },
+        });
       }
     }
   }

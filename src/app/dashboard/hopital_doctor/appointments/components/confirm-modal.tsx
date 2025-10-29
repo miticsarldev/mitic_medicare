@@ -1,10 +1,16 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent,  DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ConfirmModalProps {
-    open: boolean;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   title: string;
@@ -21,9 +27,9 @@ export const ConfirmModal = ({
   description,
   confirmText = "Confirmer",
   cancelText = "Annuler",
-  variant = "default"
+  variant = "default",
 }: ConfirmModalProps) => {
-     return (
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
@@ -36,8 +42,8 @@ export const ConfirmModal = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {cancelText}
           </Button>
-          <Button 
-            variant={variant === "destructive" ? "destructive" : "default"} 
+          <Button
+            variant={variant === "destructive" ? "destructive" : "default"}
             onClick={onConfirm}
           >
             {confirmText}

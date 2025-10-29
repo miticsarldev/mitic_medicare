@@ -62,10 +62,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import {
-  getPatientProfile,
-  updatePatientProfile,
-} from "@/app/dashboard/patient/actions";
+// Removed patient-specific imports - using hospital_doctor API instead
 import { countries } from "@/constant";
 import { useAvatarUpload } from "@/lib/upload/useAvatarUpload";
 import { useSession } from "next-auth/react";
@@ -109,7 +106,27 @@ const profileFormSchema = z.object({
       message: "La bio ne peut pas dépasser 500 caractères.",
     })
     .optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z
+    .string()
+    .optional()
+    .refine(
+      (date) => {
+        if (!date) return true; // Optional field
+        const today = new Date();
+        const birthDate = new Date(date);
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        const actualAge =
+          monthDiff < 0 ||
+          (monthDiff === 0 && today.getDate() < birthDate.getDate())
+            ? age - 1
+            : age;
+        return actualAge >= 14 && actualAge <= 100;
+      },
+      {
+        message: "L'âge doit être compris entre 14 et 100 ans.",
+      }
+    ),
   allergies: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -197,53 +214,54 @@ export default function ProfilePage() {
     const fetchProfileData = async () => {
       setIsLoadingProfile(true);
       try {
-        const data = await getPatientProfile();
+        const res = await fetch("/api/hospital_doctor/profile");
+        if (!res.ok) throw new Error("Failed to fetch profile");
+        const { doctor } = await res.json();
+
         setProfileData({
-          ...data.profile,
-          dateOfBirth: data.profile.dateOfBirth
-            ? new Date(data.profile.dateOfBirth).toISOString().split("T")[0]
+          ...doctor,
+          dateOfBirth: doctor.dateOfBirth
+            ? new Date(doctor.dateOfBirth).toISOString().split("T")[0]
             : undefined,
-          createdAt: data.profile.createdAt
-            ? new Date(data.profile.createdAt).toISOString()
+          createdAt: doctor.createdAt
+            ? new Date(doctor.createdAt).toISOString()
             : undefined,
         });
 
-        if (data.profile.avatarUrl) {
-          setAvatarPreview(data.profile.avatarUrl);
-          setOriginalAvatarUrl(data.profile.avatarUrl);
+        if (doctor.profile?.avatarUrl) {
+          setAvatarPreview(doctor.profile.avatarUrl);
+          setOriginalAvatarUrl(doctor.profile.avatarUrl);
         }
 
         profileForm.reset({
-          name: data.profile.name || "",
-          email: data.profile.email || "",
-          phone: data.profile.phone || "",
-          bio: data.profile.bio || "",
-          dateOfBirth: data.profile.dateOfBirth
-            ? new Date(data.profile.dateOfBirth).toISOString().split("T")[0]
+          name: doctor.name || "",
+          email: doctor.email || "",
+          phone: doctor.phone || "",
+          bio: doctor.profile?.bio || "",
+          dateOfBirth: doctor.dateOfBirth
+            ? new Date(doctor.dateOfBirth).toISOString().split("T")[0]
             : "",
-          allergies: data.profile.allergies || "",
-          address: data.profile.address || "",
-          city: data.profile.city || "",
-          state: data.profile.state || "",
-          zipCode: data.profile.zipCode || "",
-          country: data.profile.country || "",
-          gender: data.profile.gender || "",
-          emergencyContactName: data.profile.emergencyContactName || "",
-          emergencyContactPhone: data.profile.emergencyContactPhone || "",
-          emergencyContactRelation: data.profile.emergencyContactRelation || "",
+          allergies: "", // Not applicable for doctors
+          address: doctor.profile?.address || "",
+          city: doctor.profile?.city || "",
+          state: doctor.profile?.state || "",
+          zipCode: doctor.profile?.zipCode || "",
+          country: doctor.profile?.country || "",
+          gender: doctor.profile?.genre || "",
+          emergencyContactName: "", // Not applicable for doctors
+          emergencyContactPhone: "", // Not applicable for doctors
+          emergencyContactRelation: "", // Not applicable for doctors
         });
 
         vitalsForm.reset({
-          height: data.vitals?.height?.toString() || "",
-          weight: data.vitals?.weight?.toString() || "",
-          bloodPressureSystolic:
-            data.vitals?.bloodPressureSystolic?.toString() || "",
-          bloodPressureDiastolic:
-            data.vitals?.bloodPressureDiastolic?.toString() || "",
-          heartRate: data.vitals?.heartRate?.toString() || "",
-          respiratoryRate: data.vitals?.respiratoryRate?.toString() || "",
-          temperature: data.vitals?.temperature?.toString() || "",
-          oxygenSaturation: data.vitals?.oxygenSaturation?.toString() || "",
+          height: "", // Not applicable for doctors
+          weight: "", // Not applicable for doctors
+          bloodPressureSystolic: "", // Not applicable for doctors
+          bloodPressureDiastolic: "", // Not applicable for doctors
+          heartRate: "", // Not applicable for doctors
+          respiratoryRate: "", // Not applicable for doctors
+          temperature: "", // Not applicable for doctors
+          oxygenSaturation: "", // Not applicable for doctors
         });
       } catch (error) {
         console.error("Error fetching profile data:", error);
@@ -271,21 +289,38 @@ export default function ProfilePage() {
     let newUrl: string | null = null;
 
     try {
-      const formData = new FormData();
-
-      // Append scalar fields
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null)
-          formData.append(key, value as string);
-      });
-
       // Upload first, pass URL to backend (no file blob)
       if (avatarFile) {
         newUrl = await avatar.onPick(avatarFile); // throws if upload fails
-        formData.append("avatarUrl", newUrl); // <— send URL (rename if your API expects "avatar")
       }
 
-      await updatePatientProfile(formData);
+      // Prepare data for hospital doctor profile update
+      const updateData = {
+        name: data.name,
+        phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
+        country: data.country,
+        bio: data.bio,
+        genre: data.gender,
+        ...(newUrl && { avatarUrl: newUrl }),
+      };
+
+      const res = await fetch("/api/hospital_doctor/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!res.ok) {
+        // rollback just-uploaded file
+        if (newUrl) await avatar.deleteByUrl(newUrl).catch(() => {});
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erreur lors de la mise à jour");
+      }
 
       // delete old file if changed
       if (newUrl && originalAvatarUrl && originalAvatarUrl !== newUrl) {
@@ -539,15 +574,39 @@ export default function ProfilePage() {
                         <FormField
                           control={profileForm.control}
                           name="dateOfBirth"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Date de naissance</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                          render={({ field }) => {
+                            // Calculate min date (14 years ago) and max date (100 years ago)
+                            const today = new Date();
+                            const minDate = new Date(
+                              today.getFullYear() - 100,
+                              today.getMonth(),
+                              today.getDate()
+                            );
+                            const maxDate = new Date(
+                              today.getFullYear() - 14,
+                              today.getMonth(),
+                              today.getDate()
+                            );
+
+                            return (
+                              <FormItem>
+                                <FormLabel>Date de naissance</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="date"
+                                    min={minDate.toISOString().split("T")[0]}
+                                    max={maxDate.toISOString().split("T")[0]}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  L&apos;âge minimum requis est de 14 ans pour
+                                  être médecin.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            );
+                          }}
                         />
                         <FormField
                           control={profileForm.control}

@@ -52,6 +52,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { getSpecializationLabel } from "@/utils/function";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
@@ -859,7 +860,7 @@ export default function HospitalAdminOverviewPage() {
                         {doctor.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {doctor.specialization} • {doctor.department}
+                        {getSpecializationLabel(doctor.specialization)} • {doctor.department}
                       </p>
                     </div>
                   </div>

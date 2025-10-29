@@ -1,318 +1,194 @@
-export const dynamic = "force-dynamic";
-
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { endOfDay, startOfDay } from "date-fns";
 
-export async function GET(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
-    }
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id)
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-    const doctor = await prisma.doctor.findUnique({
-      where: { userId: session.user.id },
-    });
+  // Médecin (hôpital) courant
+  const doctor = await prisma.doctor.findFirst({
+    where: { userId: session.user.id, isIndependent: false },
+  });
 
-    if (!doctor) {
-      return NextResponse.json(
-        { message: "Médecin non trouvé" },
-        { status: 404 }
-      );
-    }
+  if (!doctor)
+    return NextResponse.json({ error: "Médecin non trouvé" }, { status: 404 });
 
-    const doctorId = doctor.id;
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const [patientsToday, confirmedAppointments, pendingAppointments] =
-      await Promise.all([
-        prisma.appointment.count({
-          where: {
-            doctorId: doctorId,
-            createdAt: { gte: startOfDay, lte: endOfDay },
-          },
-        }),
-        prisma.appointment.count({
-          where: { doctorId: doctorId, status: "COMPLETED" },
-        }),
-        prisma.appointment.count({
-          where: { doctorId: doctorId, status: "PENDING" },
-        }),
-      ]);
-
-    // Dates pour la semaine en cours
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-
-    const allDaysOfWeek = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(sevenDaysAgo);
-      date.setDate(date.getDate() + i);
-      return date.toISOString().split("T")[0];
-    });
-
-    const dailyAppointmentsData = await prisma.$queryRaw`
-      SELECT 
-        DATE_TRUNC('day', "scheduledAt") as day,
-        COUNT(*)::integer as count
-      FROM "Appointment"
-      WHERE "scheduledAt" >= ${sevenDaysAgo}
-        AND "scheduledAt" <= ${endOfDay}
-        AND "doctorId" = ${doctorId}
-      GROUP BY DATE_TRUNC('day', "scheduledAt")
-      ORDER BY day ASC
-    `;
-
-    const appointmentsByDay = (
-      dailyAppointmentsData as Array<{ day: Date; count: number }>
-    ).reduce(
-      (acc, item) => {
-        const dayStr = item.day.toISOString().split("T")[0];
-        acc[dayStr] = item.count;
-        return acc;
-      },
-      {} as Record<string, number>
+  // Hopital
+  if (!doctor.hospitalId)
+    return NextResponse.json(
+      { error: "Médecin sans hôpital" },
+      { status: 404 }
     );
 
-    const dailyAppointments = allDaysOfWeek.map((day) => ({
-      day,
-      count: appointmentsByDay[day] || 0,
-    }));
+  const hospital = await prisma.hospital.findUnique({
+    where: { id: doctor.hospitalId },
+    select: { id: true, name: true },
+  });
+  if (!hospital)
+    return NextResponse.json(
+      { error: "Hôpital non trouvé pour ce médecin" },
+      { status: 404 }
+    );
 
-    // Données hebdomadaires (patients)
-    const weeklyPatientsData = await prisma.$queryRaw`
-    SELECT 
-      DATE_TRUNC('day', "scheduledAt") as date, 
-      COUNT(*)::integer as count
-    FROM "Appointment"
-    WHERE "scheduledAt" >= ${sevenDaysAgo}
-      AND "scheduledAt" <= ${endOfDay}
-      AND "doctorId" = ${doctorId}
-    GROUP BY DATE_TRUNC('day', "scheduledAt")
-    ORDER BY date ASC
-  `;
+  const { searchParams } = new URL(req.url);
+  const from = new Date(searchParams.get("from") || new Date().toISOString());
+  const to = new Date(searchParams.get("to") || new Date().toISOString());
 
-    const weeklyPatients = (
-      weeklyPatientsData as Array<{ date: Date; count: number }>
-    ).map((item) => ({
-      date: item.date.toISOString().split("T")[0],
-      count: item.count,
-    }));
+  // RDV de la plage
+  const appts = await prisma.appointment.findMany({
+    where: { doctorId: doctor.id, scheduledAt: { gte: from, lte: to } },
+    include: { patient: { include: { user: true } } },
+    orderBy: { scheduledAt: "asc" },
+  });
 
-    // Rendez-vous en attente
-    const pendingAppointmentsList = await prisma.appointment.findMany({
-      where: { doctorId: doctorId, status: "PENDING" },
-      include: {
-        patient: {
-          include: {
-            user: { select: { name: true } },
-          },
-        },
-      },
-      orderBy: { scheduledAt: "asc" },
-    });
+  // KPIs
+  const countBy = (s) => appts.filter((a) => a.status === s).length;
+  const total = appts.length;
+  const pending = countBy("PENDING");
+  const confirmed = countBy("CONFIRMED");
+  const completed = countBy("COMPLETED");
+  const canceled = countBy("CANCELED");
+  const noShow = countBy("NO_SHOW");
 
-    // Avis du médecin
-    const reviews = await prisma.review.findMany({
-      where: {
-        doctorId,
-        targetType: "DOCTOR", // Optional but ensures the review is about a doctor
-        status: "APPROVED", // Optional: only approved reviews
-      },
-      include: {
-        author: {
-          select: { name: true },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    const url = new URL(req.url);
-    const filter = url.searchParams.get("filter") || "semaine";
-
-    let dateFilter: Date;
-
-    switch (filter) {
-      case "jour":
-        dateFilter = new Date();
-        dateFilter.setHours(0, 0, 0, 0);
-        break;
-      case "semaine":
-        dateFilter = new Date();
-        dateFilter.setDate(dateFilter.getDate() - 7);
-        break;
-      case "mois":
-        dateFilter = new Date();
-        dateFilter.setMonth(dateFilter.getMonth() - 1);
-        break;
-      case "année":
-        dateFilter = new Date();
-        dateFilter.setFullYear(dateFilter.getFullYear() - 1);
-        break;
-      default:
-        return NextResponse.json({ error: "Filtre invalide" }, { status: 400 });
+  let revenueXOF = "0";
+  try {
+    if (doctor.consultationFee) {
+      const fee = Number(doctor.consultationFee);
+      revenueXOF = new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "XOF",
+        minimumFractionDigits: 0,
+      }).format(fee * completed);
     }
+  } catch {}
 
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        doctorId,
-        status: "COMPLETED",
-        scheduledAt: {
-          gte: dateFilter,
-        },
-      },
-      select: {
-        patientId: true,
-      },
-    });
-
-    const uniquePatients = new Set(appointments.map((appt) => appt.patientId))
-      .size;
-
-    const cancellations = await prisma.appointment.findMany({
-      where: {
-        doctorId,
-        status: "CANCELED",
-        scheduledAt: { gte: dateFilter },
-      },
-      select: {
-        cancellationReason: true,
-      },
-    });
-
-    const totalCancellations = cancellations.length;
-    const reasonCounts = {
-      Urgence: 0,
-      "Changement d'horaire": 0,
-      Autres: 0,
+  // Série par jour
+  const daily = new Map<
+    string,
+    { date: string; total: number; confirmed: number; completed: number }
+  >();
+  for (const a of appts) {
+    const key = startOfDay(a.scheduledAt).toISOString();
+    const row = daily.get(key) ?? {
+      date: key,
+      total: 0,
+      confirmed: 0,
+      completed: 0,
     };
+    row.total += 1;
+    if (a.status === "CONFIRMED") row.confirmed += 1;
+    if (a.status === "COMPLETED") row.completed += 1;
+    daily.set(key, row);
+  }
+  const byDay = Array.from(daily.values()).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
 
-    cancellations.forEach((appointment) => {
-      const reason = appointment.cancellationReason?.trim().toLowerCase();
-      if (reason === "urgence") {
-        reasonCounts.Urgence++;
-      } else if (reason === "changement d'horaire") {
-        reasonCounts["Changement d'horaire"]++;
-      } else {
-        reasonCounts.Autres++;
-      }
-    });
+  // Répartition par type
+  const typeMap = new Map<string, number>();
+  for (const a of appts)
+    typeMap.set(a.type ?? "Autre", (typeMap.get(a.type ?? "Autre") ?? 0) + 1);
+  const byType = Array.from(typeMap.entries()).map(([type, count]) => ({
+    type,
+    count,
+  }));
 
-    // Rendez-vous par types
-    const appointmentsByType = await prisma.appointment.groupBy({
-      by: ["type"],
-      where: {
-        doctorId,
-        status: "COMPLETED",
-        scheduledAt: {
-          gte: dateFilter,
-        },
-      },
-      _count: {
-        type: true,
-      },
-    });
-
-    const appointmentTypeStats = appointmentsByType.map((item) => ({
-      type: item.type || "Non spécifié",
-      count: item._count.type,
+  // Prochains / Actionnables
+  const now = new Date();
+  const upcoming = appts
+    .filter((a) => a.scheduledAt >= now)
+    .slice(0, 20)
+    .map((a) => ({
+      id: a.id,
+      scheduledAt: a.scheduledAt.toISOString(),
+      status: a.status,
+      type: a.type,
+      notes: a.notes,
+      patientName: a.patient.user.name,
+      patientPhone: a.patient.user.phone ?? null,
     }));
 
-    const [recentPrescriptions, upcomingAvailabilities] = await Promise.all([
-      prisma.prescription.findMany({
-        where: { doctorId },
-        orderBy: { createdAt: "desc" },
-        take: 4,
-        include: {
-          patient: {
-            include: {
-              user: {
-                select: { name: true },
-              },
-            },
-          },
-        },
-      }),
-      prisma.doctorAvailability.findMany({
-        where: {
-          doctorId,
-          dayOfWeek: { gte: new Date().getDay() },
-          isActive: true,
-        },
-        orderBy: { dayOfWeek: "asc" },
-      }),
-    ]);
+  const actionable = appts
+    .filter((a) => a.status === "PENDING")
+    .slice(0, 15)
+    .map((a) => ({
+      id: a.id,
+      scheduledAt: a.scheduledAt.toISOString(),
+      status: a.status,
+      type: a.type,
+      notes: a.notes,
+      patientName: a.patient.user.name,
+      patientPhone: a.patient.user.phone ?? null,
+    }));
 
-    return NextResponse.json({
-      patientsToday,
-      confirmedAppointments,
-      pendingAppointments,
-      weeklyPatients,
-      dailyAppointments,
-      pendingAppointmentsList: pendingAppointmentsList.map((app) => ({
-        id: app.id,
-        patient: app.patient.user.name,
-        date: app.scheduledAt.toISOString().split("T")[0],
-        time: app.scheduledAt.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      })),
-      reviews: reviews.map((review) => ({
-        id: review.id,
-        patient: review.isAnonymous ? "Anonyme" : review.author.name,
-        rating: review.rating,
-        comment: review.content,
-        createdAt: review.createdAt.toISOString(),
-      })),
-      filter,
-      patientsSeen: uniquePatients,
-      totalCancellations,
-      cancellationsByReason: [
-        { reason: "Urgence", count: reasonCounts.Urgence },
-        {
-          reason: "Changement d'horaire",
-          count: reasonCounts["Changement d'horaire"],
-        },
-        { reason: "Autres", count: reasonCounts.Autres },
-      ],
-      appointmentTypeStats,
-      recentPrescriptions: recentPrescriptions.map((prescription) => ({
-        id: prescription.id,
-        patient: prescription.patient.user.name,
-        medicationName: prescription.medicationName,
-        dosage: prescription.dosage,
-        frequency: prescription.frequency,
-        instructions: prescription.instructions,
-        createdAt: prescription.createdAt.toISOString(),
-      })),
-      upcomingAvailabilities: upcomingAvailabilities.map((availability) => ({
-        id: availability.id,
-        dayOfWeek: availability.dayOfWeek,
-        dayName: [
-          "Dimanche",
-          "Lundi",
-          "Mardi",
-          "Mercredi",
-          "Jeudi",
-          "Vendredi",
-          "Samedi",
-        ][availability.dayOfWeek],
-        startTime: availability.startTime,
-        endTime: availability.endTime,
-        isActive: availability.isActive,
-      })),
-    });
-  } catch (error) {
-    console.error("Erreur:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  // --- Disponibilités vs RDV par jour de semaine (0=dim..6=sam) ---
+  const availabilities = await prisma.doctorAvailability.findMany({
+    where: { doctorId: doctor.id, isActive: true },
+  });
+
+  const frShort = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+  const minutes = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+    return h * 60 + (m || 0);
+  };
+  const datesInRange = (from: Date, to: Date) => {
+    const out: Date[] = [];
+    for (
+      let d = new Date(startOfDay(from));
+      d <= endOfDay(to);
+      d = new Date(d.getTime() + 86400000)
+    ) {
+      out.push(d);
+    }
+    return out;
+  };
+
+  const availabilityCountByDow = new Array(7).fill(0);
+  for (const d of datesInRange(from, to)) {
+    const dow = d.getDay();
+    for (const a of availabilities) {
+      if (a.dayOfWeek !== dow) continue;
+      const dur = minutes(a.endTime) - minutes(a.startTime);
+      if (dur > 0 && a.slotDuration > 0) {
+        availabilityCountByDow[dow] += Math.floor(dur / a.slotDuration);
+      }
+    }
   }
+
+  const apptCountByDow = new Array(7).fill(0);
+  for (const a of appts) apptCountByDow[new Date(a.scheduledAt).getDay()] += 1;
+
+  // Ordre Lun→Dim
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const availabilityVsAppointments = order.map((dow) => ({
+    dow,
+    label: frShort[dow],
+    availability: availabilityCountByDow[dow] ?? 0,
+    appointments: apptCountByDow[dow] ?? 0,
+  }));
+
+  return NextResponse.json({
+    range: { from: from.toISOString(), to: to.toISOString() },
+    hospital,
+    doctor: {
+      id: doctor.id,
+      name: session.user.name || "",
+    },
+    kpis: {
+      total,
+      pending,
+      confirmed,
+      completed,
+      canceled,
+      noShow,
+      revenueXOF,
+    },
+    series: { byDay, byType, availabilityVsAppointments },
+    upcoming,
+    actionable,
+  });
 }
