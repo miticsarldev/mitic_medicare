@@ -285,7 +285,7 @@ export default function HospitalAdminOverviewPage() {
   }
 
   return (
-    <div className="space-y-4 p-2 sm:p-4">
+    <div className="space-y-4">
       {/* Header + Filters */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {statsLoading ? (
@@ -860,7 +860,8 @@ export default function HospitalAdminOverviewPage() {
                         {doctor.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {getSpecializationLabel(doctor.specialization)} • {doctor.department}
+                        {getSpecializationLabel(doctor.specialization)} •{" "}
+                        {doctor.department}
                       </p>
                     </div>
                   </div>

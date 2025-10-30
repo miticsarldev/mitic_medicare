@@ -187,7 +187,7 @@ export default function AppointmentCalendarView() {
   }, []);
 
   return (
-    <div className="p-2 sm:p-4 space-y-6">
+    <div className="space-y-4">
       <Card className="shadow-sm">
         <CardHeader className="border-b p-2 sm:p-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

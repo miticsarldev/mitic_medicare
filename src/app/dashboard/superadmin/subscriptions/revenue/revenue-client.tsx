@@ -128,7 +128,7 @@ export default function RevenueClient({ initial }: { initial: RevenueStats }) {
       : 0;
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Revenus</h2>

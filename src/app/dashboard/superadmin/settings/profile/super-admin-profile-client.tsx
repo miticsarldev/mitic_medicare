@@ -273,7 +273,7 @@ export default function SuperAdminProfileClient() {
     .toUpperCase();
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <form
         onSubmit={form.handleSubmit(save, (errors) => {
           console.error("Invalid form", errors);

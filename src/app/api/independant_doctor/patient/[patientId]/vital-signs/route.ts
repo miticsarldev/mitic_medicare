@@ -17,8 +17,6 @@ export async function PUT(
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const appointmentId = params.patientId;
-
   const {
     temperature,
     heartRate,
@@ -30,24 +28,30 @@ export async function PUT(
   } = await request.json();
 
   try {
-    // 1. Récupérer le rendez-vous pour avoir le patientId
+    // Handle both appointmentId and patientId
     const appointment = await prisma.appointment.findUnique({
-      where: { id: appointmentId },
+      where: { id: params.patientId },
       select: { patientId: true },
     });
 
-    if (!appointment) {
+    const actualPatientId = appointment?.patientId || params.patientId;
+
+    // 1. Vérifier que le patient existe
+    const patient = await prisma.patient.findUnique({
+      where: { id: actualPatientId },
+      select: { id: true },
+    });
+    if (!patient) {
       return NextResponse.json(
-        { error: "Rendez-vous introuvable" },
+        { error: "Patient introuvable" },
         { status: 404 }
       );
     }
 
-    const patientId = appointment.patientId;
-
     // 2. Mettre à jour ou créer les signes vitaux
     const existingVitalSign = await prisma.vitalSign.findFirst({
-      where: { patientId },
+      where: { patientId: actualPatientId },
+      orderBy: { recordedAt: "desc" },
     });
 
     if (existingVitalSign) {
@@ -67,7 +71,7 @@ export async function PUT(
     } else {
       await prisma.vitalSign.create({
         data: {
-          patientId,
+          patientId: actualPatientId,
           temperature,
           heartRate,
           bloodPressureSystolic,
@@ -82,7 +86,7 @@ export async function PUT(
 
     // 3. Renvoyer les données complètes du patient (comme dans le GET)
     const updatedPatient = await prisma.patient.findUnique({
-      where: { id: patientId },
+      where: { id: actualPatientId },
       select: {
         id: true,
         bloodType: true,
@@ -172,6 +176,74 @@ export async function PUT(
     return NextResponse.json(updatedPatient);
   } catch (error) {
     console.error("Erreur mise à jour signes vitaux :", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: { patientId: string } }
+) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  const {
+    temperature,
+    heartRate,
+    bloodPressureSystolic,
+    bloodPressureDiastolic,
+    oxygenSaturation,
+    weight,
+    height,
+  } = await request.json();
+
+  try {
+    // Handle both appointmentId and patientId
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: params.patientId },
+      select: { patientId: true },
+    });
+
+    const actualPatientId = appointment?.patientId || params.patientId;
+
+    const doctor = await prisma.doctor.findFirst({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+    if (!doctor) {
+      return NextResponse.json({ error: "Médecin non trouvé" }, { status: 404 });
+    }
+
+    // Ensure doctor has relationship with patient
+    const linked = await prisma.appointment.findFirst({
+      where: { patientId: actualPatientId, doctorId: doctor.id },
+      select: { id: true },
+    });
+    if (!linked) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+
+    const created = await prisma.vitalSign.create({
+      data: {
+        patientId: actualPatientId,
+        temperature: temperature ?? null,
+        heartRate: heartRate ?? null,
+        bloodPressureSystolic: bloodPressureSystolic ?? null,
+        bloodPressureDiastolic: bloodPressureDiastolic ?? null,
+        oxygenSaturation: oxygenSaturation ?? null,
+        weight: weight ?? null,
+        height: height ?? null,
+        recordedAt: new Date(),
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ ok: true, id: created.id });
+  } catch (error) {
+    console.error("Erreur création signes vitaux :", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -437,7 +437,7 @@ export default function DoctorAvailabilityPage() {
   };
 
   return (
-    <div className="p-2 sm:p-4 space-y-4 mx-auto">
+    <div className="space-y-4 mx-auto">
       {isLoading.doctors || isLoading.availabilities ? (
         <div className="space-y-4 mb-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-pulse">

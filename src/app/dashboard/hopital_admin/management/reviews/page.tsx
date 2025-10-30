@@ -180,7 +180,7 @@ export default function AdminReviewPage() {
   };
 
   return (
-    <div className="container mx-auto p-2 sm:p-4">
+    <div className="container mx-auto">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>

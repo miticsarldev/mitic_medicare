@@ -496,7 +496,7 @@ export default function PatientList() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 p-2 sm:p-4">
+    <div className="flex flex-col lg:flex-row gap-4">
       <aside
         className="hidden lg:block w-72 flex-shrink-0 lg:sticky lg:top-0 self-start
                   max-h-[calc(100vh-7rem)] overflow-auto"

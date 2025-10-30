@@ -123,7 +123,7 @@ export default function SubscriptionSelfClient({
   const unitCurrent = priceMap[sub.plan] ?? Number(sub.amount) ?? 0;
 
   return (
-    <div className="mx-auto max-w-6xl p-2 sm:p-4 space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4">
       {checkingReturn && (
         <div className="flex items-center gap-2 text-sm rounded-md border bg-card px-3 py-2">
           <Loader2 className="h-4 w-4 animate-spin" />

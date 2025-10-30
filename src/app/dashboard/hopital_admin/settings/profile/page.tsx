@@ -263,7 +263,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="p-2 sm:p-4 max-w-6xl mx-auto space-y-4">
+      <div className=" max-w-6xl mx-auto space-y-4">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded-full" />
           <Skeleton className="h-8 w-64" />
@@ -343,7 +343,7 @@ export default function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="p-2 sm:p-4 max-w-6xl mx-auto space-y-4">
+    <div className="max-w-6xl mx-auto space-y-4">
       <h1 className="text-3xl font-bold flex items-center gap-2">
         <User className="w-6 h-6" /> Mon Profil
       </h1>

@@ -487,7 +487,7 @@ export default function DoctorsDirectory() {
 
   /*************** Render ***************/
   return (
-    <div className="space-y-4 p-2 sm:p-4">
+    <div className="space-y-4">
       <PageHeader onOpenAdd={() => setOpenAdd(true)} />
       <StatTiles
         total={stats.total}

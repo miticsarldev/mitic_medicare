@@ -99,7 +99,21 @@ const profileFormSchema = z.object({
     .string()
     .max(500, { message: "La bio ne peut pas dépasser 500 caractères." })
     .optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z
+    .string()
+    .refine(
+      (val) => {
+        if (!val) return true; // Optional
+        const today = new Date();
+        const birthDate = new Date(val);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+        return age >= 18;
+      },
+      { message: "Vous devez avoir au moins 18 ans." }
+    )
+    .optional(),
   allergies: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -118,6 +132,14 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [openCountry, setOpenCountry] = useState(false);
+
+  // Calculate maximum allowed date (18 years ago from today)
+  const maxDate = (() => {
+    const today = new Date();
+    const maxDate = new Date();
+    maxDate.setFullYear(today.getFullYear() - 18);
+    return maxDate.toISOString().split("T")[0];
+  })();
 
   // avatar state
   const avatar = useAvatarUpload({ folder: "avatars/doctors", maxMB: 5 });
@@ -302,7 +324,7 @@ export default function ProfilePage() {
   if (isLoadingProfile) return <Loading />;
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold">Mon Profil</h1>
@@ -468,7 +490,7 @@ export default function ProfilePage() {
                             <FormItem>
                               <FormLabel>Date de naissance</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} />
+                                <Input type="date" {...field} max={maxDate} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -480,8 +502,18 @@ export default function ProfilePage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Genre</FormLabel>
-                              {/* keep Select if you want */}
-                              <Input placeholder="MALE / FEMALE" {...field} />
+                              <FormControl>
+                                <select
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                  {...field}
+                                >
+                                  <option value="">
+                                    Sélectionnez un genre
+                                  </option>
+                                  <option value="MALE">Masculin</option>
+                                  <option value="FEMALE">Féminin</option>
+                                </select>
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}

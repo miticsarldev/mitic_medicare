@@ -14,6 +14,7 @@ import {
   FilePlus,
   Trash2,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +43,7 @@ import { CancelModal } from "../components/cancel-modal";
 import { CompleteModal } from "../components/complete-modal";
 import { DetailsModal } from "../components/details-modal";
 import { Calendar } from "@/components/ui/calendar";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -131,6 +133,7 @@ export default function AppointmentsPage() {
     | "deleteRecord"
     | null
   >(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -272,13 +275,13 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto">
+      <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold">Gestion des Rendez-vous</h1>
       </div>
 
       {/* Cartes Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         <StatCard
           title="Total RDV"
           value={stats.total}
@@ -307,7 +310,7 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Zone de Filtres */}
-      <Card className="mb-6">
+      <Card className="mb-4">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -422,34 +425,109 @@ export default function AppointmentsPage() {
               <AppointmentCard
                 key={appointment.id}
                 appointment={appointment}
-                onAction={(type, apt) => {
+                onAction={async (type, apt) => {
                   if (type === "edit") {
-                    // Appelle l'API pour récupérer les données du dossier
-                    fetch(`/api/independant_doctor/medical-records/${apt.id}`)
-                      .then((res) => {
-                        if (!res.ok) throw new Error("Dossier non trouvé");
-                        return res.json();
-                      })
-                      .then((data) => {
-                        if (!data) throw new Error("Dossier vide");
-                        setMedicalRecordData(data);
-                        setModalType("edit");
-                      })
-                      .catch(() => {
-                        toast({
-                          title: "Erreur",
-                          description:
-                            "Le dossier médical n'existe plus ou a été supprimé.",
-                          variant: "destructive",
-                        });
-                        setModalType(null);
-                        setMedicalRecordData(null);
+                    // Ouvre immédiatement le modal d'édition avec loader
+                    setModalType("edit");
+                    setMedicalRecordData(null);
+                    try {
+                      const res = await fetch(
+                        `/api/independant_doctor/medical-records/${apt.id}`,
+                        { cache: "no-store" }
+                      );
+                      if (!res.ok) throw new Error("Dossier non trouvé");
+                      const data = await res.json();
+                      if (!data) throw new Error("Dossier vide");
+                      const transformed: MedicalRecordData = {
+                        diagnosis: data.diagnosis ?? "",
+                        treatment: data.treatment ?? "",
+                        notes: data.notes ?? "",
+                        followUpNeeded: Boolean(data.followUpNeeded),
+                        followUpDate: data.followUpDate
+                          ? new Date(data.followUpDate)
+                          : undefined,
+                        attachments: Array.isArray(data.attachments)
+                          ? data.attachments.map(
+                              (a: {
+                                fileName: string;
+                                fileType: string;
+                                fileUrl: string;
+                                fileSize: number;
+                              }) => ({
+                                fileName: a.fileName,
+                                fileType: a.fileType,
+                                fileUrl: a.fileUrl,
+                                fileSize: a.fileSize,
+                              })
+                            )
+                          : [],
+                        prescriptions: Array.isArray(data.prescription)
+                          ? data.prescription.map(
+                              (p: {
+                                medicationName?: string;
+                                dosage?: string;
+                                frequency?: string;
+                                duration?: string;
+                                instructions?: string;
+                                isActive?: boolean;
+                                startDate?: string | Date;
+                                endDate?: string | Date;
+                              }) => ({
+                                medicationName: p.medicationName ?? "",
+                                dosage: p.dosage ?? "",
+                                frequency: p.frequency ?? "",
+                                duration: p.duration ?? "",
+                                instructions: p.instructions ?? "",
+                                isActive: Boolean(p.isActive),
+                                startDate: p.startDate
+                                  ? new Date(p.startDate)
+                                      .toISOString()
+                                      .slice(0, 10)
+                                  : "",
+                                endDate: p.endDate
+                                  ? new Date(p.endDate)
+                                      .toISOString()
+                                      .slice(0, 10)
+                                  : "",
+                              })
+                            )
+                          : [],
+                      };
+                      setMedicalRecordData(transformed);
+                    } catch {
+                      toast({
+                        title: "Erreur",
+                        description:
+                          "Le dossier médical n'existe plus ou a été supprimé.",
+                        variant: "destructive",
                       });
+                      setModalType(null);
+                      setMedicalRecordData(null);
+                      return;
+                    }
+                    setSelectedAppointment(apt);
+                  } else if (type === "details") {
+                    // Ouvre immédiatement la modale de détails avec loader
+                    setSelectedAppointment(apt);
+                    setModalType("details");
+                    setLoadingDetails(true);
+                    try {
+                      const res = await fetch(
+                        `/api/independant_doctor/appointments/${apt.id}`,
+                        { cache: "no-store" }
+                      );
+                      if (!res.ok) throw new Error("Not found");
+                      const latest = await res.json();
+                      setSelectedAppointment(latest);
+                    } catch {
+                      // Keep existing appointment data on error
+                    } finally {
+                      setLoadingDetails(false);
+                    }
                   } else {
+                    setSelectedAppointment(apt);
                     setModalType(type);
                   }
-                  setSelectedAppointment(apt);
-                  setModalType(type);
                 }}
                 getStatusBadge={getStatusBadge}
               />
@@ -498,8 +576,9 @@ export default function AppointmentsPage() {
           />
           {modalType === "edit" &&
             selectedAppointment &&
-            medicalRecordData?.diagnosis && (
+            (medicalRecordData ? (
               <CompleteModal
+                key={`edit-${selectedAppointment.id}-${JSON.stringify(medicalRecordData.attachments?.map((a) => a.fileUrl).join(","))}`}
                 open={true}
                 onOpenChange={(open) => {
                   if (!open) {
@@ -508,36 +587,51 @@ export default function AppointmentsPage() {
                   }
                 }}
                 appointment={selectedAppointment}
-                onSubmit={(updatedData) => {
-                  fetch(
-                    `/api/independant_doctor/medical-records/${selectedAppointment.id}`,
-                    {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(updatedData),
-                    }
-                  )
-                    .then((res) => {
-                      if (!res.ok) throw new Error("Erreur modification");
-                      toast({
-                        title: "Succès",
-                        description: "Dossier modifié.",
-                      });
-                      setModalType(null);
-                      fetchAppointments();
-                    })
-                    .catch(() =>
-                      toast({
-                        title: "Erreur",
-                        description: "Modification échouée.",
-                        variant: "destructive",
-                      })
+                onSubmit={async (updatedData) => {
+                  try {
+                    const res = await fetch(
+                      `/api/independant_doctor/medical-records/${selectedAppointment.id}`,
+                      {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          ...updatedData,
+                          patientId: selectedAppointment.patient.id,
+                          doctorId: selectedAppointment.doctor.id,
+                        }),
+                      }
                     );
+
+                    if (!res.ok) throw new Error("Erreur modification");
+
+                    toast({
+                      title: "Succès",
+                      description: "Dossier modifié.",
+                    });
+                    setModalType(null);
+                    fetchAppointments();
+                  } catch {
+                    toast({
+                      title: "Erreur",
+                      description: "Modification échouée.",
+                      variant: "destructive",
+                    });
+                  }
                 }}
-                // Injecte les valeurs existantes dans CompleteModal via defaultValues
                 defaultValues={medicalRecordData}
               />
-            )}
+            ) : (
+              <Dialog
+                open={true}
+                onOpenChange={(open) => !open && setModalType(null)}
+              >
+                <DialogContent className="max-w-lg">
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ))}
           {modalType === "deleteRecord" && selectedAppointment && (
             <ConfirmModal
               open={modalType === "deleteRecord"}
@@ -589,8 +683,8 @@ export default function AppointmentsPage() {
             open={modalType === "complete"}
             onOpenChange={(open) => !open && setModalType(null)}
             appointment={selectedAppointment}
-            onSubmit={(medicalRecordData) => {
-              handleStatusUpdate({
+            onSubmit={async (medicalRecordData) => {
+              await handleStatusUpdate({
                 appointmentId: selectedAppointment.id,
                 action: "complete",
                 medicalRecord: medicalRecordData,
@@ -602,6 +696,7 @@ export default function AppointmentsPage() {
             open={modalType === "details"}
             onOpenChange={(open) => !open && setModalType(null)}
             appointment={selectedAppointment}
+            loading={loadingDetails}
           />
         </>
       )}

@@ -140,7 +140,7 @@ export default function SubscriptionsClient({
 
   // ---------- edit modal
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4">
       {/* Header + KPIs */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>

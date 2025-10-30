@@ -19,17 +19,13 @@ export async function PUT(
   try {
     const { title, condition, details, diagnosedDate, status } = await request.json();
 
-    // Trouver le rendez-vous pour obtenir le vrai patientId
+    // Handle both appointmentId and patientId
     const appointment = await prisma.appointment.findUnique({
       where: { id: params.patientId },
       select: { patientId: true }
     });
 
-    if (!appointment) {
-      return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
-    }
-
-    const realPatientId = appointment.patientId;
+    const realPatientId = appointment?.patientId || params.patientId;
 
     // Vérifier que l'historique appartient bien à ce patient
     const history = await prisma.medicalHistory.findFirst({
@@ -88,17 +84,13 @@ export async function DELETE(
   }
 
   try {
-    // Trouver le rendez-vous pour obtenir le vrai patientId
+    // Handle both appointmentId and patientId
     const appointment = await prisma.appointment.findUnique({
       where: { id: params.patientId },
       select: { patientId: true }
     });
 
-    if (!appointment) {
-      return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
-    }
-
-    const realPatientId = appointment.patientId;
+    const realPatientId = appointment?.patientId || params.patientId;
 
     // Vérifier que l'historique appartient bien à ce patient
     const history = await prisma.medicalHistory.findFirst({

@@ -578,6 +578,7 @@ export default function AppointmentsPage() {
             selectedAppointment &&
             (medicalRecordData ? (
               <CompleteModal
+                key={`edit-${selectedAppointment.id}-${JSON.stringify(medicalRecordData.attachments?.map(a => a.fileUrl).join(','))}`}
                 open={true}
                 onOpenChange={(open) => {
                   if (!open) {

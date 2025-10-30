@@ -248,7 +248,7 @@ export default function PatientMedicalRecord() {
       setLoading(true);
       const timestamp = Date.now(); // Ajouter un timestamp pour éviter le cache
       const response = await fetch(
-        `/api/hospital_doctor/patient/${patientId}?timestamp=${timestamp}`,
+        `/api/independant_doctor/patient/${patientId}?timestamp=${timestamp}`,
         {
           headers: {
             "Cache-Control": "no-cache",
@@ -407,7 +407,7 @@ export default function PatientMedicalRecord() {
     setIsDeletingHistory(true);
     try {
       const response = await fetch(
-        `/api/hospital_doctor/patient/${patientId}/medical-history/${historyId}`,
+        `/api/independant_doctor/patient/${patientId}/medical-history/${historyId}`,
         {
           method: "DELETE",
           headers: {
@@ -451,8 +451,8 @@ export default function PatientMedicalRecord() {
     setIsUpdatingHistory(isEditing);
     try {
       const endpoint = editingHistory
-        ? `/api/hospital_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
-        : `/api/hospital_doctor/patient/${patientId}/medical-history`;
+        ? `/api/independant_doctor/patient/${patientId}/medical-history/${editingHistory.id}`
+        : `/api/independant_doctor/patient/${patientId}/medical-history`;
       const method = editingHistory ? "PUT" : "POST";
       const response = await fetch(endpoint, {
         method,
@@ -528,7 +528,7 @@ export default function PatientMedicalRecord() {
         return;
       }
       const response = await fetch(
-        `/api/hospital_doctor/patient/${patient?.id}/prescription`,
+        `/api/independant_doctor/patient/${patient?.id}/prescription`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -569,7 +569,7 @@ export default function PatientMedicalRecord() {
     setIsUpdatingVitals(true);
     try {
       const response = await fetch(
-        `/api/hospital_doctor/patient/${patientId}/vital-signs`,
+        `/api/independant_doctor/patient/${patientId}/vital-signs`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -610,7 +610,7 @@ export default function PatientMedicalRecord() {
     try {
       const timestamp = Date.now();
       const res = await fetch(
-        `/api/hospital_doctor/history/record?appointmentId=${appointmentId}&timestamp=${timestamp}`,
+        `/api/independant_doctor/history/record?appointmentId=${appointmentId}&timestamp=${timestamp}`,
         {
           headers: { "Cache-Control": "no-cache" },
         }

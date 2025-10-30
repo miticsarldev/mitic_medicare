@@ -70,7 +70,7 @@ export default function FAQAdmin() {
   };
 
   return (
-    <div className="space-y-4 p-2 sm:p-4">
+    <div className="space-y-4">
       <h1 className="text-3xl font-bold text-center">FAQ Admin Hôpital</h1>
 
       <Input

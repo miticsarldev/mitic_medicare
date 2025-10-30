@@ -15,17 +15,13 @@ export async function POST(request: Request, { params }: { params: { patientId: 
   try {
     const { title, condition, details, diagnosedDate, status } = await request.json();
     
-    // D'abord trouver le rendez-vous pour obtenir le vrai patientId
+    // Handle both appointmentId and patientId
     const appointment = await prisma.appointment.findUnique({
       where: { id: params.patientId },
       select: { patientId: true }
     });
 
-    if (!appointment) {
-      return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
-    }
-
-    const realPatientId = appointment.patientId;
+    const realPatientId = appointment?.patientId || params.patientId;
 
     // Vérifie si le patient existe
     const patientExists = await prisma.patient.findUnique({

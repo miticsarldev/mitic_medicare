@@ -181,7 +181,7 @@ export default function HospitalInfo() {
   // Skeleton placeholders for loading state
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="max-w-6xl mx-auto space-y-4">
         <div className="flex flex-col gap-4">
           <Skeleton className="h-10 w-1/3" />
           <div className="flex gap-4">
@@ -241,7 +241,7 @@ export default function HospitalInfo() {
 
   if (!hospital) {
     return (
-      <div className="max-w-6xl mx-auto p-4">
+      <div className="max-w-6xl mx-auto">
         <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive">
@@ -260,7 +260,7 @@ export default function HospitalInfo() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-2 sm:p-4 space-y-4">
+    <div className="max-w-6xl mx-auto space-y-4">
       {/* Header avec titre et boutons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

@@ -11,7 +11,14 @@ type AppointmentWithPatient = {
   id: string;
   scheduledAt: Date;
   status: string;
-  patient: { id: string; user: { name: string } };
+  type: string | null;
+  reason: string | null;
+  notes: string | null;
+  patient: {
+    id: string;
+    bloodType: string | null;
+    user: { name: string; email: string; phone: string; profile: { genre: string | null } | null };
+  };
 };
 
 type FormattedAppointment = {
@@ -20,6 +27,13 @@ type FormattedAppointment = {
   status: string;
   patientId: string;
   patientName: string;
+  patientEmail: string;
+  patientPhone: string;
+  patientGenre: string | null;
+  patientBloodType: string | null;
+  appointmentType: string | null;
+  reason: string | null;
+  notes: string | null;
   day: string; // lundi, mardi, ...
 };
 
@@ -36,6 +50,13 @@ const groupAppointmentsByWeek = (appointments: AppointmentWithPatient[]) => {
       status: apt.status,
       patientId: apt.patient.id,
       patientName: apt.patient.user.name,
+      patientEmail: apt.patient.user.email,
+      patientPhone: apt.patient.user.phone,
+      patientGenre: apt.patient.user.profile?.genre ?? null,
+      patientBloodType: apt.patient.bloodType ?? null,
+      appointmentType: apt.type,
+      reason: apt.reason,
+      notes: apt.notes,
       day: format(apt.scheduledAt, "EEEE", { locale: fr }).toLowerCase(), // cohérent avec le front
     });
   }
@@ -80,7 +101,23 @@ export async function GET(request: Request) {
             id: true,
             scheduledAt: true,
             status: true,
-            patient: { select: { id: true, user: { select: { name: true } } } },
+            type: true,
+            reason: true,
+            notes: true,
+            patient: {
+              select: {
+                id: true,
+                bloodType: true,
+                user: {
+                  select: {
+                    name: true,
+                    email: true,
+                    phone: true,
+                    profile: { select: { genre: true } },
+                  },
+                },
+              },
+            },
           },
           orderBy: { scheduledAt: "asc" },
         },

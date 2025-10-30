@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import axios from "axios";
 import {
   format,
@@ -38,6 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { UserGenre } from "@prisma/client";
 
 // Interface for a single appointment
 interface Appointment {
@@ -46,6 +48,13 @@ interface Appointment {
   status: string;
   patientName: string;
   patientId: string;
+  patientEmail: string;
+  patientPhone: string;
+  patientGenre: UserGenre | null;
+  patientBloodType: string | null;
+  appointmentType: string | null;
+  reason: string | null;
+  notes: string | null;
   day: string; // Day of the week in French (e.g., "lundi")
 }
 
@@ -245,7 +254,7 @@ export default function WeeklySchedule() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4">
       {/* Filter controls section */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
         <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-3 w-full">
@@ -417,6 +426,7 @@ export default function WeeklySchedule() {
                           .map((apt) => ({
                             ...apt,
                             doctor: doc.name, // Add doctor's name to appointment for display
+                            doctorSpecialization: doc.specialization,
                           }))
                     );
 
@@ -457,20 +467,19 @@ export default function WeeklySchedule() {
                                 <Badge
                                   variant="outline"
                                   className={`
-                                                                        text-xs px-1.5 py-0.5 border
-                                                                        ${
-                                                                          apt.status.toLowerCase() ===
-                                                                          "confirmed"
-                                                                            ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-800 dark:text-green-100 dark:border-green-600"
-                                                                            : apt.status.toLowerCase() ===
-                                                                                "canceled" // Corrected typo here
-                                                                              ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-800 dark:text-red-100 dark:border-red-600"
-                                                                              : apt.status.toLowerCase() ===
-                                                                                  "completed"
-                                                                                ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-800 dark:text-blue-100 dark:border-blue-600"
-                                                                                : "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-500"
-                                                                        }
-                                                                    `}
+                                    text-xs px-1.5 py-0.5 border
+                                    ${
+                                      apt.status.toLowerCase() === "confirmed"
+                                        ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-800 dark:text-green-100 dark:border-green-600"
+                                        : apt.status.toLowerCase() ===
+                                            "canceled" // Corrected typo here
+                                          ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-800 dark:text-red-100 dark:border-red-600"
+                                          : apt.status.toLowerCase() ===
+                                              "completed"
+                                            ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-800 dark:text-blue-100 dark:border-blue-600"
+                                            : "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-500"
+                                    }
+                                `}
                                 >
                                   {translateStatus(apt.status)}
                                 </Badge>
@@ -506,7 +515,7 @@ const AppointmentModal = React.memo(function AppointmentModal({
   open,
   onClose,
 }: {
-  appointment: Appointment & { doctor: string };
+  appointment: Appointment & { doctor: string; doctorSpecialization?: string };
   open: boolean;
   onClose: () => void;
 }) {
@@ -537,11 +546,11 @@ const AppointmentModal = React.memo(function AppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-lg">Détails du rendez-vous</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 text-sm">
+        <div className="space-y-4 text-sm">
           {/* Appointment Date and Time */}
           <div className="flex items-center gap-3">
             <CalendarClock className="w-5 h-5 text-blue-500 flex-shrink-0" />
@@ -563,19 +572,45 @@ const AppointmentModal = React.memo(function AppointmentModal({
             </div>
           </div>
           {/* Patient Information */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <User className="w-5 h-5 text-green-500 flex-shrink-0" />
-            <div>
+            <div className="space-y-0.5">
               <p className="font-medium">Patient</p>
               <p className="text-muted-foreground">{appointment.patientName}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {appointment.patientEmail && (
+                  <p>Email: {appointment.patientEmail}</p>
+                )}
+                {appointment.patientPhone && (
+                  <p>Téléphone: {appointment.patientPhone}</p>
+                )}
+                {appointment.patientGenre && (
+                  <p>
+                    Genre:{" "}
+                    {appointment.patientGenre === "MALE"
+                      ? "Masculin"
+                      : "Féminin"}
+                  </p>
+                )}
+                {appointment.patientBloodType && (
+                  <p>Groupe sanguin: {appointment.patientBloodType}</p>
+                )}
+              </div>
             </div>
           </div>
           {/* Doctor Information */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <Stethoscope className="w-5 h-5 text-purple-500 flex-shrink-0" />
-            <div>
+            <div className="space-y-0.5">
               <p className="font-medium">Médecin</p>
-              <p className="text-muted-foreground">{appointment.doctor}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-muted-foreground">{appointment.doctor}</p>
+                {appointment.doctorSpecialization && (
+                  <Badge variant="secondary" className="text-xs">
+                    {appointment.doctorSpecialization}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           {/* Appointment Status */}
@@ -587,6 +622,45 @@ const AppointmentModal = React.memo(function AppointmentModal({
                 {translateStatus(appointment.status)}
               </Badge>
             </div>
+          </div>
+          {/* Appointment Type / Reason / Notes */}
+          {(appointment.appointmentType ||
+            appointment.reason ||
+            appointment.notes) && (
+            <div className="grid grid-cols-1 gap-2">
+              {appointment.reason && (
+                <div className="rounded-md border p-3 bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Motif</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {appointment.reason}
+                  </p>
+                </div>
+              )}
+              {appointment.notes && (
+                <div className="rounded-md border p-3 bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {appointment.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:justify-end pt-2">
+            <Button variant="outline" onClick={onClose}>
+              Fermer
+            </Button>
+            {appointment.patientId && (
+              <Button asChild>
+                <Link
+                  href={`/dashboard/hopital_admin/patients/${appointment.patientId}`}
+                >
+                  Voir profil patient
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

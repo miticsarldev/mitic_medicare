@@ -10,7 +10,7 @@ export async function GET(
   try {
     const record = await prisma.medicalRecord.findUnique({
       where: { appointmentId: params.appointmentId },
-      include: { prescription: true },
+      include: { prescription: true, attachments: true },
     });
 
     if (!record) {
@@ -31,6 +31,15 @@ export async function PUT(
   try {
     const body = await req.json();
 
+    // Delete existing attachments and prescriptions
+    await prisma.medicalRecordAttachment.deleteMany({
+      where: { medicalRecord: { appointmentId: params.appointmentId } },
+    });
+
+    await prisma.prescription.deleteMany({
+      where: { medicalRecord: { appointmentId: params.appointmentId } },
+    });
+
     const updated = await prisma.medicalRecord.update({
       where: { appointmentId: params.appointmentId },
       data: {
@@ -39,14 +48,39 @@ export async function PUT(
         notes: body.notes || "",
         followUpNeeded: body.followUpNeeded || false,
         followUpDate: body.followUpDate ? new Date(body.followUpDate) : null,
-        // Tu peux aussi mettre à jour les prescriptions ici si besoin
+        attachments: {
+          create: (body.attachments ?? []).map((att: { fileName: string; fileType: string; fileUrl: string; fileSize: number }) => ({
+            fileName: att.fileName,
+            fileType: att.fileType,
+            fileUrl: att.fileUrl,
+            fileSize: att.fileSize,
+            uploadedAt: new Date(),
+          })),
+        },
+        prescription: {
+          create: (body.prescriptions ?? []).map((presc: { medicationName: string; dosage: string; frequency: string; duration: string; instructions?: string; isActive: boolean; startDate: string; endDate: string }) => ({
+            medicationName: presc.medicationName,
+            dosage: presc.dosage,
+            frequency: presc.frequency,
+            duration: presc.duration,
+            instructions: presc.instructions,
+            isActive: presc.isActive,
+            startDate: new Date(presc.startDate),
+            endDate: new Date(presc.endDate),
+            patient: { connect: { id: body.patientId } },
+            doctor: { connect: { id: body.doctorId } },
+          })),
+        },
       },
     });
 
     return NextResponse.json(updated);
   } catch (error) {
     console.error("[UPDATE MEDICAL RECORD]", error);
-    return NextResponse.json({ message: "Erreur de mise à jour" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Erreur de mise à jour" },
+      { status: 500 }
+    );
   }
 }
 
@@ -55,7 +89,11 @@ export async function DELETE(
   { params }: { params: { appointmentId: string } }
 ) {
   try {
-    // Supprimer d'abord les prescriptions liées
+    // Supprimer d'abord les attachments et prescriptions liées
+    await prisma.medicalRecordAttachment.deleteMany({
+      where: { medicalRecord: { appointmentId: params.appointmentId } },
+    });
+
     await prisma.prescription.deleteMany({
       where: { medicalRecord: { appointmentId: params.appointmentId } },
     });

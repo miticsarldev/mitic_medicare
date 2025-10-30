@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
@@ -8,12 +10,37 @@ export async function GET(
   { params }: { params: { patientId: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
     const appointment = await prisma.appointment.findUnique({
       where: { id: params.patientId },
       select: { patientId: true },
     });
 
     const actualPatientId = appointment?.patientId || params.patientId;
+
+    // Verify doctor has access to this patient
+    const doctor = await prisma.doctor.findFirst({
+      where: { userId: session.user.id },
+      select: { id: true },
+    });
+
+    if (!doctor) {
+      return NextResponse.json({ error: "Médecin non trouvé" }, { status: 404 });
+    }
+
+    const linked = await prisma.appointment.findFirst({
+      where: { patientId: actualPatientId, doctorId: doctor.id },
+      select: { id: true },
+    });
+
+    if (!linked) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
 
     const patient = await prisma.patient.findUnique({
       where: { id: actualPatientId },
