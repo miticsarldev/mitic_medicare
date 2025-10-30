@@ -8,7 +8,7 @@ import {
 
 export default function Loading() {
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <Skeleton className="h-8 w-48" />

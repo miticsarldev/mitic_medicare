@@ -14,6 +14,7 @@ import {
   XCircle,
   Filter,
   Search,
+  MapPin,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,11 @@ import {
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { getPatientAppointments, cancelAppointment } from "../../actions";
+import {
+  getPatientAppointments,
+  cancelAppointment,
+  getPatientAppointmentStats,
+} from "../../actions";
 import { AppointmentStatus } from "@prisma/client";
 
 export type PatientAppointment = {
@@ -96,6 +101,14 @@ export type PatientAppointmentResponse = {
 
 export default function AppointmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    completed: 0,
+    canceled: 0,
+    noShow: 0,
+  });
 
   const [appointments, setAppointments] = useState<PatientAppointmentResponse>({
     appointments: [],
@@ -113,6 +126,22 @@ export default function AppointmentsPage() {
   const [cancelNotes, setCancelNotes] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const { toast } = useToast();
+
+  // Fetch stats based on active tab
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const statsData = await getPatientAppointmentStats(
+          activeTab as "upcoming" | "past"
+        );
+        setStats(statsData);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+
+    fetchStats();
+  }, [activeTab]);
 
   // Fetch appointments based on current filters
   useEffect(() => {
@@ -229,7 +258,7 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Mes Rendez-vous</h2>
@@ -243,6 +272,45 @@ export default function AppointmentsPage() {
             Prendre un rendez-vous
           </Link>
         </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatCard
+          title="Total"
+          value={stats.total}
+          icon={<Calendar className="h-5 w-5 text-muted-foreground" />}
+        />
+        <StatCard
+          title="En attente"
+          value={stats.pending}
+          icon={<Clock className="h-5 w-5 text-yellow-600" />}
+          className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20"
+        />
+        <StatCard
+          title="Confirmés"
+          value={stats.confirmed}
+          icon={<CheckCircle2 className="h-5 w-5 text-blue-600" />}
+          className="border-blue-200 bg-blue-50 dark:bg-blue-950/20"
+        />
+        <StatCard
+          title="Terminés"
+          value={stats.completed}
+          icon={<CheckCircle2 className="h-5 w-5 text-green-600" />}
+          className="border-green-200 bg-green-50 dark:bg-green-950/20"
+        />
+        <StatCard
+          title="Annulés"
+          value={stats.canceled}
+          icon={<XCircle className="h-5 w-5 text-red-600" />}
+          className="border-red-200 bg-red-50 dark:bg-red-950/20"
+        />
+        <StatCard
+          title="Absents"
+          value={stats.noShow}
+          icon={<AlertCircle className="h-5 w-5 text-orange-600" />}
+          className="border-orange-200 bg-orange-50 dark:bg-orange-950/20"
+        />
       </div>
 
       <Tabs
@@ -357,80 +425,95 @@ export default function AppointmentsPage() {
                 <div className="space-y-4">
                   {appointments.appointments.map(
                     (appointment: PatientAppointment) => (
-                      <div
+                      <Card
                         key={appointment.id}
-                        className="flex flex-col sm:flex-row items-start justify-between gap-4 rounded-lg border p-4 transition-all hover:bg-muted/50"
+                        className="transition-all hover:shadow-md border-2"
                       >
-                        <div className="flex items-start gap-4">
-                          <Avatar className="h-12 w-12 border">
-                            <AvatarImage
-                              src={
-                                appointment.doctorAvatar ||
-                                `/placeholder.svg?height=48&width=48`
-                              }
-                              alt={appointment.doctorName}
-                              className="object-contain"
-                            />
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {appointment.doctorName
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-medium">
-                              {appointment.doctorName}
-                            </h4>
-                            <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
-                              <Clock className="h-3.5 w-3.5" />
-                              <span>
-                                {new Date(
-                                  appointment.scheduledAt
-                                ).toLocaleDateString("fr-FR", {
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                })}{" "}
-                                à{" "}
-                                {new Date(
-                                  appointment.scheduledAt
-                                ).toLocaleTimeString("fr-FR", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </span>
+                        <CardContent className="p-4">
+                          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-14 w-14 border-2 border-primary/20">
+                                <AvatarImage
+                                  src={
+                                    appointment.doctorAvatar ||
+                                    `/placeholder.svg?height=56&width=56`
+                                  }
+                                  alt={appointment.doctorName}
+                                  className="object-contain"
+                                />
+                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                  {appointment.doctorName
+                                    .split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <h4 className="font-semibold text-lg">
+                                    {appointment.doctorName}
+                                  </h4>
+                                  <Badge
+                                    variant={
+                                      appointment.status === "CONFIRMED"
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className={cn(
+                                      "ml-auto",
+                                      appointment.status === "CONFIRMED"
+                                        ? "bg-green-500 hover:bg-green-600 text-white border-green-600"
+                                        : "bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-600"
+                                    )}
+                                  >
+                                    {appointment.status === "CONFIRMED"
+                                      ? "Confirmé"
+                                      : "En attente"}
+                                  </Badge>
+                                </div>
+                                {appointment.hospitalName && (
+                                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    <span className="line-clamp-1">
+                                      {appointment.hospitalName}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">
+                                    {new Date(
+                                      appointment.scheduledAt
+                                    ).toLocaleDateString("fr-FR", {
+                                      day: "numeric",
+                                      month: "long",
+                                      year: "numeric",
+                                    })}{" "}
+                                    à{" "}
+                                    {new Date(
+                                      appointment.scheduledAt
+                                    ).toLocaleTimeString("fr-FR", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </div>
+                                {appointment.reason && (
+                                  <p className="mt-2 text-sm text-foreground/80 bg-muted/50 rounded-md p-2">
+                                    <span className="font-medium">Motif:</span>{" "}
+                                    {appointment.reason}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <p className="mt-1 text-sm">
-                              {appointment.reason || "Consultation générale"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:items-end w-full sm:w-auto">
-                          <Badge
-                            variant={
-                              appointment.status === "CONFIRMED"
-                                ? "default"
-                                : "outline"
-                            }
-                            className={cn(
-                              appointment.status === "CONFIRMED"
-                                ? "bg-green-100 hover:bg-green-100 text-green-800 border-green-200"
-                                : "bg-yellow-100 hover:bg-yellow-100 text-yellow-800 border-yellow-200"
-                            )}
-                          >
-                            {appointment.status === "CONFIRMED"
-                              ? "Confirmé"
-                              : "En attente"}
-                          </Badge>
-                          <div className="flex gap-2 mt-2">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  Actions
-                                </Button>
-                              </DropdownMenuTrigger>
-                              {/* <DropdownMenuContent align="end">
+                            <div className="flex gap-2 sm:flex-col w-full sm:w-auto">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    Actions
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                {/* <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
                                   <Link
                                     href={`/dashboard/patient/appointments/${appointment.id}`}
@@ -450,29 +533,30 @@ export default function AppointmentsPage() {
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent> */}
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    href={`/dashboard/patient/appointments/${appointment.id}`}
-                                  >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Voir les détails
-                                  </Link>
-                                </DropdownMenuItem>
-                                {/* Pas de reprogrammation dans l’historique */}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem asChild>
+                                    <Link
+                                      href={`/dashboard/patient/appointments/${appointment.id}`}
+                                    >
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      Voir les détails
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  {/* Pas de reprogrammation dans l’historique */}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
 
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => openCancelDialog(appointment.id)}
-                            >
-                              Annuler
-                            </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => openCancelDialog(appointment.id)}
+                              >
+                                Annuler
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     )
                   )}
                 </div>
@@ -646,112 +730,128 @@ export default function AppointmentsPage() {
                 <div className="space-y-4">
                   {appointments.appointments.map(
                     (appointment: PatientAppointment) => (
-                      <div
+                      <Card
                         key={appointment.id}
-                        className="flex flex-col sm:flex-row items-start justify-between gap-4 rounded-lg border p-4 transition-all hover:bg-muted/50"
+                        className="transition-all hover:shadow-md border-2"
                       >
-                        <div className="flex items-start gap-4">
-                          <Avatar className="h-12 w-12 border">
-                            <AvatarImage
-                              src={
-                                appointment.doctorAvatar ||
-                                `/placeholder.svg?height=48&width=48`
-                              }
-                              alt={appointment.doctorName}
-                              className="object-contain"
-                            />
-                            <AvatarFallback className="bg-muted text-muted-foreground">
-                              {appointment.doctorName
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-medium">
-                              {appointment.doctorName}
-                            </h4>
-                            <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
-                              <Clock className="h-3.5 w-3.5" />
-                              <span>
-                                {new Date(
-                                  appointment.scheduledAt
-                                ).toLocaleDateString("fr-FR", {
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                })}{" "}
-                                à{" "}
-                                {new Date(
-                                  appointment.scheduledAt
-                                ).toLocaleTimeString("fr-FR", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm">
-                              {appointment.reason || "Consultation générale"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:items-end w-full sm:w-auto">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              appointment.status === "COMPLETED"
-                                ? "bg-green-100 hover:bg-green-100 text-green-800 border-green-200"
-                                : appointment.status === "CANCELED"
-                                  ? "bg-red-100 hover:bg-red-100 text-red-800 border-red-200"
-                                  : "bg-orange-100 hover:bg-orange-100 text-orange-800 border-orange-200"
-                            )}
-                          >
-                            <span className="flex items-center">
-                              {appointment.status === "COMPLETED" ? (
-                                <CheckCircle2 className="mr-1 h-3 w-3" />
-                              ) : appointment.status === "CANCELED" ? (
-                                <XCircle className="mr-1 h-3 w-3" />
-                              ) : (
-                                <AlertCircle className="mr-1 h-3 w-3" />
-                              )}
-                              {appointment.status === "COMPLETED"
-                                ? "Terminé"
-                                : appointment.status === "CANCELED"
-                                  ? "Annulé"
-                                  : "Non présenté"}
-                            </span>
-                          </Badge>
-                          <div className="flex gap-2 mt-2">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  Actions
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    href={`/dashboard/patient/appointments/${appointment.id}`}
+                        <CardContent className="p-4">
+                          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-14 w-14 border-2 border-primary/20">
+                                <AvatarImage
+                                  src={
+                                    appointment.doctorAvatar ||
+                                    `/placeholder.svg?height=56&width=56`
+                                  }
+                                  alt={appointment.doctorName}
+                                  className="object-contain"
+                                />
+                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                  {appointment.doctorName
+                                    .split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <h4 className="font-semibold text-lg">
+                                    {appointment.doctorName}
+                                  </h4>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "ml-auto",
+                                      appointment.status === "COMPLETED"
+                                        ? "bg-green-500 hover:bg-green-600 text-white border-green-600"
+                                        : appointment.status === "CANCELED"
+                                          ? "bg-red-500 hover:bg-red-600 text-white border-red-600"
+                                          : "bg-orange-500 hover:bg-orange-600 text-white border-orange-600"
+                                    )}
                                   >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Voir les détails
-                                  </Link>
-                                </DropdownMenuItem>
-                                {appointment.status !== "COMPLETED" && (
+                                    <span className="flex items-center">
+                                      {appointment.status === "COMPLETED" ? (
+                                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                                      ) : appointment.status === "CANCELED" ? (
+                                        <XCircle className="mr-1 h-3 w-3" />
+                                      ) : (
+                                        <AlertCircle className="mr-1 h-3 w-3" />
+                                      )}
+                                      {appointment.status === "COMPLETED"
+                                        ? "Terminé"
+                                        : appointment.status === "CANCELED"
+                                          ? "Annulé"
+                                          : "Non présenté"}
+                                    </span>
+                                  </Badge>
+                                </div>
+                                {appointment.hospitalName && (
+                                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    <span className="line-clamp-1">
+                                      {appointment.hospitalName}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">
+                                    {new Date(
+                                      appointment.scheduledAt
+                                    ).toLocaleDateString("fr-FR", {
+                                      day: "numeric",
+                                      month: "long",
+                                      year: "numeric",
+                                    })}{" "}
+                                    à{" "}
+                                    {new Date(
+                                      appointment.scheduledAt
+                                    ).toLocaleTimeString("fr-FR", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </div>
+                                {appointment.reason && (
+                                  <p className="mt-2 text-sm text-foreground/80 bg-muted/50 rounded-md p-2">
+                                    <span className="font-medium">Motif:</span>{" "}
+                                    {appointment.reason}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 sm:flex-col w-full sm:w-auto">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    Actions
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
                                   <DropdownMenuItem asChild>
                                     <Link
-                                      href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}
+                                      href={`/dashboard/patient/appointments/${appointment.id}`}
                                     >
-                                      <Calendar className="mr-2 h-4 w-4" />
-                                      Reprendre rendez-vous
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      Voir les détails
                                     </Link>
                                   </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  {appointment.status !== "COMPLETED" && (
+                                    <DropdownMenuItem asChild>
+                                      <Link
+                                        href={`/dashboard/patient/appointments/reschedule/${appointment.id}`}
+                                      >
+                                        <Calendar className="mr-2 h-4 w-4" />
+                                        Reprendre rendez-vous
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     )
                   )}
                 </div>
@@ -900,5 +1000,32 @@ export default function AppointmentsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// StatCard component
+function StatCard({
+  title,
+  value,
+  icon,
+  className,
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card className={cn("transition-all hover:shadow-md", className)}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
   );
 }

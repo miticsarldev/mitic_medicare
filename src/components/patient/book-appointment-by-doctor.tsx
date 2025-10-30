@@ -40,6 +40,7 @@ import {
 } from "@/app/dashboard/patient/actions";
 import { getDoctorById } from "@/app/actions/patient-actions/provider-actions";
 import { DoctorWithRelations } from "@/types/patient/index";
+import { getSpecializationLabel } from "@/utils/function";
 
 export default function BookAppointmentByDoctorIdPage({
   doctorId,
@@ -149,8 +150,8 @@ export default function BookAppointmentByDoctorIdPage({
   };
 
   return (
-    <div className="container p-4">
-      <div className="mb-6 flex items-center">
+    <div className="container">
+      <div className="mb-4 flex items-center">
         <Button
           variant="default"
           size="sm"
@@ -221,7 +222,7 @@ export default function BookAppointmentByDoctorIdPage({
                       {doctor?.user?.name}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {doctor?.specialization}
+                      {getSpecializationLabel(doctor?.specialization || "")}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
                       {doctor?.hospital?.name}

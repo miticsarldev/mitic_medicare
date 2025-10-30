@@ -55,6 +55,7 @@ import {
   getRecentEstablishments,
   submitReview,
 } from "@/app/dashboard/patient/actions";
+import { getSpecializationLabel } from "@/utils/function";
 
 // Types
 type Appointment = {
@@ -278,7 +279,7 @@ export default function GiveFeedbackPage() {
   }
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4">
       <div className="flex items-center">
         <Button variant="ghost" size="icon" onClick={goBack}>
           <ChevronLeft className="h-5 w-5" />
@@ -371,7 +372,9 @@ export default function GiveFeedbackPage() {
                                 {appointment.doctorName}
                               </CardTitle>
                               <CardDescription>
-                                {appointment.doctorSpecialty}
+                                {getSpecializationLabel(
+                                  appointment.doctorSpecialty
+                                )}
                               </CardDescription>
                             </div>
                           </div>
@@ -517,7 +520,7 @@ export default function GiveFeedbackPage() {
                       {selectedItem.doctorName}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {selectedItem.doctorSpecialty}
+                      {getSpecializationLabel(selectedItem.doctorSpecialty)}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {format(selectedItem.date, "d MMMM yyyy", { locale: fr })}{" "}
@@ -743,7 +746,7 @@ export default function GiveFeedbackPage() {
 // Loading component for internal use
 function Loading() {
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-4">
       <div className="flex items-center">
         <Skeleton className="h-10 w-10 rounded-full" />
         <div className="ml-4">

@@ -53,7 +53,8 @@ export default function FAQPage() {
     },
     {
       id: "4",
-      question: "Que faire si un patient ne se présente pas à son rendez-vous ?",
+      question:
+        "Que faire si un patient ne se présente pas à son rendez-vous ?",
       answer:
         "Vous pouvez marquer le rendez-vous comme 'Non honoré' et contacter le patient pour reprogrammer une nouvelle consultation.",
       category: "appointments",
@@ -92,7 +93,7 @@ export default function FAQPage() {
   });
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <h1 className="text-3xl font-bold mb-4 text-center">FAQ Médecins</h1>
       <div className="relative mb-8 max-w-2xl mx-auto">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -107,7 +108,11 @@ export default function FAQPage() {
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
         <TabsList className="flex flex-wrap justify-start gap-2 mb-6">
           {categories.map((category) => (
-            <TabsTrigger key={category.id} value={category.id} className="px-4 py-2">
+            <TabsTrigger
+              key={category.id}
+              value={category.id}
+              className="px-4 py-2"
+            >
               {category.name}
             </TabsTrigger>
           ))}
@@ -126,7 +131,9 @@ export default function FAQPage() {
         </CardContent>
       </Card>
       <div className="text-center mt-8">
-        <p className="text-muted-foreground">Vous ne trouvez pas la réponse ?</p>
+        <p className="text-muted-foreground">
+          Vous ne trouvez pas la réponse ?
+        </p>
         <Button asChild className="mt-2">
           <Link href="contact">Contactez-nous</Link>
         </Button>

@@ -53,7 +53,15 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       include: {
         doctor: {
           include: {
-            user: true,
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -70,7 +78,15 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       include: {
         doctor: {
           include: {
-            user: true,
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -88,7 +104,15 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       include: {
         doctor: {
           include: {
-            user: true,
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -110,7 +134,15 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       include: {
         doctor: {
           include: {
-            user: true,
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -126,7 +158,15 @@ export async function getPatientOverview(): Promise<PatientOverviewData> {
       include: {
         doctor: {
           include: {
-            user: true,
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
           },
         },
         prescriptions: true,
@@ -302,7 +342,11 @@ export async function bookAppointment(formData: FormData) {
   }
 }
 
-export async function getAvailableDoctors(searchQuery?: string) {
+export async function getAvailableDoctors(
+  searchQuery?: string,
+  limit?: number,
+  skip?: number
+) {
   try {
     // Build the where clause based on the search query
     const where = searchQuery
@@ -310,17 +354,22 @@ export async function getAvailableDoctors(searchQuery?: string) {
           OR: [
             {
               user: {
-                // Ensure this is the only 'user' property in the object
                 name: {
                   contains: searchQuery,
                   mode: "insensitive" as const,
                 },
+                isActive: true,
+                isApproved: true,
               },
             },
             {
               specialization: {
                 contains: searchQuery,
                 mode: "insensitive" as const,
+              },
+              user: {
+                isActive: true,
+                isApproved: true,
               },
             },
             {
@@ -330,21 +379,38 @@ export async function getAvailableDoctors(searchQuery?: string) {
                   mode: "insensitive" as const,
                 },
               },
+              user: {
+                isActive: true,
+                isApproved: true,
+              },
             },
           ],
+          // Doctor must be verified
           isVerified: true,
-          availableForChat: true,
         }
       : {
+          // Doctor must be verified
           isVerified: true,
-          availableForChat: true,
+          // User must be active and approved
+          user: {
+            isActive: true,
+            isApproved: true,
+          },
         };
 
-    // Get all available doctors
+    // Get available doctors with pagination
     const doctors = await prisma.doctor.findMany({
       where,
       include: {
-        user: true,
+        user: {
+          include: {
+            profile: {
+              select: {
+                avatarUrl: true,
+              },
+            },
+          },
+        },
         hospital: true,
         department: true,
       },
@@ -353,12 +419,18 @@ export async function getAvailableDoctors(searchQuery?: string) {
           name: "asc",
         },
       },
+      take: limit,
+      skip: skip,
     });
 
+    // Get total count for pagination
+    const total = await prisma.doctor.count({ where });
+
     // Transform the data to a more usable format
-    return doctors.map((doctor) => ({
+    const transformedDoctors = doctors.map((doctor) => ({
       id: doctor.id,
       name: doctor.user.name,
+      avatar: doctor.user.profile?.avatarUrl || "",
       specialization: doctor.specialization,
       hospital: doctor.hospital?.name || "Cabinet privé",
       department: doctor.department?.name,
@@ -368,9 +440,22 @@ export async function getAvailableDoctors(searchQuery?: string) {
       experience: doctor.experience,
       isIndependent: doctor.isIndependent,
     }));
+
+    return {
+      data: transformedDoctors,
+      total,
+      hasMore:
+        skip !== undefined && limit !== undefined
+          ? skip + limit < total
+          : false,
+    };
   } catch (error) {
     console.error("Error fetching available doctors:", error);
-    return [];
+    return {
+      data: [],
+      total: 0,
+      hasMore: false,
+    };
   }
 }
 
@@ -465,40 +550,53 @@ export async function getDoctorAvailableTimeSlots(
     // Generate time slots based on availability
     const availableTimeSlots: string[] = [];
 
+    // Check if the selected date is today
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
     availability.forEach((slot) => {
       const [startHour, startMinute] = slot.startTime.split(":").map(Number);
       const [endHour, endMinute] = slot.endTime.split(":").map(Number);
 
       // Generate 30-minute slots
       const slotDurationMinutes = 30;
-      let currentHour = startHour;
-      let currentMinute = startMinute;
+      let currentSlotHour = startHour;
+      let currentSlotMinute = startMinute;
 
       while (
-        currentHour < endHour ||
-        (currentHour === endHour && currentMinute < endMinute)
+        currentSlotHour < endHour ||
+        (currentSlotHour === endHour && currentSlotMinute < endMinute)
       ) {
-        const timeSlot = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
+        const timeSlot = `${currentSlotHour.toString().padStart(2, "0")}:${currentSlotMinute.toString().padStart(2, "0")}`;
 
         // Check if this time slot conflicts with an existing appointment
         const isBooked = existingAppointments.some((appointment) => {
           const appointmentHour = appointment.scheduledAt.getHours();
           const appointmentMinute = appointment.scheduledAt.getMinutes();
           return (
-            appointmentHour === currentHour &&
-            appointmentMinute === currentMinute
+            appointmentHour === currentSlotHour &&
+            appointmentMinute === currentSlotMinute
           );
         });
 
-        if (!isBooked) {
+        // Check if this time slot is in the past (only if selected date is today)
+        const isPastTime =
+          isToday &&
+          (currentSlotHour < currentHour ||
+            (currentSlotHour === currentHour &&
+              currentSlotMinute < currentMinute));
+
+        if (!isBooked && !isPastTime) {
           availableTimeSlots.push(timeSlot);
         }
 
         // Move to next slot
-        currentMinute += slotDurationMinutes;
-        if (currentMinute >= 60) {
-          currentHour += 1;
-          currentMinute = 0;
+        currentSlotMinute += slotDurationMinutes;
+        if (currentSlotMinute >= 60) {
+          currentSlotHour += 1;
+          currentSlotMinute = 0;
         }
       }
     });
@@ -515,7 +613,8 @@ export async function getHospitalAvailableTimeSlots(
   date: string
 ): Promise<string[]> {
   try {
-    const dayOfWeek = new Date(date).getDay();
+    const selectedDate = new Date(date);
+    const dayOfWeek = selectedDate.getDay();
 
     const doctors = await prisma.doctor.findMany({
       where: {
@@ -535,13 +634,29 @@ export async function getHospitalAvailableTimeSlots(
 
     const timeSlotSet = new Set<string>();
 
+    // Check if the selected date is today
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
     for (const doctor of doctors) {
       for (const slot of doctor.availabilities) {
         const start = parseTime(slot.startTime);
         const end = parseTime(slot.endTime);
 
         for (let t = start; t < end; t += 30) {
-          timeSlotSet.add(formatTime(t));
+          const [hours, minutes] = formatTime(t).split(":").map(Number);
+
+          // Check if this time slot is in the past (only if selected date is today)
+          const isPastTime =
+            isToday &&
+            (hours < currentHour ||
+              (hours === currentHour && minutes < currentMinute));
+
+          if (!isPastTime) {
+            timeSlotSet.add(formatTime(t));
+          }
         }
       }
     }
@@ -754,6 +869,123 @@ export async function getPatientAppointments({
         page: 1,
         limit,
       },
+    };
+  }
+}
+
+export async function getPatientAppointmentStats(time?: "upcoming" | "past") {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user.id;
+
+    const patient = await prisma.patient.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    const now = new Date();
+
+    // First, mark overdue appointments as NO_SHOW
+    const overdueAppointments = await prisma.appointment.findMany({
+      where: {
+        patientId: patient.id,
+        status: {
+          in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+        },
+        scheduledAt: { lt: now },
+      },
+    });
+
+    if (overdueAppointments.length > 0) {
+      await prisma.appointment.updateMany({
+        where: {
+          id: { in: overdueAppointments.map((apt) => apt.id) },
+        },
+        data: {
+          status: AppointmentStatus.NO_SHOW,
+          notes: "Marked as no-show: appointment date has passed.",
+        },
+      });
+    }
+
+    // Build where clause based on time filter
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { patientId: patient.id };
+    if (time === "upcoming") {
+      whereClause.scheduledAt = { gte: now };
+      whereClause.status = {
+        in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+      };
+    } else if (time === "past") {
+      const finalized: AppointmentStatus[] = [
+        AppointmentStatus.COMPLETED,
+        AppointmentStatus.CANCELED,
+        AppointmentStatus.NO_SHOW,
+      ];
+      whereClause.OR = [
+        { scheduledAt: { lt: now } },
+        { status: { in: finalized } },
+      ];
+    }
+
+    // Get appointment counts by status filtered by time
+    const [total, pending, confirmed, completed, canceled, noShow] =
+      await Promise.all([
+        prisma.appointment.count({ where: whereClause }),
+        prisma.appointment.count({
+          where: {
+            ...whereClause,
+            status: AppointmentStatus.PENDING,
+          },
+        }),
+        prisma.appointment.count({
+          where: {
+            ...whereClause,
+            status: AppointmentStatus.CONFIRMED,
+          },
+        }),
+        prisma.appointment.count({
+          where: {
+            ...whereClause,
+            status: AppointmentStatus.COMPLETED,
+          },
+        }),
+        prisma.appointment.count({
+          where: {
+            ...whereClause,
+            status: AppointmentStatus.CANCELED,
+          },
+        }),
+        prisma.appointment.count({
+          where: {
+            ...whereClause,
+            status: AppointmentStatus.NO_SHOW,
+          },
+        }),
+      ]);
+
+    return {
+      total,
+      pending,
+      confirmed,
+      completed,
+      canceled,
+      noShow,
+    };
+  } catch (error) {
+    console.error("Error fetching patient appointment stats:", error);
+    return {
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      completed: 0,
+      canceled: 0,
+      noShow: 0,
     };
   }
 }
@@ -2850,9 +3082,15 @@ export async function searchDoctors(params: {
     }
 
     if (params.specialty && params.specialty !== "all") {
+      // Convert hyphenated value back to original format for matching
+      const originalSpecialty = params.specialty
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
       query.AND.push({
         specialization: {
-          equals: params.specialty,
+          contains: originalSpecialty,
           mode: "insensitive",
         },
       });
@@ -2912,6 +3150,9 @@ export async function searchDoctors(params: {
       const daysToGenerate = 7;
 
       const groupedSlots: Record<string, string[]> = {};
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
 
       for (let i = 0; i < daysToGenerate; i++) {
         const date = new Date(today);
@@ -2919,9 +3160,23 @@ export async function searchDoctors(params: {
         const isoDate = format(date, "yyyy-MM-dd");
         const dayOfWeek = date.getDay(); // 0 (Sunday) to 6 (Saturday)
 
-        const slotsForDay = doctor.availabilities
+        // Check if this is today
+        const isToday = date.toDateString() === now.toDateString();
+
+        let slotsForDay = doctor.availabilities
           .filter((a) => a.dayOfWeek === dayOfWeek && a.isActive)
           .flatMap((a) => generateTimeSlots(a.startTime, a.endTime));
+
+        // Filter out past times if this is today
+        if (isToday) {
+          slotsForDay = slotsForDay.filter((slot) => {
+            const [hours, minutes] = slot.split(":").map(Number);
+            return (
+              hours > currentHour ||
+              (hours === currentHour && minutes >= currentMinute)
+            );
+          });
+        }
 
         if (slotsForDay.length) {
           groupedSlots[isoDate] = slotsForDay;
@@ -2978,7 +3233,10 @@ export async function searchDoctors(params: {
     };
   } catch (error) {
     console.error("Error searching doctors:", error);
-    return [];
+    return {
+      data: [],
+      total: 0,
+    };
   }
 }
 
@@ -3154,6 +3412,9 @@ export async function getFavoritesDoctors(params: {
       const today = new Date();
       const daysToGenerate = 7;
       const groupedSlots: Record<string, string[]> = {};
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
 
       for (let i = 0; i < daysToGenerate; i++) {
         const date = new Date(today);
@@ -3161,9 +3422,23 @@ export async function getFavoritesDoctors(params: {
         const isoDate = format(date, "yyyy-MM-dd");
         const dayOfWeek = date.getDay();
 
-        const slotsForDay = doctor.availabilities
+        // Check if this is today
+        const isToday = date.toDateString() === now.toDateString();
+
+        let slotsForDay = doctor.availabilities
           .filter((a) => a.dayOfWeek === dayOfWeek && a.isActive)
           .flatMap((a) => generateTimeSlots(a.startTime, a.endTime));
+
+        // Filter out past times if this is today
+        if (isToday) {
+          slotsForDay = slotsForDay.filter((slot) => {
+            const [hours, minutes] = slot.split(":").map(Number);
+            return (
+              hours > currentHour ||
+              (hours === currentHour && minutes >= currentMinute)
+            );
+          });
+        }
 
         if (slotsForDay.length) {
           groupedSlots[isoDate] = slotsForDay;

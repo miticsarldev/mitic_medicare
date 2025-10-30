@@ -811,9 +811,9 @@ export function MedicalRecordsClient({
 
       {/* Record Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-4xl max-h-[90vh] p-0">
-          <DialogHeader className="p-6 pb-0">
-            <div className="flex items-center justify-between">
+        <DialogContent className="w-[calc(100%-1rem)] max-w-[95vw] sm:max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-4 sm:p-6 pb-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
               <div className="flex items-center">
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-full ${
@@ -842,24 +842,41 @@ export function MedicalRecordsClient({
           </DialogHeader>
 
           {selectedRecord && (
-            <ScrollArea className="h-[calc(90vh-8rem)]">
-              <div className="p-6 pt-4">
+            <ScrollArea className="h-[calc(90vh-8rem)] sm:h-[calc(90vh-10rem)]">
+              <div className="p-4 sm:p-6 pt-4">
                 <Tabs
                   value={activeTab}
                   onValueChange={setActiveTab}
                   className="w-full"
                 >
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="overview">Aperçu</TabsTrigger>
-                    <TabsTrigger value="documents">
+                  <TabsList className="grid w-full grid-cols-3 h-auto">
+                    <TabsTrigger
+                      value="overview"
+                      className="text-xs sm:text-sm"
+                    >
+                      Aperçu
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="documents"
+                      className="text-xs sm:text-sm"
+                    >
                       Documents
-                      <Badge variant="secondary" className="ml-2">
+                      <Badge
+                        variant="secondary"
+                        className="ml-1 sm:ml-2 text-xs"
+                      >
                         {selectedRecord.documents.length}
                       </Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="medications">
+                    <TabsTrigger
+                      value="medications"
+                      className="text-xs sm:text-sm"
+                    >
                       Médicaments
-                      <Badge variant="secondary" className="ml-2">
+                      <Badge
+                        variant="secondary"
+                        className="ml-1 sm:ml-2 text-xs"
+                      >
                         {selectedRecord.medications.length}
                       </Badge>
                     </TabsTrigger>
@@ -1102,15 +1119,29 @@ export function MedicalRecordsClient({
                                           {doc.name}
                                         </span>
                                       </div>
-                                      <Link
-                                        href={doc.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
-                                      >
-                                        <Download className="h-4 w-4" />
-                                      </Link>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(doc.url, "_blank");
+                                          }}
+                                          title="Ouvrir"
+                                        >
+                                          <ArrowUpRight className="h-3 w-3" />
+                                        </Button>
+                                        <Link
+                                          href={doc.url}
+                                          download={doc.name}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
+                                          title="Télécharger"
+                                        >
+                                          <Download className="h-3 w-3" />
+                                        </Link>
+                                      </div>
                                     </div>
                                   ))}
                                 {selectedRecord.documents.length > 3 && (
@@ -1177,6 +1208,11 @@ export function MedicalRecordsClient({
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(doc.url, "_blank");
+                                  }}
+                                  title="Ouvrir dans un nouvel onglet"
                                 >
                                   <ArrowUpRight className="h-4 w-4" />
                                 </Button>
@@ -1184,6 +1220,14 @@ export function MedicalRecordsClient({
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const link = document.createElement("a");
+                                    link.href = doc.url;
+                                    link.download = doc.name;
+                                    link.click();
+                                  }}
+                                  title="Télécharger"
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -1255,8 +1299,12 @@ export function MedicalRecordsClient({
             </ScrollArea>
           )}
 
-          <DialogFooter className="p-6 pt-2">
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
+          <DialogFooter className="p-4 sm:p-6 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDetailOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Fermer
             </Button>
           </DialogFooter>

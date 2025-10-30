@@ -70,6 +70,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { getSpecializationLabel } from "@/utils/function";
 
 type HospitalRatingDistribution = {
   star: number; // 1 → 5
@@ -204,7 +205,6 @@ export default function HospitalsPage() {
 
         // Set des spécialités
         setSpecialties(specialtiesData);
-
         // Mise en forme des hôpitaux
         const isArray = Array.isArray(rawData);
         const hospitalList = isArray ? [] : rawData.data;
@@ -318,7 +318,7 @@ export default function HospitalsPage() {
   };
 
   return (
-    <div className="space-y-2 p-4">
+    <div className="space-y-2">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
@@ -433,7 +433,7 @@ export default function HospitalsPage() {
                           htmlFor={`specialty-${specialty}`}
                           className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
-                          {specialty.label}
+                          {getSpecializationLabel(specialty.value)}
                         </label>
                       </div>
                     ))}

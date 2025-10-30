@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getSpecializationLabel } from "@/utils/function";
 
 export default async function AppointmentDetailPage({
   params,
@@ -47,7 +48,7 @@ export default async function AppointmentDetailPage({
   const prescriptionOrders = medicalRecord?.prescriptionOrder || [];
 
   return (
-    <div className="flex flex-col gap-4 p-2 sm:p-4">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
           <Link href="/dashboard/patient/appointments/all">
@@ -178,7 +179,9 @@ export default async function AppointmentDetailPage({
               </Avatar>
               <div>
                 <h3 className="text-xl font-semibold">{doctor.user.name}</h3>
-                <p className="text-muted-foreground">{doctor.specialization}</p>
+                <p className="text-muted-foreground">
+                  {getSpecializationLabel(doctor.specialization)}
+                </p>
                 <div className="mt-2 flex gap-2">
                   <Button size="sm" variant="outline" asChild>
                     <Link href={`/dashboard/patient/doctors/${doctor.id}`}>

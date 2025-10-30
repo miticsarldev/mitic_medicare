@@ -89,7 +89,7 @@ export function MedicalHistoryView({ history }: MedicalHistoryViewProps) {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col md:flex-row items-center space-x-4">
           <div className="text-sm text-muted-foreground">
             {history.length} condition{history.length !== 1 ? "s" : ""} au total
           </div>

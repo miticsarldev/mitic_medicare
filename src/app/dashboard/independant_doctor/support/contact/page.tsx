@@ -86,7 +86,7 @@ export default function ContactPage() {
         console.error("Erreur réseau:", err);
       }
     };
-  
+
     fetchHospitalContact();
   }, []);
 
@@ -185,7 +185,7 @@ export default function ContactPage() {
   ];
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold">Support Client</h1>
@@ -405,59 +405,63 @@ export default function ContactPage() {
         </div>
 
         <div className="md:col-span-4 space-y-6">
-        {hospitalContact && (
-        <Card className="md:col-span-4">
-          <CardHeader>
-            <CardTitle>Informations de l’hôpital</CardTitle>
-            <CardDescription>Voici comment nous contacter :</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {hospitalContact.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-muted-foreground" />
-                <span>{hospitalContact.phone}</span>
-              </div>
-            )}
-            {hospitalContact.email && (
-              <div className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-muted-foreground" />
-                <span>{hospitalContact.email}</span>
-              </div>
-            )}
-            {hospitalContact.address && (
-              <div className="flex items-start gap-2">
-                <MessageSquare className="w-5 h-5 text-muted-foreground mt-1" />
-                <span>{hospitalContact.address}</span>
-              </div>
-            )}
-            {hospitalContact.website && (
-              <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-muted-foreground" />
-                <Link
-                  href={hospitalContact.website}
-                  className="text-blue-600 hover:underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {hospitalContact.website}
-                </Link>
-              </div>
-            )}
-            <Separator />
-            <div>
-              <p className="text-sm text-muted-foreground mb-2 font-medium">Heures de support :</p>
-              <ul className="text-sm space-y-1">
-                {supportHours.map((item, index) => (
-                  <li key={index}>
-                    <Clock className="inline w-4 h-4 mr-2 text-muted-foreground" />
-                    {item.day} : {item.hours}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          {hospitalContact && (
+            <Card className="md:col-span-4">
+              <CardHeader>
+                <CardTitle>Informations de l’hôpital</CardTitle>
+                <CardDescription>
+                  Voici comment nous contacter :
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {hospitalContact.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-5 h-5 text-muted-foreground" />
+                    <span>{hospitalContact.phone}</span>
+                  </div>
+                )}
+                {hospitalContact.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-muted-foreground" />
+                    <span>{hospitalContact.email}</span>
+                  </div>
+                )}
+                {hospitalContact.address && (
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="w-5 h-5 text-muted-foreground mt-1" />
+                    <span>{hospitalContact.address}</span>
+                  </div>
+                )}
+                {hospitalContact.website && (
+                  <div className="flex items-center gap-2">
+                    <Send className="w-5 h-5 text-muted-foreground" />
+                    <Link
+                      href={hospitalContact.website}
+                      className="text-blue-600 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {hospitalContact.website}
+                    </Link>
+                  </div>
+                )}
+                <Separator />
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2 font-medium">
+                    Heures de support :
+                  </p>
+                  <ul className="text-sm space-y-1">
+                    {supportHours.map((item, index) => (
+                      <li key={index}>
+                        <Clock className="inline w-4 h-4 mr-2 text-muted-foreground" />
+                        {item.day} : {item.hours}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

@@ -71,6 +71,7 @@ import {
 } from "@/components/ui/pagination";
 import Link from "next/link";
 import { Textarea } from "@/components/ui/textarea";
+import { getSpecializationLabel } from "@/utils/function";
 
 interface Doctor {
   id: string;
@@ -225,20 +226,20 @@ export default function DoctorSearchPage() {
           // Mise en forme des docteurs
           const data = Array.isArray(rawData)
             ? []
-            : rawData.data.map((doctor) => ({
+            : (rawData.data || []).map((doctor) => ({
                 ...doctor,
                 experience:
                   typeof doctor.experience === "string"
                     ? parseFloat(doctor.experience)
                     : doctor.experience,
-                reviews: doctor.reviews.map((review) => ({
+                reviews: (doctor.reviews || []).map((review) => ({
                   ...review,
                   date: review.date,
                 })),
               }));
 
           setDoctors(data);
-          setTotalCount(Array.isArray(rawData) ? 0 : rawData.total);
+          setTotalCount(Array.isArray(rawData) ? 0 : rawData.total || 0);
         } else {
           // Récupère en parallèle
           const [favorites, specialtiesData, rawData] = await Promise.all([
@@ -259,27 +260,27 @@ export default function DoctorSearchPage() {
           setSpecialties(specialtiesData);
 
           // Set des favoris
-          const favSet = new Set(favorites);
+          const favSet = new Set(favorites || []);
           setFavoriteDoctorIds(favSet);
 
           // Mise en forme des docteurs
           const data = Array.isArray(rawData)
             ? []
-            : rawData.data.map((doctor) => ({
+            : (rawData.data || []).map((doctor) => ({
                 ...doctor,
                 experience:
                   typeof doctor.experience === "string"
                     ? parseFloat(doctor.experience)
                     : doctor.experience,
                 isFavorite: favSet.has(doctor.id),
-                reviews: doctor.reviews.map((review) => ({
+                reviews: (doctor.reviews || []).map((review) => ({
                   ...review,
                   date: review.date,
                 })),
               }));
 
           setDoctors(data);
-          setTotalCount(Array.isArray(rawData) ? 0 : rawData.total);
+          setTotalCount(Array.isArray(rawData) ? 0 : rawData.total || 0);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -309,6 +310,11 @@ export default function DoctorSearchPage() {
   useEffect(() => {
     setPage(1);
   }, [showFavoritesOnly]);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedSpecialty, selectedGender]);
 
   // Open doctor detail dialog
   const openDoctorDetail = async (doctor: Doctor) => {
@@ -444,7 +450,7 @@ export default function DoctorSearchPage() {
   };
 
   return (
-    <div className="space-y-2 p-4">
+    <div className="space-y-2">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
@@ -478,7 +484,7 @@ export default function DoctorSearchPage() {
               <SelectItem value="all">Toutes les spécialités</SelectItem>
               {specialties.map((specialty) => (
                 <SelectItem key={specialty.value} value={specialty.value}>
-                  {specialty.label}
+                  {getSpecializationLabel(specialty.value)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -545,7 +551,7 @@ export default function DoctorSearchPage() {
         <div className="flex items-center space-x-2">
           {selectedSpecialty && (
             <Badge variant="secondary" className="flex items-center gap-1">
-              {specialties.find((s) => s.value === selectedSpecialty)?.label}
+              {getSpecializationLabel(selectedSpecialty)}
               <button
                 onClick={() => setSelectedSpecialty("")}
                 className="ml-1 rounded-full hover:bg-secondary"
@@ -659,7 +665,7 @@ export default function DoctorSearchPage() {
               <CardHeader className="p-4 pb-2 text-center">
                 <CardTitle className="text-lg">{doctor.name}</CardTitle>
                 <CardDescription className="flex items-center justify-center">
-                  {doctor.specialty}
+                  {getSpecializationLabel(doctor.specialty)}
                 </CardDescription>
                 <div className="mt-1 flex items-center justify-center">
                   <StarRating rating={doctor.rating} />

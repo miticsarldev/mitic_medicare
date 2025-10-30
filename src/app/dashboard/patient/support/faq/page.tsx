@@ -113,8 +113,8 @@ export default function FAQPage() {
   const popularFAQs = faqItems.filter((item) => item.popular);
 
   return (
-    <div className="container mx-auto px-4 py-4 md:p-4">
-      <div className="text-center mb-6 md:mb-8">
+    <div className="container mx-auto">
+      <div className="text-center mb-2 md:mb-4">
         <h1 className="text-2xl md:text-3xl font-bold mb-2">
           Questions Fréquentes
         </h1>

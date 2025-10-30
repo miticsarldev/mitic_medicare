@@ -150,7 +150,7 @@ export default function MyFeedbackPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold">Mes Avis</h1>
         <Link href="/dashboard/patient/reviews/give-feedback">
@@ -158,7 +158,7 @@ export default function MyFeedbackPage() {
         </Link>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input

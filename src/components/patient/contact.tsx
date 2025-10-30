@@ -159,7 +159,7 @@ export default function ContactPage() {
   ];
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold">Support Client</h1>
@@ -169,7 +169,7 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-12">
+      <div className="grid gap-4 md:grid-cols-12">
         <div className="md:col-span-8 space-y-6">
           <Card>
             <CardHeader>

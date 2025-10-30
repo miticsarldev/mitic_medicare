@@ -10,7 +10,7 @@ export default async function MedicalRecordsPage() {
   const medicalRecordsData = await getPatientMedicalRecords();
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto">
       <h1 className="text-2xl font-bold tracking-tight md:text-3xl mb-2">
         Mon Dossier Médical
       </h1>
@@ -27,8 +27,8 @@ export default async function MedicalRecordsPage() {
 
 function MedicalRecordsLoading() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-4">
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-4">
         {/* Sidebar skeleton */}
         <div className="md:col-span-1 space-y-6">
           <div className="rounded-lg border bg-card shadow-sm">

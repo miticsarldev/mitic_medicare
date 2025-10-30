@@ -470,7 +470,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold">Mon Profil</h1>
@@ -1342,7 +1342,7 @@ export default function ProfilePage() {
 // Loading component for internal use
 function Loading() {
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <Skeleton className="h-8 w-48" />

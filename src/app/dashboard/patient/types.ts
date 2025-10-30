@@ -29,26 +29,26 @@ export type Doctor = Prisma.DoctorGetPayload<{
 };
 
 export type Appointment = Prisma.AppointmentGetPayload<{
-  include: { doctor: { include: { user: true } } };
+  include: { doctor: { include: { user: { include: { profile: true } } } } };
 }> & {
   doctorName: string;
 };
 
 export type MedicalRecord = Prisma.MedicalRecordGetPayload<{
-  include: { doctor: { include: { user: true } } };
+  include: { doctor: { include: { user: { include: { profile: true } } } } };
 }> & {
   doctorName: string;
 };
 
 export type Prescription = Prisma.PrescriptionGetPayload<{
-  include: { doctor: { include: { user: true } } };
+  include: { doctor: { include: { user: { include: { profile: true } } } } };
 }> & {
   doctorName: string;
 };
 
 export type PrescriptionOrder = Prisma.PrescriptionOrderGetPayload<{
   include: {
-    doctor: { include: { user: true } };
+    doctor: { include: { user: { include: { profile: true } } } };
     prescriptions: true;
   };
 }> & {

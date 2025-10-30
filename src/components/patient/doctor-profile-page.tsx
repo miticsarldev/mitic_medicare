@@ -241,7 +241,7 @@ export default function DoctorProfile({
   };
 
   return (
-    <div className="container p-2 sm:p-4 mx-auto">
+    <div className="container mx-auto">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-2 sm:p-4 mb-4">
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
@@ -428,7 +428,8 @@ export default function DoctorProfile({
                       </div>
                       <div>
                         <h4 className="font-medium">
-                          Spécialisation en {getSpecializationLabel(doctor.specialization)}
+                          Spécialisation en{" "}
+                          {getSpecializationLabel(doctor.specialization)}
                         </h4>
                         <p className="text-sm text-muted-foreground">
                           Centre Hospitalier Universitaire du Point G

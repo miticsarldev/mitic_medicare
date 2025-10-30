@@ -9,7 +9,7 @@ import { MedicalHistoryView } from "@/components/patient/medical-history-view";
 export default async function MedicalHistoryPage() {
   return (
     <div className="min-h-screen bg-transparent">
-      <div className="container mx-auto p-4 space-y-4">
+      <div className="container mx-auto space-y-4">
         <div className="grid gap-3">
           <div className="flex items-center justify-between">
             <div>
