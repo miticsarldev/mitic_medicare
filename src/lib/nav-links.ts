@@ -14,6 +14,8 @@ import {
   UserCheck,
   Stethoscope,
   Star,
+  CreditCard,
+  CheckCircle,
 } from "lucide-react";
 
 // Super Admin Navigation
@@ -43,7 +45,7 @@ export const superAdminNavItems = [
   },
   {
     title: "Rendez-vous",
-    icon: Users,
+    icon: Calendar,
     url: "/dashboard/superadmin/appointment",
     items: [
       {
@@ -54,7 +56,7 @@ export const superAdminNavItems = [
   },
   {
     title: "Abonnements",
-    icon: Users,
+    icon: CreditCard,
     url: "/dashboard/superadmin/subscriptions",
     items: [
       {
@@ -73,7 +75,7 @@ export const superAdminNavItems = [
   },
   {
     title: "Vérifications",
-    icon: Users,
+    icon: CheckCircle,
     url: "/dashboard/superadmin/verifications",
     items: [
       {
@@ -463,7 +465,7 @@ export const hospitalDoctorNavItems = [
     url: "/dashboard/hopital_doctor/hospital",
     items: [
       {
-        title: "Informations de l’Hôpital",
+        title: "Informations de l'Hôpital",
         url: "/dashboard/hopital_doctor/hospital/details",
       },
     ],
@@ -471,7 +473,7 @@ export const hospitalDoctorNavItems = [
   {
     title: "Paramètres & Sécurité",
     icon: Settings,
-    url: "/dashboard/hopital_admin/settings",
+    url: "/dashboard/hopital_doctor/settings",
     items: [
       {
         title: "Mon Profil",
